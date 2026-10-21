@@ -1728,7 +1728,6 @@ async function initCloud(){
   const fs = firebase.firestore();
   fs.enablePersistence({synchronizeTabs:true}).catch(() => {});
   CLOUD.on = true; CLOUD.auth = firebase.auth(); renderTrainees();
-  CLOUD.auth.getRedirectResult().catch(() => {});
   CLOUD.auth.onAuthStateChanged(async user => {
     if (!user || CLOUD.user) return;
     CLOUD.user = user;
@@ -1749,13 +1748,31 @@ async function initCloud(){
     attachDb(wrap);
   });
 }
-async function cloudLogin(){
-  const p = new firebase.auth.GoogleAuthProvider();
-  try { await CLOUD.auth.signInWithPopup(p); }
-  catch(e){
-    if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) CLOUD.auth.signInWithRedirect(p);
-    else if (!e || e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("ההתחברות נכשלה");
-  }
+const AUTH_ERR = {
+  "auth/invalid-email":"כתובת המייל לא תקינה", "auth/missing-password":"צריך להקליד סיסמה",
+  "auth/weak-password":"הסיסמה צריכה להיות לפחות 6 תווים", "auth/email-already-in-use":"כבר יש חשבון עם המייל הזה. לחצו \"התחברות\"",
+  "auth/invalid-credential":"המייל או הסיסמה לא נכונים", "auth/wrong-password":"המייל או הסיסמה לא נכונים",
+  "auth/user-not-found":"אין חשבון עם המייל הזה. לחצו \"הרשמה\"", "auth/too-many-requests":"יותר מדי ניסיונות. נסו שוב בעוד כמה דקות",
+  "auth/network-request-failed":"אין חיבור לאינטרנט"};
+function cloudLogin(){
+  openModal(`<h2>סנכרון בענן</h2>
+    <p class="hint">מתחברים עם מייל וסיסמה, ובכל מכשיר שמתחברים אליו לאותו חשבון רואים את אותם מתאמנים. בפעם הראשונה לוחצים "הרשמה".</p>
+    <form id="lform" class="mbox" style="padding:0;border:0;max-height:none;overflow:visible">
+      <label>מייל<input id="l-email" type="email" autocomplete="username" required dir="ltr"></label>
+      <label>סיסמה<input id="l-pass" type="password" autocomplete="current-password" required dir="ltr" minlength="6"></label>
+      <p class="hint" id="l-err" hidden style="color:var(--warn)"></p>
+      <div class="macts"><button class="primary" type="submit">התחברות</button><button class="ghost" type="button" id="l-new">הרשמה</button><button class="ghost" type="button" data-act="cancel">ביטול</button></div>
+      <button type="button" class="ghost" id="l-reset" style="justify-self:start;border:0;padding:0;color:var(--accent)">שכחתי סיסמה</button>
+    </form>`);
+  const em = () => $("l-email").value.trim(), pw = () => $("l-pass").value;
+  const err = e => { const el = $("l-err"); el.textContent = (e && AUTH_ERR[e.code]) || "משהו השתבש. נסו שוב."; el.hidden = false; };
+  const run = async fn => { $("l-err").hidden = true; try { await fn(); closeModal(); } catch(e){ err(e); } };
+  $("lform").addEventListener("submit", ev => { ev.preventDefault(); run(() => CLOUD.auth.signInWithEmailAndPassword(em(), pw())); });
+  $("l-new").addEventListener("click", () => { if (!$("lform").reportValidity()) return; run(() => CLOUD.auth.createUserWithEmailAndPassword(em(), pw())); });
+  $("l-reset").addEventListener("click", async () => {
+    if (!em()){ err({code:"auth/invalid-email"}); return; }
+    try { await CLOUD.auth.sendPasswordResetEmail(em()); closeModal(); toast("נשלח מייל לאיפוס הסיסמה"); } catch(e){ err(e); }
+  });
 }
 function openAccount(){
   const u = CLOUD.user;
