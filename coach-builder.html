@@ -1669,6 +1669,7 @@ function loadLocal(){
   try{ d = JSON.parse(localStorage.getItem(LS) || "{}") || {}; }catch(e){}
   const tr = d.trainees && Object.keys(d.trainees).length ? d.trainees : JSON.parse(JSON.stringify(SEED));
   Object.assign(T, tr); CUSTOM = d.custom || []; rebuild();
+  if (tr !== d.trainees) saveLocal();
 }
 function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({trainees:T, custom:CUSTOM})); }catch(e){} }
 function save(id){
