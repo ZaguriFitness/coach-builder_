@@ -1683,11 +1683,7 @@ function saveCustom(){
   if (!db){ saveLocal(); return; }
   customBusy = customBusy.then(() => db.doc("custom/exercises").set({list:CUSTOM}).catch(() => toast("שמירת התרגיל נכשלה")));
 }
-(async () => {
-  await null;
-  let d = null;
-  try { d = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch(e){ d = null; }
-  if (!d){ loadLocal(); ready = true; pickActive(); renderAll(); return; }
+function attachDb(d){
   db = d;
   db.collection("trainees").onSnapshot(snap => {
     for (const ch of snap.docChanges()){
@@ -1702,7 +1698,66 @@ function saveCustom(){
     CUSTOM = s.exists ? (s.data().list || []).map(x => ({...x})) : [];
     rebuild(); renderLibrary(); renderPanel();
   }, () => {});
+}
+(async () => {
+  await null;
+  let d = null;
+  try { d = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch(e){ d = null; }
+  if (d){ attachDb(d); return; }
+  loadLocal(); ready = true; pickActive(); renderAll();
+  if (FIREBASE_CONFIG.apiKey) initCloud();
 })();
+
+// ===================== cloud sync (Firebase, outside Claude) =====================
+// Paste the web app config from the Firebase console here. Empty = browser-only storage.
+const FIREBASE_CONFIG = {};
+const FB_SDK = "https://www.gstatic.com/firebasejs/10.14.1/";
+const CLOUD = {on:false, user:null, auth:null};
+function loadScript(src){ return new Promise((ok, fail) => { const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = fail; document.head.appendChild(el); }); }
+async function initCloud(){
+  try {
+    await loadScript(FB_SDK + "firebase-app-compat.js");
+    await Promise.all(["auth", "firestore"].map(m => loadScript(FB_SDK + `firebase-${m}-compat.js`)));
+  } catch(e){ toast("אין חיבור לענן. הנתונים נשמרים במכשיר בלבד."); return; }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const fs = firebase.firestore();
+  fs.enablePersistence({synchronizeTabs:true}).catch(() => {});
+  CLOUD.on = true; CLOUD.auth = firebase.auth(); renderTrainees();
+  CLOUD.auth.getRedirectResult().catch(() => {});
+  CLOUD.auth.onAuthStateChanged(async user => {
+    if (!user || CLOUD.user) return;
+    CLOUD.user = user;
+    const base = `users/${user.uid}/`;
+    const wrap = {collection: c => fs.collection(base + c), doc: path => fs.doc(base + path)};
+    try {
+      // first sign-in: move what this browser already has into the empty cloud account
+      const snap = await wrap.collection("trainees").limit(1).get();
+      if (snap.empty){
+        const b = fs.batch();
+        for (const [id, t] of Object.entries(T)) b.set(wrap.collection("trainees").doc(id), JSON.parse(JSON.stringify(t)));
+        if (CUSTOM.length) b.set(wrap.doc("custom/exercises"), {list:CUSTOM});
+        await b.commit();
+      }
+    } catch(e){ toast("הסנכרון נכשל. בדקו חיבור ונסו שוב."); CLOUD.user = null; return; }
+    for (const k of Object.keys(T)) delete T[k];
+    ready = false; renderTrainees();
+    attachDb(wrap);
+  });
+}
+async function cloudLogin(){
+  const p = new firebase.auth.GoogleAuthProvider();
+  try { await CLOUD.auth.signInWithPopup(p); }
+  catch(e){
+    if (e && (e.code === "auth/popup-blocked" || e.code === "auth/operation-not-supported-in-this-environment")) CLOUD.auth.signInWithRedirect(p);
+    else if (!e || e.code !== "auth/popup-closed-by-user" && e.code !== "auth/cancelled-popup-request") toast("ההתחברות נכשלה");
+  }
+}
+function openAccount(){
+  const u = CLOUD.user;
+  openModal(`<h2>סנכרון בענן</h2>
+    <p class="hint">מחובר כ-<b>${esc(u.email || u.displayName || "")}</b>. המתאמנים נשמרים בענן ומסתנכרנים בכל מכשיר שמתחברים בו לאותו חשבון.</p>
+    <div class="macts"><button type="button" class="ghost" data-act="logout">התנתקות</button><button type="button" class="ghost" data-act="cancel">סגור</button></div>`);
+}
 // no automatic selection: a trainee is chosen only by tapping their name
 function pickActive(){ if (activeId && !T[activeId]){ activeId = null; activeDay = 0; } }
 function sortedIds(){ return Object.keys(T).sort((a,b) => (T[a].name||"").localeCompare(T[b].name||"", "he")); }
@@ -1718,7 +1773,8 @@ function renderTrainees(){
   el.innerHTML = sortedIds().map(id => {
     const t = T[id], n = t.days.reduce((a,d)=>a+d.items.length,0);
     return `<button type="button" class="tr" data-act="pick" data-id="${id}" aria-pressed="${id===activeId}">${esc(t.name)} <small>${n}</small></button>`;
-  }).join("") + `<button type="button" class="tr new" data-act="newT">+ מתאמן חדש</button><button type="button" class="tr new" data-act="backup">גיבוי</button>`;
+  }).join("") + `<button type="button" class="tr new" data-act="newT">+ מתאמן חדש</button><button type="button" class="tr new" data-act="backup">גיבוי</button>` +
+    (CLOUD.on ? (CLOUD.user ? `<button type="button" class="tr" data-act="acct">☁ מסונכרן</button>` : `<button type="button" class="tr new" data-act="login">☁ התחברות לסנכרון</button>`) : "");
 }
 
 function renderGroups(){
@@ -2320,6 +2376,9 @@ document.addEventListener("click", ev => {
     case "pick": { setAdding(false); const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
     case "backup": openBackup(); break;
+    case "login": cloudLogin(); break;
+    case "acct": openAccount(); break;
+    case "logout": CLOUD.auth.signOut().then(() => location.reload()); break;
     case "bkexp": exportBackup(); break;
     case "editT": openTrainee(true); break;
     case "cancel": pendingAdd = null; closeModal(); break;
