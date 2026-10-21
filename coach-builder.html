@@ -268,6 +268,7 @@ html::-webkit-scrollbar{display:none;width:0}
 .itlink:hover{color:var(--accent);text-decoration:underline}
 .itlink:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
+.bkimp{display:inline-flex;align-items:center;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1712,7 +1713,7 @@ function renderTrainees(){
   el.innerHTML = sortedIds().map(id => {
     const t = T[id], n = t.days.reduce((a,d)=>a+d.items.length,0);
     return `<button type="button" class="tr" data-act="pick" data-id="${id}" aria-pressed="${id===activeId}">${esc(t.name)} <small>${n}</small></button>`;
-  }).join("") + `<button type="button" class="tr new" data-act="newT">+ מתאמן חדש</button>`;
+  }).join("") + `<button type="button" class="tr new" data-act="newT">+ מתאמן חדש</button><button type="button" class="tr new" data-act="backup">גיבוי</button>`;
 }
 
 function renderGroups(){
@@ -1966,6 +1967,40 @@ function openPlan(){ const t = cur(); if (!t) return; planPick = t.days.length; 
 function dayNames(split, n){ const names = SPLITS[split].names; return Array.from({length:n}, (_,i) => names[i % names.length] + (i >= names.length ? " 2" : "")); }
 
 function openModal(html, wide){ try{TD.stop();}catch(e){} const m=$("mbox"); m.className = "mbox" + (wide?" wide":""); m.innerHTML = html; $("modal").hidden = false; m.scrollTop = 0; const f = wide ? m.querySelector(".dclose") : m.querySelector("input,select,textarea"); if (f){ f.readOnly = false; f.focus(); } }
+// ===================== backup (file export / import) =====================
+function openBackup(){
+  openModal(`<h2>גיבוי</h2>
+    <p class="hint">הנתונים נשמרים בדפדפן הזה בלבד. כדי להעביר אותם למכשיר אחר או לשמור עותק, מייצאים קובץ גיבוי ומייבאים אותו במכשיר השני.</p>
+    <div class="macts"><button type="button" class="primary" data-act="bkexp">ייצוא לקובץ</button>
+    <label class="ghost bkimp">ייבוא מקובץ<input type="file" id="bkfile" accept=".json,application/json" hidden></label>
+    <button type="button" class="ghost" data-act="cancel">סגור</button></div>`);
+  $("bkfile").addEventListener("change", ev => { const f = ev.target.files && ev.target.files[0]; if (f) importBackup(f); });
+}
+function exportBackup(){
+  const blob = new Blob([JSON.stringify({trainees:T, custom:CUSTOM}, null, 1)], {type:"application/json"});
+  const a = document.createElement("a"), d = new Date();
+  a.href = URL.createObjectURL(blob);
+  a.download = `coach-builder-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function importBackup(file){
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch(e){ toast("הקובץ לא תקין"); return; }
+    const tr = d && d.trainees && typeof d.trainees === "object" ? d.trainees : null;
+    if (!tr){ toast("הקובץ לא תקין"); return; }
+    let n = 0;
+    for (const [id, t] of Object.entries(tr)){ if (t && t.name && Array.isArray(t.days)){ T[id] = t; save(id); n++; } }
+    if (Array.isArray(d.custom) && d.custom.length){
+      const have = new Set(CUSTOM.map(x => x.id));
+      d.custom.forEach(x => { if (x && !have.has(x.id)) CUSTOM.push(x); });
+      rebuild(); saveCustom();
+    }
+    closeModal(); renderAll(); toast(`יובאו ${n} מתאמנים`);
+  };
+  r.readAsText(file);
+}
 function closeModal(){ try{TD.stop();}catch(e){} $("modal").hidden = true; $("mbox").innerHTML = ""; }
 function infoBtn(id){
   const t = cur(), d = curDay(), on = inDay(id);
@@ -2279,6 +2314,8 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
+    case "backup": openBackup(); break;
+    case "bkexp": exportBackup(); break;
     case "editT": openTrainee(true); break;
     case "cancel": pendingAdd = null; closeModal(); break;
     case "info": case "open": openInfo(b.dataset.id); break;
