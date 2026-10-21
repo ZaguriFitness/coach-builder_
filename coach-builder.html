@@ -1715,7 +1715,14 @@ function attachDb(d){
 
 // ===================== cloud sync (Firebase, outside Claude) =====================
 // Paste the web app config from the Firebase console here. Empty = browser-only storage.
-const FIREBASE_CONFIG = {};
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBXAQDWHONwFsBWbyBw38ZGBLaBh_ywsuc",
+  authDomain: "coach-builder-7365d.firebaseapp.com",
+  projectId: "coach-builder-7365d",
+  storageBucket: "coach-builder-7365d.firebasestorage.app",
+  messagingSenderId: "406298622061",
+  appId: "1:406298622061:web:59235a12be1a985a90a764"
+};
 const FB_SDK = "https://www.gstatic.com/firebasejs/10.14.1/";
 const CLOUD = {on:false, user:null, auth:null};
 function loadScript(src){ return new Promise((ok, fail) => { const el = document.createElement("script"); el.src = src; el.onload = ok; el.onerror = fail; document.head.appendChild(el); }); }
@@ -1753,7 +1760,7 @@ const AUTH_ERR = {
   "auth/weak-password":"הסיסמה צריכה להיות לפחות 6 תווים", "auth/email-already-in-use":"כבר יש חשבון עם המייל הזה. לחצו \"התחברות\"",
   "auth/invalid-credential":"המייל או הסיסמה לא נכונים", "auth/wrong-password":"המייל או הסיסמה לא נכונים",
   "auth/user-not-found":"אין חשבון עם המייל הזה. לחצו \"הרשמה\"", "auth/too-many-requests":"יותר מדי ניסיונות. נסו שוב בעוד כמה דקות",
-  "auth/network-request-failed":"אין חיבור לאינטרנט"};
+  "auth/network-request-failed":"אין חיבור לאינטרנט", "auth/operation-not-allowed":"ההתחברות במייל עוד לא הופעלה ב-Firebase"};
 function cloudLogin(){
   openModal(`<h2>סנכרון בענן</h2>
     <p class="hint">מתחברים עם מייל וסיסמה, ובכל מכשיר שמתחברים אליו לאותו חשבון רואים את אותם מתאמנים. בפעם הראשונה לוחצים "הרשמה".</p>
