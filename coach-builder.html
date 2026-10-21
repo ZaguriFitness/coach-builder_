@@ -2350,7 +2350,7 @@ function jpegToPdf(jpegBytes, imgW, imgH){
   const out = new Uint8Array(len); let p = 0; for (const b of parts){ out.set(b, p); p += b.length; } return out;
 }
 const toBlob = (cv, type, q) => new Promise(res => cv.toBlob(res, type, q));
-let docCanvas = null, docDl = null;
+let docCanvas = null, docDl = null, docFiles = null;
 (async () => { await null; try { docDl = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch(e){ docDl = null; } })();
 async function openSend(){
   const t = cur(); if (!t) return;
@@ -2359,14 +2359,26 @@ async function openSend(){
   if ($("modal").hidden) return;
   const url = docCanvas.toDataURL("image/png");
   const safe = t.name.replace(/[\\/:*?"<>|]/g, "").trim() || "מתאמן";
+  // files are prepared up front: the share sheet must open straight from the tap
+  docFiles = null;
+  if (!docDl){
+    const png = await toBlob(docCanvas, "image/png");
+    const jb = new Uint8Array(await (await toBlob(docCanvas, "image/jpeg", 0.92)).arrayBuffer());
+    docFiles = {png: new File([png], `תוכנית אימונים - ${safe}.png`, {type:"image/png"}),
+      pdf: new File([jpegToPdf(jb, docCanvas.width, docCanvas.height)], `תוכנית אימונים - ${safe}.pdf`, {type:"application/pdf"})};
+    if ($("modal").hidden) return;
+  }
+  const canShare = !!(docFiles && navigator.canShare && navigator.canShare({files:[docFiles.png]}));
   $("mbox").innerHTML = `<div class="dhead"><div><h2>שליחת התוכנית</h2><div class="pmeta">${esc(t.name)} · ${esc(planFull(t))}</div></div></div>
     <div class="dbody">
       <img class="docprev" src="${url}" alt="תוכנית האימונים של ${esc(t.name)}">
-      ${docDl ? `<p class="hint">שומרים את המסמך כתמונה או כ-PDF, ושולחים אותו ל${esc(t.name)} בוואטסאפ דרך ה-📎 בצ'אט.</p>` : `<p class="hint">לחיצה ארוכה על התמונה ← "שתף" ← וואטסאפ, או "שמור תמונה" ואז לשלוח אותה בצ'אט.</p>`}
+      ${docDl ? `<p class="hint">שומרים את המסמך כתמונה או כ-PDF, ושולחים אותו ל${esc(t.name)} בוואטסאפ דרך ה-📎 בצ'אט.</p>` : canShare ? `<p class="hint">לוחצים "שליחה", בוחרים וואטסאפ ואת ${esc(t.name)}.</p>` : `<p class="hint">שומרים את המסמך כתמונה או כ-PDF, ושולחים אותו ל${esc(t.name)} בוואטסאפ.</p>`}
     </div>
     <div class="dfoot">
       <button type="button" class="ghost" data-act="cancel">סגור</button>
-      ${docDl ? `<button type="button" class="ghost" data-act="savepdf" data-n="${esc(safe)}">שמור PDF</button><button type="button" class="primary" data-act="savepng" data-n="${esc(safe)}">שמור תמונה</button>` : ""}
+      ${docDl ? `<button type="button" class="ghost" data-act="savepdf" data-n="${esc(safe)}">שמור PDF</button><button type="button" class="primary" data-act="savepng" data-n="${esc(safe)}">שמור תמונה</button>`
+        : canShare ? `<button type="button" class="ghost" data-act="sharepdf">שליחה כ-PDF</button><button type="button" class="primary" data-act="sharepng">שליחה כתמונה</button>`
+        : `<button type="button" class="ghost" data-act="dlpdf">שמור PDF</button><button type="button" class="primary" data-act="dlpng">שמור תמונה</button>`}
     </div>`;
 }
 async function saveDoc(kind, name){
@@ -2382,6 +2394,18 @@ async function saveDoc(kind, name){
     if (e && e.code === "rate_limited"){ toast("חלון שמירה כבר פתוח"); return; }
     toast("השמירה לא זמינה כאן. לחיצה ארוכה על התמונה ← שתף");
   }
+}
+
+function shareDoc(kind){
+  if (!docFiles) return;
+  navigator.share({files:[docFiles[kind]]}).catch(e => { if (!e || e.name !== "AbortError") toast("השליחה לא הצליחה. נסו לשמור את הקובץ"); });
+}
+function downloadDoc(kind){
+  if (!docFiles) return;
+  const f = docFiles[kind], a = document.createElement("a");
+  a.href = URL.createObjectURL(f); a.download = f.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 function copyProgram(){
@@ -2433,6 +2457,10 @@ document.addEventListener("click", ev => {
     case "send": openSend(); break;
     case "savepng": saveDoc("png", b.dataset.n); break;
     case "savepdf": saveDoc("pdf", b.dataset.n); break;
+    case "sharepng": shareDoc("png"); break;
+    case "sharepdf": shareDoc("pdf"); break;
+    case "dlpng": downloadDoc("png"); break;
+    case "dlpdf": downloadDoc("pdf"); break;
     case "dup": { const id = uid(), c = JSON.parse(JSON.stringify(t)); c.name = t.name + " (עותק)"; c.created = Date.now(); c.days.forEach(d => d.id = uid()); T[id] = c; activeId = id; activeDay = 0; save(id); renderAll(); openTrainee(true); toast("התוכנית שוכפלה. תנו שם למתאמן החדש"); break; }
     case "delT": { if (armed !== "t"){ armed = "t"; renderPanel(); return; } const name = t.name; delete T[activeId]; save(activeId); activeId = null; armed = null; pickActive(); renderAll(); toast(`${name} נמחק`); break; }
     case "close": $("panel").classList.remove("open"); activeId = null; activeDay = 0; setAdding(false); renderAll(); break;
