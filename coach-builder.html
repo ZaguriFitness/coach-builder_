@@ -1654,8 +1654,13 @@ function pref(k,v){ try{ if(v===undefined) return localStorage.getItem(k); local
 let db = null;
 const LS = "coach-builder-v1";
 const pending = {}, timers = {}, chain = {};
+// trainees carried over from the Claude version; shown when this browser has none saved yet
+const SEED = {"mz2vrsyq3zu":{"created":1792302655674,"days":[{"id":"l1xdxa3q3zx","items":[],"name":"גוף מלא A"}],"goal":"כושר כללי","level":1,"name":"סברינה","notes":"","updated":1792302656291},"5bzc6emgjgx":{"created":1792335801490,"days":[{"id":"8rohbxkgjh0","items":[{"he":"בעיטה אחורה בכבל","i":"","n":"","r":"12","rest":"60","s":"3","w":"","x":"cable-kickback"},{"he":"הרחקת ירך בעמידת שש","i":"","n":"","r":"12","rest":"45","s":"3","w":"","x":"fire-hydrant"},{"he":"דדליפט רגל אחת קטלבל","i":"","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"kettlebell-single-leg-deadlift"},{"he":"צלב ברזל בקרוס אובר (קירוב כתפיים)","i":"","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"cable-iron-cross"},{"he":"לחיצת חזה בסמית'","i":"","n":"","r":"12","rest":"60","s":"3","w":"","x":"smith-machine-bench-press"},{"he":"הילה עם קטלבל","i":"","n":"","r":"30 שנ'","rest":"0","s":"2","w":"","x":"kettlebell-halo"},{"he":"מגהץ משקולות","i":"","n":"","r":"12","rest":"60","s":"3","w":"","x":"dumbbell-skull-crusher"},{"he":"דד באג","i":"","n":"","r":"12","rest":"45","s":"3","w":"","x":"dead-bug"},{"he":"בעיטות מספריים","i":"","n":"","r":"12","rest":"60","s":"3","w":"","x":"flutter-kicks"}],"name":"פול באדי"}],"goal":"כוח","level":2,"name":"כרמית","notes":"","updated":1792505653684},"yaron-example":{"created":1792268100000,"days":[{"id":"d1","items":[{"he":"דדליפט","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"deadlift"},{"he":"סקוואט אחורי עם מוט","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"back-squat"},{"he":"בנט אובר רו – חתירה במוט בהטיה","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"bent-over-barbell-row"},{"he":"לחיצת חזה במוט","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"barbell-bench-press"},{"he":"לחיצת כתפיים בעמידה עם מוט","n":"","r":"8-10","rest":"90","s":"4","w":"","x":"overhead-press"}],"name":"פול באדי"}],"goal":"כושר כללי","level":1,"name":"יאיר","notes":"","updated":1792357555321}};
 function loadLocal(){
-  try{ const d = JSON.parse(localStorage.getItem(LS) || "{}"); Object.assign(T, d.trainees || {}); CUSTOM = d.custom || []; rebuild(); }catch(e){}
+  let d = {};
+  try{ d = JSON.parse(localStorage.getItem(LS) || "{}") || {}; }catch(e){}
+  const tr = d.trainees && Object.keys(d.trainees).length ? d.trainees : JSON.parse(JSON.stringify(SEED));
+  Object.assign(T, tr); CUSTOM = d.custom || []; rebuild();
 }
 function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({trainees:T, custom:CUSTOM})); }catch(e){} }
 function save(id){
