@@ -1,6 +1,6 @@
 {
-  "name": "בונה תוכניות אימון",
-  "short_name": "תוכניות אימון",
+  "name": "Program Coach",
+  "short_name": "Program Coach",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./coach-builder.html",
