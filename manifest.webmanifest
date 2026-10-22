@@ -1,6 +1,6 @@
 {
-  "name": "Program Coach",
-  "short_name": "Program Coach",
+  "name": "Coach Builder",
+  "short_name": "Coach Builder",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./coach-builder.html",
