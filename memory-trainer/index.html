@@ -131,6 +131,9 @@ textarea{min-height:110px;resize:vertical;line-height:1.7}
 /* Fluency */
 .clock{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
 .words{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.chip.hint{background:var(--cue-soft);color:var(--cue);border-color:var(--cue)}
+.chip.gap{border-style:dashed}
+.why-list{margin:0;padding-inline-start:20px}
 .tapcount{width:180px;height:180px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-size:3rem;font-weight:700;margin:0 auto}
 
 /* RAN */
@@ -301,21 +304,52 @@ const STARTER = [
   { deck: 'אנגלית', front: 'therefore', back: 'לכן', hint: 'מילת מסקנה', link: '', emoji: '➡️' },
   { deck: 'עבודה', front: 'מה אומרים כשהתשובה לא עולה מול הממונה?', back: 'שנייה, אני בודק ומחזיר לך תשובה עד הצהריים', hint: 'לקנות זמן', link: '', emoji: '⏱️' }
 ];
-const FLU = [
-  { p: 'חיות', subs: ['חיות בית', 'חיות בחווה', 'חיות ים', 'חרקים', 'חיות בספארי'] },
-  { p: 'אוכל', subs: ['פירות', 'ירקות', 'ארוחת בוקר', 'מאפים', 'מתוקים'] },
-  { p: 'מקצועות', subs: ['בבית חולים', 'בבית ספר', 'בבנייה', 'במשרד', 'בצבא'] },
-  { p: 'דברים בבית', subs: ['מטבח', 'אמבטיה', 'סלון', 'חדר שינה', 'ארגז כלים'] },
-  { p: 'ספורט וכושר', subs: ['ענפי כדור', 'במים', 'בחדר כושר', 'תרגילים', 'ציוד'] },
-  { p: 'רגשות ותכונות', subs: ['רגשות נעימים', 'רגשות קשים', 'תכונות של חבר', 'תכונות בעבודה'] },
-  { p: 'מושגים בפסיכולוגיה', subs: ['זיכרון ולמידה', 'התפתחות', 'טיפול', 'חוקרים', 'הפרעות'] },
-  { p: 'ארצות וערים', subs: ['בישראל', 'באירופה', 'באסיה', 'באמריקה', 'בירות'] },
-  { p: 'בגדים ואביזרים', subs: ['לחורף', 'לקיץ', 'לרגליים', 'לראש', 'תכשיטים'] },
-  { p: 'כלי תחבורה', subs: ['ביבשה', 'במים', 'באוויר', 'ציבורית', 'עבודה'] },
-  { p: 'מילים באנגלית', subs: ['food', 'school', 'body', 'work', 'feelings'] }
+// Fluency categories by difficulty. Animals, fruits and vegetables, vehicles and the letters ב ג ש are left out on
+// purpose: they are the standard items of Hebrew fluency tests, and practising them would inflate a future assessment.
+const FLU_LEVELS = [null,
+  { name: 'רחבה', cats: [
+    { p: 'ארצות וערים', subs: ['ערים בישראל', 'ארצות באירופה', 'ארצות באסיה', 'ארצות באמריקה', 'ארצות באפריקה', 'בירות'] },
+    { p: 'דברים בבית', subs: ['מטבח', 'אמבטיה', 'סלון', 'חדר שינה', 'מרפסת', 'ארגז כלים'] },
+    { p: 'מקצועות', subs: ['בבית חולים', 'בבית ספר', 'בבנייה', 'במשרד', 'במסעדה', 'בצבא'] },
+    { p: 'בגדים ואביזרים', subs: ['לחורף', 'לקיץ', 'לרגליים', 'לראש', 'תכשיטים', 'לספורט'] },
+    { p: 'ספורט וכושר', subs: ['ענפי כדור', 'במים', 'בחדר כושר', 'תרגילים', 'ציוד', 'אולימפיאדה'] }
+  ] },
+  { name: 'בינונית', cats: [
+    { p: 'מנות ומאכלים', subs: ['ארוחת בוקר', 'מאפים', 'מתוקים', 'אוכל רחוב', 'מנות חג', 'משקאות'] },
+    { p: 'כלים ומכשירים', subs: ['כלי עבודה', 'מכשירי חשמל', 'כלי כתיבה', 'כלי גינה', 'מכשירים רפואיים'] },
+    { p: 'רגשות ותכונות', subs: ['רגשות נעימים', 'רגשות קשים', 'תכונות של חבר', 'תכונות בעבודה', 'תכונות של מנהיג'] },
+    { p: 'מקומות בעיר', subs: ['קניות', 'בילוי', 'שירותים', 'תחבורה', 'לימודים', 'בריאות'] },
+    { p: 'דברים בחוף ים', subs: ['במים', 'בחול', 'בתיק', 'אוכל', 'אנשים', 'משחקים'] }
+  ] },
+  { name: 'צרה', cats: [
+    { p: 'כלים במטבח', subs: ['לבישול', 'לאכילה', 'לחיתוך', 'מכשירי חשמל', 'בארון', 'ליד הכיור'] },
+    { p: 'דברים בחדר אמבטיה', subs: ['ניקיון', 'טיפוח', 'מגבות ובדים', 'על המדף', 'ברצפה ובקיר'] },
+    { p: 'דברים במשרד', subs: ['על השולחן', 'במחשב', 'מכשירים', 'ריהוט', 'מסמכים', 'אנשים'] },
+    { p: 'ציוד לטיול', subs: ['לישון', 'לבשל', 'ללבוש', 'בטיחות', 'בתרמיל', 'ניווט'] },
+    { p: 'דברים בבית חולים', subs: ['אנשי צוות', 'מכשירים', 'מחלקות', 'טיפולים', 'בחדר של המטופל'] },
+    { p: 'מילים באנגלית', subs: ['food', 'school', 'body', 'work', 'feelings', 'house'] }
+  ] },
+  { name: 'לפי תכונה', cats: [
+    { p: 'דברים עגולים', subs: ['במטבח', 'בספורט', 'בטבע', 'בשמיים', 'בגוף', 'צעצועים'] },
+    { p: 'דברים קרים', subs: ['אוכל', 'מקומות', 'מזג אוויר', 'במקרר', 'חומרים'] },
+    { p: 'דברים שמשמיעים רעש', subs: ['בבית', 'ברחוב', 'כלי נגינה', 'בטבע', 'מכשירים'] },
+    { p: 'דברים עשויים מעץ', subs: ['רהיטים', 'כלים', 'צעצועים', 'בבנייה', 'כלי נגינה'] },
+    { p: 'דברים שאפשר לפתוח', subs: ['בבית', 'אריזות', 'במחשב', 'בגוף', 'ברכב'] },
+    { p: 'דברים אדומים', subs: ['אוכל', 'בטבע', 'ברחוב', 'בגדים', 'סימנים'] }
+  ] },
+  { name: 'שני תנאים', cats: null }
 ];
-const LETTERS = ['מ', 'ב', 'ש', 'כ', 'ר', 'ת', 'ל', 'ג', 'ק', 'פ', 'ד', 'א', 'ס', 'ח'];
-const LETTER_SUBS = ['שמות של אנשים', 'מקומות', 'אוכל', 'חפצים בבית', 'פעלים (לעשות משהו)', 'מילים מהעבודה או מהלימודים'];
+const FLU5_TOPICS = {
+  'אוכל': ['ארוחת בוקר', 'מתוקים', 'משקאות', 'תבלינים', 'מאפים'],
+  'חפצים בבית': ['מטבח', 'אמבטיה', 'סלון', 'ארון בגדים', 'ארגז כלים'],
+  'מקצועות': ['בריאות', 'חינוך', 'בנייה', 'משרד', 'אומנות'],
+  'מקומות': ['בעיר', 'בטבע', 'ארצות', 'ערים', 'בבית'],
+  'פעלים (לעשות משהו)': ['במטבח', 'בספורט', 'בעבודה', 'בלימודים', 'עם הידיים'],
+  'בגדים ואביזרים': ['לחורף', 'לקיץ', 'לרגליים', 'לראש', 'תכשיטים']
+};
+const FLU5_LETTERS = ['מ', 'כ', 'ר', 'ת', 'ל', 'ק', 'ד', 'ס', 'ח', 'ע', 'נ', 'צ'];
+const MEASURE_CAT = { p: 'דברים שקונים בסופרמרקט', subs: [] };
+const MINE_HINTS = ['נסה לחשוב על הרצאה מסוימת', 'נסה לחשוב על חוקר או אדם', 'נסה דוגמה מהחיים שלך', 'נסה מילה שראית בסיכום', 'נסה מושג הפוך או מנוגד'];
 const PICS = [
   ['🍎','תפוח','פרי','גדל על עץ, אדום או ירוק'],['🐘','פיל','חיה','חדק ארוך, אוזניים גדולות'],['🔑','מפתח','חפץ','פותח דלת'],
   ['✂️','מספריים','כלי','גוזרים איתם נייר'],['🎸','גיטרה','כלי נגינה','שישה מיתרים'],['🚲','אופניים','כלי תחבורה','שני גלגלים ודוושות'],
@@ -460,7 +494,8 @@ VIEWS.today = () => {
   const days = logDoc().days;
   const last14 = []; const lab = [];
   for (let i = 13; i >= 0; i--) { const k = addDays(dstr(), -i); last14.push(Math.round(((days[k] || {}).sec || 0) / 60)); lab.push(heDate(k)); }
-  const fluSeries = Object.keys(days).sort().flatMap(k => (days[k].flu || []).map(x => x.n)).slice(-12);
+  const measures = Object.keys(days).sort().flatMap(k => (days[k].flu || []).filter(x => x.m === 'measure').map(x => Object.assign({ d: k }, x)));
+  const measureDue = !measures.length || measures[measures.length - 1].d <= addDays(dstr(), -7);
   let al = 0, tot = 0;
   for (let i = 0; i < 14; i++) { const x = days[addDays(dstr(), -i)] || {}; al += x.alone || 0; tot += (x.alone || 0) + (x.cued || 0) + (x.miss || 0); }
   const longTerm = cards().filter(c => (c.box || 0) >= 4).length;
@@ -471,7 +506,7 @@ VIEWS.today = () => {
     <p class="eyebrow">${hello} · ${new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
     <h2>האימון של היום, 10–15 דקות</h2>
     <div class="plan">
-      <div class="step ${fluDone ? 'done' : ''}"><span class="n">1</span><div class="t"><b>חימום שליפה</b><small>דקה אחת של שטף מילים. מעיר את מערכת השליפה.</small></div>
+      <div class="step ${fluDone ? 'done' : ''}"><span class="n">1</span><div class="t"><b>חימום שליפה</b><small>דקה אחת של שטף מילים, רמה: ${esc(levelName(Math.min(fluState().level || 1, maxLevel())))}.</small></div>
         <button class="btn ${fluDone ? 'ghost' : 'primary'}" data-a="fluStart">${fluDone ? 'שוב' : 'התחל'}</button></div>
       <div class="step ${revDone ? 'done' : ''}"><span class="n">2</span><div class="t"><b>חזרה על כרטיסים</b><small>${nCards ? (due ? due + ' כרטיסים מחכים לך היום' : 'אין כרטיסים לחזרה היום') : 'עוד אין כרטיסים. הוסף מה שאתה לומד.'}</small></div>
         ${nCards ? `<button class="btn ${due ? 'primary' : 'ghost'}" data-a="review" ${due ? '' : 'disabled'}>${due ? 'התחל' : 'סיימת'}</button>` : `<button class="btn" data-a="tab" data-v="cards">הוסף</button>`}</div>
@@ -485,7 +520,9 @@ VIEWS.today = () => {
     <div class="stat"><b>${tot ? Math.round(al / tot * 100) + '%' : '–'}</b><span>שליפה לבד, 14 יום</span></div>
     <div class="stat"><b>${longTerm}</b><span>כרטיסים בזיכרון ארוך</span></div>
   </section>
-  <section class="panel"><h3>שטף מילים לאורך זמן</h3><p class="muted small">כמה מילים שלפת בדקה, סבב אחרי סבב.</p>${lineChart(fluSeries, 'מילים בדקה לאורך הסבבים')}</section>
+  <section class="panel"><h3>מדידה שבועית: שטף מילים</h3><p class="muted small">אותה קטגוריה בכל שבוע, בלי רמזים. ככה רואים אם יש שיפור אמיתי.</p>
+    ${measures.length >= 2 ? lineChart(measures.slice(-12).map(x => x.n), 'מילים בדקה במדידות השבועיות') : `<p class="muted small">${measures.length ? 'אחרי המדידה הבאה יופיע כאן גרף.' : 'עוד לא עשית מדידה.'}</p>`}
+    ${measureDue ? '<button class="btn cue" data-a="fluMeasure">מדידה עכשיו, דקה אחת</button>' : ''}</section>
   <section class="panel"><h3>דקות אימון, שבועיים אחרונים</h3>${barChart(last14, lab)}</section>
   <section class="panel">
     <h3>כלל עשר השניות</h3>
@@ -522,16 +559,33 @@ VIEWS.cards = () => {
 
 VIEWS.gym = () => {
   const days = logDoc().days; const ks = Object.keys(days).sort();
-  const lastFlu = ks.flatMap(k => days[k].flu || []).slice(-1)[0];
-  const bestFlu = Math.max(0, ...ks.flatMap(k => (days[k].flu || []).map(x => x.n)));
+  const flu = ks.flatMap(k => (days[k].flu || []).map(x => Object.assign({ d: k }, x)));
+  const lastTrain = flu.filter(x => x.m !== 'measure').slice(-1)[0];
+  const lastMeasure = flu.filter(x => x.m === 'measure').slice(-1)[0];
+  const measureDue = !lastMeasure || lastMeasure.d <= addDays(dstr(), -7);
   const nm = ks.reduce((a, k) => { a.n += days[k].nm || 0; a.ok += days[k].nmOk || 0; return a; }, { n: 0, ok: 0 });
-  const ran = ks.flatMap(k => days[k].ran || []);
-  const lastRan = ran.slice(-1)[0];
+  const lastRan = ks.flatMap(k => days[k].ran || []).slice(-1)[0];
+  const st = fluState(); const lvl = Math.min(st.level || 1, maxLevel()); const mine = mineCats();
   return `
   <h2>חדר האימון</h2>
-  <p class="muted">שלושה תרגילים קצרים שמכוונים בדיוק לשליפה ולמהירות השיום. כל אחד לוקח פחות משלוש דקות.</p>
-  <button class="tile" data-a="fluStart"><b>שטף מילים · דקה</b><span class="last">${lastFlu ? lastFlu.n + ' מילים' : 'חדש'}</span>
-    <small>מקבלים קטגוריה או אות, ושולפים כמה שיותר מילים בדקה. כשהזרם נגמר, קופצים לתת-קטגוריה. ${bestFlu ? 'השיא שלך: ' + bestFlu + '.' : ''}</small></button>
+  <p class="muted">שלושה תרגילים קצרים לשליפה ולמהירות השיום. כל אחד לוקח פחות משלוש דקות.</p>
+  <div class="tile" role="group" aria-label="שטף מילים"><b>שטף מילים · דקה</b><span class="last">${lastTrain ? lastTrain.n + ' מילים' : 'חדש'}</span>
+    <small>הרמה שלך עכשיו: <b>${esc(levelName(lvl))}</b> (${lvl} מתוך ${maxLevel()}). יותר מ-15 מילים מעלה רמה, פחות מ-6 מוריד. רמז מופיע רק אחרי 8 שניות בלי מילה.</small>
+    <div class="row" style="grid-column:1/-1">
+      <button class="btn primary" data-a="fluStart">אימון</button>
+      <button class="btn" data-a="fluMine">מהקטגוריות שלי</button>
+      <button class="btn ${measureDue ? 'cue' : ''}" data-a="fluMeasure">מדידה שבועית${measureDue ? ' · הגיע הזמן' : ''}</button>
+    </div></div>
+  <section class="panel">
+    <h3>הקטגוריות שלי</h3>
+    <p class="muted small">נושאים מהלימודים או מהעבודה, כמו "מושגים מהקורס בזיכרון" או "חוקרים בפסיכולוגיה". אימון עליהם הוא גם חזרה על החומר.</p>
+    ${mine.length ? `<div class="row">${mine.map((c, i) => `<span class="chip">${esc(c.p)} <button class="chip" style="min-height:0;padding:0 6px;border:0" data-a="mineDel" data-v="${i}" aria-label="מחק ${esc(c.p)}">✕</button></span>`).join('')}</div>` : ''}
+    <form class="stack-s" data-form="mineAdd">
+      <label class="fld">קטגוריה חדשה<input type="text" id="mineP" name="p" required maxlength="60" placeholder="מושגים מהקורס בזיכרון"></label>
+      <label class="fld">תתי-נושאים לרמזים<span class="help">לא חובה. מופרדים בפסיק, למשל: קידוד, אחסון, שליפה, חוקרים</span><input type="text" id="mineSubs" name="subs" maxlength="200"></label>
+      <button class="btn">הוסף קטגוריה</button>
+    </form>
+  </section>
   <button class="tile" data-a="nameStart"><b>שיום תמונות</b><span class="last">${nm.n ? Math.round(nm.ok / nm.n * 100) + '% הצלחה' : 'חדש'}</span>
     <small>רואים תמונה ואומרים את השם. נתקעים? מקבלים רמזים לפי הסדר: קטגוריה, שימוש, אות ראשונה. השיטה מבוססת על טיפול לשליפת מילים (ניתוח מאפיינים סמנטי).</small></button>
   <div class="tile" role="group" aria-label="שיום מהיר"><b>שיום מהיר</b><span class="last">${lastRan ? lastRan.s + ' ש׳' : 'חדש'}</span>
@@ -670,61 +724,165 @@ function nextCard() {
   render(); armThink();
 }
 
-/* ---------- fluency ---------- */
-function startFluency(mode) {
-  mode = mode || (Math.random() < .7 ? 'cat' : 'letter');
-  let p, subs;
-  if (mode === 'cat') { const f = pick(FLU); p = f.p; subs = shuffle(f.subs); }
-  else { const l = pick(LETTERS); p = 'מילים שמתחילות ב-' + l; subs = shuffle(LETTER_SUBS).map(s => s + ' שמתחילים ב-' + l); }
-  openScreen('flu', { mode, p, subs, w: [], taps: 0, input: 'type', phase: 'ready', left: 60, hintN: 0 });
+/* ---------- fluency: adaptive training, own categories, weekly measure ---------- */
+function fluState() { const o = S.items.flu; return (o && o.kind === 'flustate') ? o : { id: 'flu', kind: 'flustate', level: 1, recent: [], last: {} }; }
+const mineCats = () => { const o = S.items.flucats; return (o && o.kind === 'flucats') ? o.list : []; };
+function level5Cats() {
+  return Object.keys(FLU5_TOPICS).flatMap(t => FLU5_LETTERS.map(l => ({ p: `${t} שמתחילים ב-${l}`, subs: FLU5_TOPICS[t].map(s => `${s}, שמתחיל ב-${l}`) })));
+}
+function maxLevel() { return mineCats().length ? 6 : 5; }
+function levelName(l) { return l === 6 ? 'הקטגוריות שלי' : FLU_LEVELS[l].name; }
+function catsFor(level) { return level === 6 ? mineCats() : level === 5 ? level5Cats() : FLU_LEVELS[level].cats; }
+function pickCat(list) {
+  const st = fluState();
+  let pool = list.filter(c => !(st.recent || []).includes(c.p)); if (!pool.length) pool = list;
+  const tried = pool.filter(c => st.last && st.last[c.p] != null);
+  // now and then, go back to the category that went worst
+  if (tried.length && Math.random() < .4) return tried.sort((a, b) => st.last[a.p] - st.last[b.p])[0];
+  return pick(pool);
+}
+function startFluency(kind, cat) {
+  kind = kind || 'train';
+  const st = fluState(); let level = Math.min(st.level || 1, maxLevel());
+  if (kind === 'mine') { if (!mineCats().length) { toast('עוד אין לך קטגוריות. הוסף אחת בחדר האימון.'); go('gym'); return; } level = 6; }
+  if (!cat) cat = kind === 'measure' ? MEASURE_CAT : pickCat(catsFor(level));
+  const subs = kind === 'measure' ? [] : shuffle(cat.subs && cat.subs.length ? cat.subs : MINE_HINTS);
+  openScreen('flu', { kind, level, p: cat.p, subs, w: [], taps: [], input: prefs().fluInput || 'type', phase: 'ready', left: 60, hintI: -1, hint: null, marks: [] });
 }
 function runFluency() {
-  const F = UI.screen; F.phase = 'run'; F.t0 = Date.now(); render();
+  const F = UI.screen; F.phase = 'run'; F.t0 = Date.now(); F.lastAdd = F.t0; render();
   every(() => {
-    if (UI.screen !== F) return;
-    const el = (Date.now() - F.t0) / 1000; F.left = Math.max(0, Math.ceil(60 - el));
-    const hn = Math.min(3, Math.floor(el / 15));
+    if (UI.screen !== F || F.phase !== 'run') return;
+    const now = Date.now(); const el = (now - F.t0) / 1000; F.left = Math.max(0, Math.ceil(60 - el));
     const c = $('#fluClock'); if (c) c.textContent = F.left;
-    if (hn !== F.hintN) { F.hintN = hn; const h = $('#fluHint'); if (h) h.innerHTML = fluHint(F); }
+    // a hint only after 8 seconds without a new word
+    if (F.subs.length && (now - F.lastAdd) / 1000 >= 8 && F.left > 3) {
+      F.hintI++; F.hint = F.subs[F.hintI % F.subs.length]; F.lastAdd = now;
+      F.marks.push({ hint: F.hint, t: Math.round(el) });
+      const h = $('#fluHint'); if (h) h.innerHTML = fluHint(F);
+    }
     if (F.left <= 0) finishFluency();
   }, 250);
 }
-function fluHint(F) { return F.hintN ? `<div class="cueline"><small>נגמר הזרם? נסה</small>${esc(F.subs[(F.hintN - 1) % F.subs.length])}</div>` : ''; }
+function fluAdd(word) {
+  const F = UI.screen; if (!F || F.phase !== 'run') return false;
+  const t = Math.round((Date.now() - F.t0) / 100) / 10; F.lastAdd = Date.now();
+  if (word == null) { F.taps.push(t); return true; }
+  if (F.w.some(x => x.w === word)) return false;
+  F.w.push({ w: word, t }); F.marks.push({ w: word, t }); return true;
+}
+function fluHint(F) { return F.hint ? `<div class="cueline"><small>נתקעת? נסה</small>${esc(F.hint)}</div>` : ''; }
 function finishFluency() {
-  const F = UI.screen; if (F.phase !== 'run') return; clearTimers();
-  F.phase = 'done'; F.n = F.input === 'type' ? F.w.length : F.taps;
-  const prev = Object.values(logDoc().days).flatMap(d => d.flu || []).filter(x => x.m === F.mode);
-  F.prev = prev.length ? prev[prev.length - 1].n : null;
-  bump({ flu: [{ m: F.mode, p: F.p, n: F.n }] });
+  const F = UI.screen; if (!F || F.phase !== 'run') return; clearTimers();
+  const end = Math.min(60, (Date.now() - F.t0) / 1000);
+  F.phase = 'done'; const times = F.input === 'type' ? F.w.map(x => x.t) : F.taps; F.n = times.length;
+  let prevT = 0, gap = 0; times.forEach(t => { gap = Math.max(gap, t - prevT); prevT = t; }); F.maxGap = Math.round(Math.max(gap, end - prevT));
+  const hist = Object.values(logDoc().days).flatMap(d => d.flu || []);
+  const same = F.kind === 'measure' ? hist.filter(x => x.m === 'measure') : hist.filter(x => x.p === F.p);
+  F.prev = same.length ? same[same.length - 1].n : null;
+  const st = fluState();
+  if (F.kind === 'train' && !F.custom) {
+    const top = maxLevel(); const before = Math.min(st.level || 1, top);
+    st.level = F.n > 15 ? Math.min(top, before + 1) : F.n < 6 ? Math.max(1, before - 1) : before;
+    F.levelMove = st.level - before; F.newLevel = st.level;
+  }
+  if (F.kind !== 'measure') { st.recent = [F.p, ...(st.recent || []).filter(x => x !== F.p)].slice(0, 4); st.last = Object.assign({}, st.last, { [F.p]: F.n }); put(st); }
+  bump({ flu: [{ m: F.kind, p: F.p, n: F.n, l: F.level }] });
   render();
+}
+function timeline(F) {
+  let prev = 0, out = '';
+  F.marks.forEach(m => {
+    if (m.hint) { out += `<span class="chip hint">רמז: ${esc(m.hint)}</span>`; return; }
+    if (m.t - prev >= 6) out += `<span class="chip gap">⏸ ${Math.round(m.t - prev)} ש׳</span>`;
+    out += `<span class="chip">${esc(m.w)}</span>`; prev = m.t;
+  });
+  return out;
 }
 SCREENS.flu = () => {
   const F = UI.screen;
-  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"></div><span class="chip">שטף מילים</span></div>`;
+  const tag = F.kind === 'measure' ? 'מדידה שבועית' : F.custom ? 'קטגוריה שהציע Claude' : 'רמה: ' + levelName(F.level);
+  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"></div><span class="chip">${tag}</span></div>`;
   if (F.phase === 'ready') return `<section class="session">${head}
     <div class="prompt"><span class="eyebrow">הקטגוריה</span><span class="big">${esc(F.p)}</span>
-      <p class="muted small">60 שניות. אין טעויות, רק מילים. כשנתקעים, קופצים לתת-קטגוריה אחרת. הרמזים יופיעו לבד כל 15 שניות.</p></div>
+      <p class="muted small">${F.kind === 'measure'
+        ? '60 שניות, בלי רמזים. זו אותה קטגוריה בכל שבוע, כדי שאפשר יהיה להשוות.'
+        : '60 שניות. אין טעויות, רק מילים. אם עוברות 8 שניות בלי מילה, יופיע רעיון לתת-קטגוריה.'}</p></div>
     <div class="row" role="group" aria-label="איך לספור" style="justify-content:center">
       <button class="chip ${F.input === 'type' ? 'on' : ''}" data-a="fluInput" data-v="type">להקליד</button>
       <button class="chip ${F.input === 'tap' ? 'on' : ''}" data-a="fluInput" data-v="tap">להגיד בקול ולספור בלחיצה</button>
     </div>
-    <div class="btns two"><button class="btn primary" data-a="fluGo" autofocus>התחל</button><button class="btn" data-a="fluOther">קטגוריה אחרת</button></div>
+    ${F.input === 'tap' ? '<p class="note">בספירה בלחיצה אין ניתוח של המילים, רק מספר וזמנים.</p>' : ''}
+    <div class="btns ${F.kind === 'measure' ? '' : 'two'}"><button class="btn primary" data-a="fluGo" autofocus>התחל</button>${F.kind === 'measure' ? '' : '<button class="btn" data-a="fluOther">קטגוריה אחרת</button>'}</div>
   </section>`;
   if (F.phase === 'run') return `<section class="session">${head}
     <div class="prompt"><span class="big">${esc(F.p)}</span><span class="clock" id="fluClock" aria-live="off">${F.left}</span><div id="fluHint" class="cues">${fluHint(F)}</div></div>
     ${F.input === 'type'
       ? `<form data-form="fluWord" class="row"><input type="text" id="fluIn" name="w" autocomplete="off" autofocus placeholder="מילה ואז אנטר" style="flex:1"><button class="btn primary">הוסף</button></form>
-         <div class="words" id="fluWords">${F.w.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`
-      : `<button class="tapcount" data-a="fluTap" id="fluTap">${F.taps}</button><p class="note">לחיצה על כל מילה שאמרת בקול</p>`}
+         <div class="words" id="fluWords">${F.w.map(x => `<span class="chip">${esc(x.w)}</span>`).join('')}</div>`
+      : `<button class="tapcount" data-a="fluTap" id="fluTap">${F.taps.length}</button><p class="note">לחיצה על כל מילה שאמרת בקול</p>`}
     <button class="btn ghost" data-a="fluStop">עצור</button>
   </section>`;
-  const diff = F.prev == null ? '' : F.n > F.prev ? `${F.n - F.prev} יותר מהפעם הקודמת.` : F.n === F.prev ? 'בדיוק כמו בפעם הקודמת.' : 'פחות מהפעם הקודמת. זה טבעי, יש ימים כאלה.';
+  const diff = F.prev == null ? '' : F.n > F.prev ? `${F.n - F.prev} יותר מהפעם הקודמת.` : F.n === F.prev ? 'בדיוק כמו בפעם הקודמת.' : 'פחות מהפעם הקודמת. יש ימים כאלה.';
+  const move = F.levelMove > 0 ? `<p><b>היה לך קל.</b> בפעם הבאה רמה קשה יותר: ${esc(levelName(F.newLevel))}.</p>`
+    : F.levelMove < 0 ? `<p><b>זה היה קשה.</b> בפעם הבאה רמה קלה יותר: ${esc(levelName(F.newLevel))}. ככה האימון נשאר בטווח שבו אתה מתאמץ ומצליח.</p>`
+    : F.kind === 'train' && !F.custom ? '<p class="muted small">בדיוק ברמה הנכונה, נשארים בה. בין 6 ל-15 מילים זה טווח האימון.</p>' : '';
   return `<section class="session">${head}
-    <div class="prompt"><span class="eyebrow">${esc(F.p)}</span><span class="clock">${F.n}</span><p>מילים בדקה. ${diff}</p>
-      ${F.w.length ? `<div class="words">${F.w.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}</div>
-    <div class="btns two"><button class="btn primary" data-a="fluOther">סבב נוסף</button><button class="btn" data-a="tab" data-v="today">סיום</button></div>
+    <div class="prompt"><span class="eyebrow">${esc(F.p)}</span><span class="clock">${F.n}</span><p>מילים בדקה. ${diff}</p>${move}
+      <p class="muted small">ההפסקה הכי ארוכה בלי מילה: ${F.maxGap} שניות.</p></div>
+    ${F.marks.length ? `<section class="panel"><h3>הסדר שבו המילים יצאו</h3><p class="muted small">⏸ מסמן הפסקה של 6 שניות ומעלה, כלומר איפה נתקעת.</p><div class="words" style="justify-content:flex-start">${timeline(F)}</div></section>` : ''}
+    ${F.input === 'type' && F.w.length >= 2 ? `<section class="panel" id="fluAi">${F.ai ? aiHtml(F.ai) : `<h3>ניתוח עם Claude</h3><p class="muted small">יבדוק אילו מילים מתאימות, מה זלג מהנושא, אילו קבוצות עשית ומה פספסת. משתמש במכסת השימוש שלך ב-Claude.</p><button class="btn primary" data-a="fluAnalyze" ${F.aiBusy ? 'disabled' : ''}>${F.aiBusy ? 'Claude חושב…' : 'נתח את הסבב'}</button>`}</section>` : ''}
+    <div class="btns two"><button class="btn primary" data-a="fluAgain">סבב נוסף</button><button class="btn" data-a="tab" data-v="today">סיום</button></div>
   </section>`;
 };
+function aiHtml(a) {
+  const li = arr => arr.map(x => `<li>${x}</li>`).join('');
+  return `<h3>מה Claude ראה</h3>
+    <p><b>${(a.ok || []).length}</b> מילים מתאימות${(a.off || []).length ? `, <b>${a.off.length}</b> לא בדיוק בנושא` : ''}${a.switches != null ? `, <b>${esc(a.switches)}</b> קפיצות בין קבוצות` : ''}.</p>
+    ${(a.off || []).length ? `<div class="stack-s"><span class="eyebrow">לא בדיוק בנושא</span><ul class="why-list">${li(a.off.map(o => `<b>${esc(o.w)}</b>: ${esc(o.why)}`))}</ul></div>` : ''}
+    ${(a.unclear || []).length ? `<div class="stack-s"><span class="eyebrow">לא ברור</span><ul class="why-list">${li(a.unclear.map(o => `<b>${esc(o.w)}</b>: ${esc(o.note)}`))}</ul></div>` : ''}
+    ${(a.groups || []).length ? `<div class="stack-s"><span class="eyebrow">הקבוצות שעשית</span>${a.groups.map(g => `<p><b>${esc(g.name)}:</b> ${esc((g.words || []).join(', '))}</p>`).join('')}</div>` : ''}
+    ${(a.missed || []).length ? `<div class="stack-s"><span class="eyebrow">מה לא נגעת בו</span><p>${esc(a.missed.join(' · '))}</p></div>` : ''}
+    ${a.tip ? `<div class="cueline"><small>טיפ לפעם הבאה</small>${esc(a.tip)}</div>` : ''}
+    ${a.next ? `<button class="btn" data-a="fluAiNext">לנסות עכשיו: ${esc(a.next)}</button>` : ''}`;
+}
+let samplerP = null;
+function sampler() {
+  if (!samplerP) samplerP = (window.claude && typeof window.claude.use === 'function' ? window.claude.use('sample') : Promise.resolve(null)).catch(() => null);
+  return samplerP;
+}
+async function fluAnalyze() {
+  const F = UI.screen; if (!F || F.aiBusy) return;
+  const sample = await sampler();
+  if (!sample) { toast('הניתוח עובד רק כשהאפליקציה פתוחה דרך Claude.'); return; }
+  F.aiBusy = true; render();
+  const list = F.w.map((x, i) => `${i + 1}. ${x.w} (שנייה ${Math.round(x.t)})`).join('\n');
+  const hints = F.marks.filter(m => m.hint).map(m => `שנייה ${m.t}: "${m.hint}"`).join(', ') || 'אין';
+  const prompt = `אתה עוזר לאדם עם לקות בשליפת מילים ולקות קריאה וכתיבה, שמתאמן במשימת שטף מילולי.
+הקטגוריה: "${F.p}". בדקה אחת הוא כתב את המילים האלה, לפי הסדר, עם השנייה שבה כל אחת נכתבה:
+${list}
+רמזים שהופיעו לו: ${hints}
+
+החזר JSON בלבד, במבנה הזה:
+{"ok":["מילים שמתאימות לקטגוריה"],"off":[{"w":"מילה","why":"למה היא לא בדיוק בנושא, משפט קצר"}],"unclear":[{"w":"מילה","note":"מה לא ברור, משפט קצר"}],"groups":[{"name":"שם קצר לקבוצה","words":["..."]}],"switches":3,"missed":["תת-נושא שלא נגע בו"],"tip":"משפט אחד עם דוגמה מוחשית","next":"קטגוריה אחת לפעם הבאה, צרה יותר או קשורה למה שהיה לו קשה"}
+
+כללים:
+- עברית פשוטה ומשפטים קצרים. בלי מילים מקצועיות.
+- סלחן לשגיאות כתיב: אם ברור לאיזו מילה הוא התכוון, היא מתאימה.
+- כפילויות או שתי צורות של אותה מילה הולכות ל-unclear.
+- groups לפי הסדר שבו הן הופיעו. switches הוא מספר המעברים בין קבוצות.
+- עד 3 פריטים ב-missed.
+- ה-tip מעודד ומעשי, לא שיפוטי.`;
+  try {
+    const a = await sample.json(prompt, { modelTier: 'quick' });
+    if (UI.screen !== F) return;
+    F.ai = a && typeof a === 'object' ? a : { tip: 'לא התקבלה תשובה ברורה. נסה שוב.' };
+    const o = logDoc(); const day = o.days[dstr()]; const e = day && (day.flu || []).filter(x => x.p === F.p).pop();
+    if (e && Array.isArray(a.ok)) { e.v = a.ok.length; put(o); }
+  } catch (e) {
+    toast(e && e.code === 'not_granted' ? 'לא אישרת שימוש ב-Claude, אז אין ניתוח. אפשר לאשר בפעם הבאה.' : e && e.code === 'rate_limited' ? 'יותר מדי בקשות. נסה שוב בעוד דקה.' : 'הניתוח לא הצליח הפעם. נסה שוב.');
+  } finally { F.aiBusy = false; if (UI.screen === F) render(); }
+}
 
 /* ---------- picture naming with a cue ladder ---------- */
 function startNaming() {
@@ -887,6 +1045,7 @@ function whyHtml() {
       <li><b>חזרות עובדות אצלך.</b> ב-2010 עקומת הלמידה עם חזרות עלתה מעל הממוצע. לכן החזרה מרווחת: מחר, עוד יומיים, עוד ארבעה, עוד שבוע.</li>
       <li><b>טקסט ארוך ודחוס קשה לזכור</b> (זכירת סיפור 23% ו-11% ב-2010). לכן הקריאה מחולקת לחלקים קטנים, עם סיכום במילים שלך אחרי כל חלק. זו גם ההמלצה מ-2005.</li>
       <li><b>החוזקה שלך חזותית</b> (ביצועי 113, תפיסה חזותית באחוזון 100 ב-2017). לכן יש בכרטיסים מקום לסמל ולחיבור אישי, שנותנים לזיכרון עוד דרך להיכנס.</li>
+      <li><b>שטף מילים מותאם אליך.</b> הרמה עולה כשקל לך ויורדת כשקשה, כדי שתתאמץ ותצליח. חיות, פירות וירקות, כלי תחבורה והאותיות ב, ג, ש הוצאו בכוונה: אלה הפריטים של מבחני האבחון, ואימון עליהם עלול לנפח תוצאות באבחון הבא. כדאי לספר לבודק שאתה מתאמן.</li>
       <li><b>הלולאה של בחינה עצמית ותסכול</b> שתיארת: זמן חשיבה קצוב, רמז אוטומטי, וכפתור "נתקעתי" שעוצר את הלולאה במקום להילחם בה.</li>
       <li><b>הוראות בעבודה:</b> כותבים מיד, שלב בכל שורה, ומנסחים במילים שלך. ככה לא צריך לשלוף אותן אחר כך.</li>
     </ul>
@@ -923,12 +1082,18 @@ const ACT = {
   moreCue: () => { UI.screen.cue++; clearTimers(); render(); },
   blank: () => { UI.screen.phase = 'blank'; clearTimers(); render(); speak(curCard().back); },
   grade: v => grade(v),
-  fluStart: () => startFluency(),
-  fluOther: () => startFluency(UI.screen && UI.screen.mode),
-  fluInput: v => { UI.screen.input = v; render(); },
+  fluStart: () => startFluency('train'),
+  fluMine: () => startFluency('mine'),
+  fluMeasure: () => startFluency('measure'),
+  fluOther: () => { const F = UI.screen; startFluency(F.kind === 'measure' ? 'train' : F.kind); },
+  fluAgain: () => { const F = UI.screen; startFluency(F.kind === 'measure' || F.custom ? 'train' : F.kind); },
+  fluInput: v => { UI.screen.input = v; setPref('fluInput', v); render(); },
   fluGo: () => runFluency(),
-  fluTap: () => { const F = UI.screen; if (F.phase !== 'run') return; F.taps++; const b = $('#fluTap'); if (b) b.textContent = F.taps; },
+  fluTap: () => { if (fluAdd(null)) { const b = $('#fluTap'); if (b) b.textContent = UI.screen.taps.length; } },
   fluStop: () => finishFluency(),
+  fluAnalyze: () => fluAnalyze(),
+  fluAiNext: () => { const a = UI.screen.ai; const subs = (a.missed || []).filter(Boolean); startFluency('train', { p: a.next, subs: subs.length ? subs : MINE_HINTS }); UI.screen.custom = true; render(); },
+  mineDel: v => { const o = Object.assign({ id: 'flucats', kind: 'flucats' }, S.items.flucats || {}); o.list = mineCats().filter((_, i) => i !== +v); put(o); render(); },
   nameStart: () => startNaming(),
   nameGot: () => { const N = UI.screen; N.ms = Date.now() - N.t0; N.phase = 'check'; render(); },
   nameCue: () => { UI.screen.cue++; render(); },
@@ -989,8 +1154,13 @@ document.addEventListener('submit', e => {
   }
   if (k === 'fluWord') {
     const F = UI.screen; const w = (d.w || '').trim(); const inp = $('#fluIn');
-    if (w && F.phase === 'run' && !F.w.includes(w)) { F.w.push(w); $('#fluWords').insertAdjacentHTML('beforeend', `<span class="chip">${esc(w)}</span>`); }
+    if (w && fluAdd(w)) $('#fluWords').insertAdjacentHTML('beforeend', `<span class="chip">${esc(w)}</span>`);
     if (inp) { inp.value = ''; inp.focus(); }
+  }
+  if (k === 'mineAdd') {
+    const o = Object.assign({ id: 'flucats', kind: 'flucats' }, S.items.flucats || {});
+    const subs = (d.subs || '').split(/[,،]/).map(x => x.trim()).filter(Boolean);
+    o.list = [...mineCats(), { p: d.p.trim(), subs }]; put(o); toast('הקטגוריה נוספה'); render();
   }
   if (k === 'readNew') {
     const text = d.text.slice(0, 60000); const parts = chunkText(text);
