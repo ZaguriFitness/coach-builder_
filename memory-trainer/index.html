@@ -1,0 +1,1017 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>מאמן השליפה</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&family=Suez+One&display=swap">
+<style>
+/* Layout: one narrow phone column; sticky header, five-tab bottom bar, full-screen practice sessions. Indigo = the thing you're reaching for, amber = a cue on the way to it. */
+:root{
+  --bg:#F2F3F8; --surface:#FFFFFF; --sunk:#E9EBF3; --ink:#1A1E2D; --muted:#596079; --line:#D7DAE6;
+  --accent:#3A49B8; --accent-ink:#FFFFFF; --accent-soft:#E2E5F9;
+  --cue:#9A5B00; --cue-soft:#FAEED7;
+  --good:#1E7349; --good-soft:#DCF0E4; --bad:#AE3636; --bad-soft:#F7E1E1;
+  --display:"Suez One","Rubik",system-ui,sans-serif;
+  --body:"Rubik",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --fs:17px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10121A; --surface:#191C27; --sunk:#141620; --ink:#E7E9F3; --muted:#9BA1B9; --line:#2B2F40;
+  --accent:#8E9AFF; --accent-ink:#10121A; --accent-soft:#252A4A;
+  --cue:#F0B558; --cue-soft:#372B16;
+  --good:#62C994; --good-soft:#17332A; --bad:#F08C8C; --bad-soft:#3B1F23; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10121A; --surface:#191C27; --sunk:#141620; --ink:#E7E9F3; --muted:#9BA1B9; --line:#2B2F40;
+  --accent:#8E9AFF; --accent-ink:#10121A; --accent-soft:#252A4A;
+  --cue:#F0B558; --cue-soft:#372B16;
+  --good:#62C994; --good-soft:#17332A; --bad:#F08C8C; --bad-soft:#3B1F23; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:var(--fs);line-height:1.6;direction:rtl}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+.app{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:12px 10px}
+header.top h1{font-family:var(--display);font-weight:400;font-size:1.35rem;margin:0;flex:1;letter-spacing:.01em}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:40px;min-width:40px;padding:0 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:.9rem}
+.sos{border-color:var(--cue);color:var(--cue);background:var(--cue-soft);font-weight:500}
+.sync{font-size:.75rem;color:var(--muted)}
+
+nav.tabs{position:fixed;inset:auto 0 0 0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+nav.tabs .row{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{background:none;border:0;padding:8px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.78rem;color:var(--muted)}
+nav.tabs button svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:500}
+
+h2{font-family:var(--display);font-weight:400;font-size:1.25rem;margin:0;text-wrap:balance}
+h3{font-size:1rem;margin:0;font-weight:700}
+p{margin:0}
+.stack{display:flex;flex-direction:column;gap:14px}
+.stack-s{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.eyebrow{font-size:.75rem;letter-spacing:.06em;color:var(--muted);font-weight:500}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 16px;min-height:46px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.cue{background:var(--cue-soft);border-color:var(--cue);color:var(--cue)}
+.btn.good{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.btn.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.btn.ghost{background:transparent}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.btns{display:grid;gap:8px}
+.btns.two{grid-template-columns:1fr 1fr}
+.btns.three{grid-template-columns:1fr 1fr 1fr}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:.8rem;background:var(--surface);color:var(--muted)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.chip.ex{border-style:dashed}
+button.chip{min-height:34px}
+label.fld{display:flex;flex-direction:column;gap:4px;font-size:.9rem;font-weight:500}
+label.fld span.help{font-weight:400;color:var(--muted);font-size:.8rem}
+input[type=text],input[type=date],input[type=search],textarea,select{width:100%;border:1px solid var(--line);background:var(--sunk);border-radius:10px;padding:10px 12px;min-height:46px}
+textarea{min-height:110px;resize:vertical;line-height:1.7}
+
+/* Today */
+.plan{counter-reset:step;display:flex;flex-direction:column;gap:8px}
+.step{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--sunk)}
+.step .n{width:30px;height:30px;border-radius:999px;border:2px solid var(--line);display:grid;place-items:center;font-weight:700;font-size:.9rem;color:var(--muted)}
+.step.done .n{background:var(--good);border-color:var(--good);color:var(--surface)}
+.step .t{min-width:0}
+.step .t small{display:block;color:var(--muted);font-size:.8rem;line-height:1.4}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:var(--sunk);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:1.5rem;font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:.8rem;color:var(--muted)}
+.chart{width:100%;height:auto;display:block;color:var(--accent)}
+.chart text{fill:var(--muted);font-size:10px;font-family:var(--body)}
+
+/* Cards list */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;text-align:right;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.item .emo{font-size:1.5rem;width:34px;text-align:center}
+.item .txt{min-width:0}
+.item .txt b{display:block;font-weight:500;overflow-wrap:anywhere}
+.item .txt small{display:block;color:var(--muted);overflow-wrap:anywhere;line-height:1.4}
+.boxdots{display:flex;gap:3px;direction:ltr}
+.boxdots i{width:6px;height:14px;border-radius:2px;background:var(--line)}
+.boxdots i.on{background:var(--accent)}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:20px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+
+/* Session (full screen practice) */
+.session{display:flex;flex-direction:column;gap:16px;padding-top:4px}
+.sesshead{display:flex;align-items:center;gap:10px}
+.sesshead .grow{flex:1}
+.progress{height:6px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.prompt{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:24px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.prompt .big{font-size:1.6rem;font-weight:500;line-height:1.35;overflow-wrap:anywhere}
+.prompt .emoji{font-size:3.6rem;line-height:1}
+.prompt .pic{font-size:6rem;line-height:1.1}
+.timer{width:100%;height:4px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.timer i{display:block;height:100%;width:100%;background:var(--cue);transform-origin:right;animation:drain linear forwards}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.cues{display:flex;flex-direction:column;gap:6px;width:100%}
+.cueline{background:var(--cue-soft);color:var(--cue);border-radius:10px;padding:8px 12px;text-align:right;font-weight:500;overflow-wrap:anywhere}
+.cueline small{display:block;font-weight:400;opacity:.85;font-size:.75rem}
+.answer{background:var(--accent-soft);border-radius:14px;padding:14px;width:100%;text-align:center}
+.answer b{font-size:1.4rem;display:block;overflow-wrap:anywhere}
+.mask{letter-spacing:.18em;direction:rtl;font-variant-numeric:tabular-nums}
+.note{font-size:.88rem;color:var(--muted);text-align:center}
+.opts{display:grid;gap:8px;width:100%}
+.opt{text-align:right;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:12px 14px;min-height:50px;overflow-wrap:anywhere}
+.opt.right{background:var(--good-soft);border-color:var(--good)}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad)}
+
+/* Fluency */
+.clock{font-size:3rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.words{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.tapcount{width:180px;height:180px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);font-size:3rem;font-weight:700;margin:0 auto}
+
+/* RAN */
+.grid-ran{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;direction:rtl;width:100%}
+.grid-ran span{aspect-ratio:1;display:grid;place-items:center;font-size:1.45rem;font-weight:700;max-width:100%;background:var(--sunk);border-radius:8px}
+.dot{width:70%;height:70%;border-radius:999px;border:2px solid var(--line)}
+
+/* Reading */
+.reading{font-size:calc(var(--fs) * 1.12);line-height:2;max-width:62ch;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* Tasks */
+.task{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start}
+.check input{width:22px;height:22px;margin-top:3px;accent-color:var(--accent);flex:none}
+.check.done span{text-decoration:line-through;color:var(--muted)}
+.phrase{display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--sunk);border-radius:10px;padding:8px 12px}
+.phrase span{min-width:0;overflow-wrap:anywhere}
+
+/* Sheets and overlays */
+.sheet-bg{position:fixed;inset:0;z-index:20;background:rgb(10 12 20 / .45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding-block:16px calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.sheet .head{display:flex;align-items:center;gap:8px}
+.sheet .head h2{flex:1}
+.breath{width:180px;height:180px;margin:10px auto;border-radius:999px;background:var(--accent-soft);border:2px solid var(--accent);display:grid;place-items:center;font-weight:500;color:var(--accent);transform:scale(.6)}
+.breath.in{animation:bin 4s ease-in-out forwards}
+.breath.out{animation:bout 6s ease-in-out forwards}
+@keyframes bin{from{transform:scale(.6)}to{transform:scale(1)}}
+@keyframes bout{from{transform:scale(1)}to{transform:scale(.6)}}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:.9rem;max-width:min(92%,480px);text-align:center}
+.why ul{margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:6px}
+.why li{line-height:1.55}
+.tile{display:grid;grid-template-columns:1fr auto;gap:4px 10px;text-align:right;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;width:100%}
+.tile b{font-size:1.05rem}
+.tile small{grid-column:1/-1;color:var(--muted);line-height:1.45}
+.tile .last{color:var(--accent);font-weight:700;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent)}
+</style>
+
+<div class="app" dir="rtl" lang="he">
+  <header class="top">
+    <h1>מאמן השליפה</h1>
+    <span class="sync" id="sync">שמור במכשיר</span>
+    <button class="iconbtn sos" data-a="sos" aria-label="נתקעתי – עצירה קצרה">נתקעתי</button>
+    <button class="iconbtn" data-a="settings" aria-label="הגדרות ומידע">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+    </button>
+  </header>
+  <main id="view" class="stack"></main>
+</div>
+
+<nav class="tabs" dir="rtl" aria-label="ניווט ראשי"><div class="row" id="tabs"></div></nav>
+<div id="overlay" dir="rtl"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
+const z2 = n => String(n).padStart(2, '0');
+const dstr = (d = new Date()) => d.getFullYear() + '-' + z2(d.getMonth() + 1) + '-' + z2(d.getDate());
+const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return dstr(new Date(y, m - 1, d + n)); };
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const isHeb = s => /[֐-׿]/.test(s);
+const words = s => String(s || '').trim().split(/\s+/).filter(Boolean);
+const heDate = s => { const [y, m, d] = s.split('-'); return d + '.' + m; };
+
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+
+/* ---------- storage: this device always, the person's private cloud space when the viewer offers it ---------- */
+const LKEY = 'shlifa.v1';
+const S = { items: {}, cloud: false };
+try { const raw = localStorage.getItem(LKEY); if (raw) { const o = JSON.parse(raw); if (o && o.items) S.items = o.items; } } catch (e) {}
+function saveLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ items: S.items })); } catch (e) {} }
+
+let remote = null, flushing = false, flushT = null;
+const pending = new Set();
+function put(o) { o.u = Date.now(); S.items[o.id] = o; saveLocal(); pending.add(o.id); clearTimeout(flushT); flushT = setTimeout(flush, 700); }
+function remove(id) { put({ id, kind: 'gone' }); }
+async function flush() {
+  if (!remote || flushing) return;
+  flushing = true;
+  try {
+    while (pending.size) {
+      const id = pending.values().next().value; pending.delete(id);
+      const o = S.items[id]; if (!o) continue;
+      try { await remote.doc(id).set(o); }
+      catch (e) {
+        if (e && e.code === 'unavailable') { await sleep(400 + Math.random() * 600); try { await remote.doc(id).set(o); } catch (e2) { pending.add(id); break; } }
+        else if (e && (e.code === 'revoked' || e.code === 'not_granted' || e.code === 'capability_disabled')) { remote = null; S.cloud = false; syncLabel(); break; }
+        else if (e && e.code === 'quota_exceeded') { toast('נגמר המקום בשמירה בחשבון. הנתונים נשמרים במכשיר.'); break; }
+      }
+    }
+  } finally { flushing = false; }
+}
+async function connect() {
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const me = await user.id(); if (!me) return;
+    const col = db.collection('data/users/' + me);
+    const snap = await col.limit(1000).get();
+    const seen = new Set();
+    snap.docs.forEach(d => {
+      const o = d.data(); if (!o) return; seen.add(d.id);
+      const l = S.items[d.id];
+      if (!l || (o.u || 0) > (l.u || 0)) S.items[d.id] = o;
+      else if ((l.u || 0) > (o.u || 0)) pending.add(d.id);
+    });
+    Object.keys(S.items).forEach(k => { if (!seen.has(k)) pending.add(k); });
+    remote = col; S.cloud = true; saveLocal(); syncLabel(); applyPrefs(); render(); flush();
+  } catch (e) { /* stays device-only */ }
+}
+function syncLabel() { $('#sync').textContent = S.cloud ? 'נשמר בחשבון' : 'שמור במכשיר'; }
+
+const all = kind => Object.values(S.items).filter(o => o.kind === kind);
+const prefs = () => Object.assign({ fs: 17, rate: 0.9, think: 12 }, S.items.prefs || {});
+function setPref(k, v) { const p = Object.assign({ id: 'prefs', kind: 'prefs' }, S.items.prefs || {}); p[k] = v; put(p); applyPrefs(); }
+function applyPrefs() { document.documentElement.style.setProperty('--fs', prefs().fs + 'px'); }
+
+/* daily log: one document of per-day counters */
+function logDoc() { const o = S.items.log; return (o && o.kind === 'log') ? o : { id: 'log', kind: 'log', days: {} }; }
+function today() { return logDoc().days[dstr()] || {}; }
+function bump(fields) {
+  const o = logDoc(); const d = dstr(); const day = o.days[d] || (o.days[d] = {});
+  for (const k in fields) { const v = fields[k]; if (Array.isArray(v)) day[k] = (day[k] || []).concat(v); else day[k] = (day[k] || 0) + v; }
+  put(o);
+}
+// active practice time: count gaps under 90s between interactions
+let lastAct = 0, secBuf = 0, secT = null;
+function activity() {
+  const now = Date.now(); const gap = (now - lastAct) / 1000; lastAct = now;
+  if (gap > 0 && gap < 90) { secBuf += gap; if (!secT) secT = setTimeout(() => { secT = null; const s = Math.round(secBuf); secBuf = 0; if (s > 0) bump({ sec: s }); }, 20000); }
+}
+document.addEventListener('pointerdown', activity, { passive: true });
+document.addEventListener('keydown', activity, { passive: true });
+
+/* ---------- speech ---------- */
+function speak(text) {
+  if (!('speechSynthesis' in window)) { toast('הקראה לא זמינה בדפדפן הזה'); return; }
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = isHeb(text) ? 'he-IL' : 'en-US'; u.rate = prefs().rate;
+    const v = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith(u.lang.slice(0, 2)));
+    if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) { toast('הקראה לא זמינה כאן'); }
+}
+function hush() { try { speechSynthesis.cancel(); } catch (e) {} }
+
+/* ---------- content ---------- */
+const BOX_DAYS = [0, 1, 2, 4, 7, 14, 30, 60];
+const STARTER = [
+  { deck: 'פסיכולוגיה', front: 'אפקט הבדיקה', back: 'לשלוף מהזיכרון מחזק אותו יותר מקריאה חוזרת', hint: 'מבחן כשיטת למידה (testing effect)', link: 'זה בדיוק מה שהאפליקציה הזאת עושה', emoji: '🎯' },
+  { deck: 'פסיכולוגיה', front: 'מי חקר התניה קלאסית?', back: 'איוון פבלוב', hint: 'כלבים ופעמון', link: '', emoji: '🔔' },
+  { deck: 'פסיכולוגיה', front: 'זיכרון עבודה', back: 'מחסן זמני שמחזיק ומעבד מידע לכמה שניות', hint: 'כמו שולחן עבודה קטן', link: 'כשמחייגים מספר שעוד לא שמרתי', emoji: '🧮' },
+  { deck: 'פסיכולוגיה', front: 'חזרה מרווחת', back: 'חזרה על חומר במרווחים שהולכים וגדלים', hint: 'מחר, עוד יומיים, עוד שבוע', link: '', emoji: '📅' },
+  { deck: 'אנגלית', front: 'retrieve', back: 'לשלוף', hint: 're = שוב', link: 'לשלוף מילה מהראש', emoji: '🎣' },
+  { deck: 'אנגלית', front: 'although', back: 'למרות ש', hint: 'מתחיל ב-ל', link: '', emoji: '' },
+  { deck: 'אנגלית', front: 'therefore', back: 'לכן', hint: 'מילת מסקנה', link: '', emoji: '➡️' },
+  { deck: 'עבודה', front: 'מה אומרים כשהתשובה לא עולה מול הממונה?', back: 'שנייה, אני בודק ומחזיר לך תשובה עד הצהריים', hint: 'לקנות זמן', link: '', emoji: '⏱️' }
+];
+const FLU = [
+  { p: 'חיות', subs: ['חיות בית', 'חיות בחווה', 'חיות ים', 'חרקים', 'חיות בספארי'] },
+  { p: 'אוכל', subs: ['פירות', 'ירקות', 'ארוחת בוקר', 'מאפים', 'מתוקים'] },
+  { p: 'מקצועות', subs: ['בבית חולים', 'בבית ספר', 'בבנייה', 'במשרד', 'בצבא'] },
+  { p: 'דברים בבית', subs: ['מטבח', 'אמבטיה', 'סלון', 'חדר שינה', 'ארגז כלים'] },
+  { p: 'ספורט וכושר', subs: ['ענפי כדור', 'במים', 'בחדר כושר', 'תרגילים', 'ציוד'] },
+  { p: 'רגשות ותכונות', subs: ['רגשות נעימים', 'רגשות קשים', 'תכונות של חבר', 'תכונות בעבודה'] },
+  { p: 'מושגים בפסיכולוגיה', subs: ['זיכרון ולמידה', 'התפתחות', 'טיפול', 'חוקרים', 'הפרעות'] },
+  { p: 'ארצות וערים', subs: ['בישראל', 'באירופה', 'באסיה', 'באמריקה', 'בירות'] },
+  { p: 'בגדים ואביזרים', subs: ['לחורף', 'לקיץ', 'לרגליים', 'לראש', 'תכשיטים'] },
+  { p: 'כלי תחבורה', subs: ['ביבשה', 'במים', 'באוויר', 'ציבורית', 'עבודה'] },
+  { p: 'מילים באנגלית', subs: ['food', 'school', 'body', 'work', 'feelings'] }
+];
+const LETTERS = ['מ', 'ב', 'ש', 'כ', 'ר', 'ת', 'ל', 'ג', 'ק', 'פ', 'ד', 'א', 'ס', 'ח'];
+const LETTER_SUBS = ['שמות של אנשים', 'מקומות', 'אוכל', 'חפצים בבית', 'פעלים (לעשות משהו)', 'מילים מהעבודה או מהלימודים'];
+const PICS = [
+  ['🍎','תפוח','פרי','גדל על עץ, אדום או ירוק'],['🐘','פיל','חיה','חדק ארוך, אוזניים גדולות'],['🔑','מפתח','חפץ','פותח דלת'],
+  ['✂️','מספריים','כלי','גוזרים איתם נייר'],['🎸','גיטרה','כלי נגינה','שישה מיתרים'],['🚲','אופניים','כלי תחבורה','שני גלגלים ודוושות'],
+  ['🌵','קקטוס','צמח','גדל במדבר, יש לו קוצים'],['🦒','ג׳ירפה','חיה','צוואר ארוך מאוד'],['🧲','מגנט','חפץ','מושך ברזל'],
+  ['🪜','סולם','כלי','עולים עליו למעלה'],['⚓','עוגן','חפץ','מחזיק ספינה במקום'],['🧭','מצפן','מכשיר','מראה איפה צפון'],
+  ['🔦','פנס','חפץ','מאיר בחושך'],['🕯️','נר','חפץ','מדליקים בשבת ובחנוכה'],['🎻','כינור','כלי נגינה','מנגנים עליו עם קשת'],
+  ['🥕','גזר','ירק','כתום, ארנבים אוהבים'],['🍄','פטרייה','מזון','גדלה ביער אחרי גשם'],['🐢','צב','חיה','הולך לאט, יש לו שריון'],
+  ['🦉','ינשוף','ציפור','ער בלילה'],['🐙','תמנון','חיה ימית','שמונה זרועות'],['🦀','סרטן','חיה ימית','הולך הצידה, יש לו צבתות'],
+  ['🔨','פטיש','כלי עבודה','דופקים איתו מסמרים'],['🪚','מסור','כלי עבודה','חותך עץ'],['🪡','מחט','כלי תפירה','יש לה חור לחוט'],
+  ['🧸','דובי','צעצוע','בובה רכה של דוב'],['🎈','בלון','צעצוע','ממלאים באוויר ביום הולדת'],['⛺','אוהל','חפץ','ישנים בו בטיול'],
+  ['🌋','הר געש','מקום בטבע','יוצאת ממנו לבה'],['🏰','טירה','מבנה','גר בה מלך'],['🚁','מסוק','כלי תחבורה','טס עם להב מסתובב'],
+  ['🪁','עפיפון','צעצוע','עף ברוח על חוט'],['🎺','חצוצרה','כלי נגינה','כלי נשיפה ממתכת'],['🥁','תוף','כלי נגינה','מכים עליו במקלות'],
+  ['🧤','כפפות','בגד','שמים על הידיים בחורף'],['🧣','צעיף','בגד','עוטפים בו את הצוואר'],['👓','משקפיים','חפץ','עוזרים לראות'],
+  ['🌂','מטרייה','חפץ','פותחים בגשם'],['⏳','שעון חול','חפץ','מודד זמן עם חול'],['🔭','טלסקופ','מכשיר','מסתכלים בו על כוכבים'],
+  ['🔬','מיקרוסקופ','מכשיר','מגדיל דברים קטנים מאוד'],['🦔','קיפוד','חיה','מכוסה קוצים'],['🦩','פלמינגו','ציפור','ורודה, עומדת על רגל אחת'],
+  ['🐿️','סנאי','חיה','אוסף אגוזים, זנב עבות'],['🍍','אננס','פרי','קליפה קשה וכתר של עלים'],['🥥','קוקוס','פרי','קשה מבחוץ, מים בפנים'],
+  ['🌶️','פלפל חריף','ירק','שורף בפה'],['🧹','מטאטא','כלי ניקוי','מטאטאים איתו רצפה'],['🪣','דלי','כלי','נושאים בו מים'],
+  ['🛁','אמבטיה','בבית','מתרחצים בה בשכיבה'],['🧯','מטף','חפץ בטיחות','מכבה שריפה'],['🦜','תוכי','ציפור','צבעוני, מחקה דיבור'],
+  ['🐝','דבורה','חרק','עושה דבש'],['🦋','פרפר','חרק','כנפיים צבעוניות'],['🍉','אבטיח','פרי','ירוק מבחוץ, אדום בפנים'],
+  ['🧀','גבינה','מאכל','עשויה מחלב'],['🥐','קרואסון','מאפה','מאפה חמאה צרפתי'],['🪥','מברשת שיניים','היגיינה','בבוקר ובערב'],
+  ['🧊','קרח','חומר','מים קפואים'],['🛎️','פעמון','חפץ','מצלצלים בו בדלפק'],['🪑','כיסא','רהיט','יושבים עליו'],['🏺','כד','כלי','פעם שמרו בו מים או שמן']
+];
+const RAN_SETS = {
+  digits: { name: 'ספרות', items: ['2', '4', '7', '9', '5'] },
+  colors: { name: 'צבעים', items: ['#D93B3B', '#2F62D9', '#1F9D55', '#E8B90F', '#8A3FC7'], dots: true },
+  objects: { name: 'חפצים', items: ['🍎', '🔑', '⭐', '🏠', '⚽'] }
+};
+const PHRASES = [
+  'שנייה, אני מסדר את המחשבה.',
+  'רק לוודא שהבנתי: אתה מבקש ש… עד…',
+  'זה על קצה הלשון. אחזור אליך עם זה תוך שעה.',
+  'אפשר לקבל את זה גם בכתב? ככה אני לא מפספס כלום.',
+  'יש לי תשובה חלקית עכשיו, ואת המלאה אשלח אחר כך.'
+];
+
+/* ---------- app state ---------- */
+const UI = { tab: 'today', screen: null, deckFilter: 'הכל', q: '' };
+let timers = [];
+function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+function every(fn, ms) { timers.push(setInterval(fn, ms)); }
+function clearTimers() { timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; }
+
+const TABS = [
+  ['today', 'היום', '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>'],
+  ['cards', 'כרטיסים', '<rect x="4" y="6" width="13" height="14" rx="2"/><path d="M8 3h10a2 2 0 0 1 2 2v12"/>'],
+  ['gym', 'אימון', '<path d="M3 12h3M18 12h3M6 8v8M18 8v8M9 12h6M9 9v6M15 9v6"/>'],
+  ['read', 'קריאה', '<path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/>'],
+  ['tasks', 'משימות', '<path d="M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>']
+];
+function renderTabs() {
+  $('#tabs').innerHTML = TABS.map(([k, label, icon]) =>
+    `<button data-a="tab" data-v="${k}" ${UI.tab === k && !UI.screen ? 'aria-current="page"' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icon}</svg>${label}</button>`).join('');
+}
+function render() {
+  renderTabs();
+  const v = $('#view');
+  if (UI.screen) v.innerHTML = SCREENS[UI.screen.type]();
+  else v.innerHTML = VIEWS[UI.tab]();
+  const f = v.querySelector('[autofocus]'); if (f) f.focus({ preventScroll: true });
+}
+function go(tab) { clearTimers(); hush(); UI.tab = tab; UI.screen = null; render(); window.scrollTo(0, 0); }
+function openScreen(type, data) { clearTimers(); hush(); UI.screen = Object.assign({ type }, data); render(); window.scrollTo(0, 0); }
+
+/* ---------- cards & scheduling ---------- */
+const cards = () => all('card');
+const decks = () => [...new Set(cards().map(c => c.deck || 'כללי'))];
+function dueCards() {
+  const t = dstr();
+  return cards().filter(c => (c.due || t) <= t).sort((a, b) => (a.box || 0) - (b.box || 0) || String(a.due).localeCompare(String(b.due)));
+}
+function newCard(f) { return Object.assign({ id: 'c' + rid(), kind: 'card', deck: 'כללי', front: '', back: '', hint: '', link: '', emoji: '', box: 0, due: dstr(), st: { seen: 0, alone: 0, cued: 0, miss: 0 } }, f); }
+function boxDots(b) { let s = '<span class="boxdots" aria-label="שלב ' + (b || 0) + ' מתוך 7">'; for (let i = 1; i <= 7; i++) s += `<i class="${i <= (b || 0) ? 'on' : ''}"></i>`; return s + '</span>'; }
+function dueLabel(c) {
+  const t = dstr(); if (!c.due || c.due <= t) return 'לחזרה היום';
+  const [y, m, d] = c.due.split('-').map(Number); const [ty, tm, td] = t.split('-').map(Number);
+  const n = Math.round((new Date(y, m - 1, d) - new Date(ty, tm - 1, td)) / 86400000);
+  return n === 1 ? 'מחר' : 'בעוד ' + n + ' ימים';
+}
+function maskOf(ans) {
+  const w = words(ans);
+  const m = w.slice(0, 6).map(x => x[0] + ' ' + Array(Math.max(0, [...x].length - 1)).fill('_').join(' ')).join('   ');
+  return m + (w.length > 6 ? '  …' : '');
+}
+function halfOf(ans) {
+  const w = words(ans);
+  if (w.length > 1) return w.slice(0, Math.ceil(w.length / 2)).join(' ') + ' …';
+  const ch = [...ans]; return ch.slice(0, Math.max(1, Math.ceil(ch.length / 2))).join('') + '…';
+}
+function cueLadder(c) {
+  const L = [];
+  if (c.hint) L.push(['רמז', c.hint]);
+  if (c.link) L.push(['החיבור שלך', c.link]);
+  if (!c.hint && !c.link) L.push(['נושא', c.deck || 'כללי']);
+  L.push(['אות ראשונה ואורך', maskOf(c.back)]);
+  L.push(['חצי דרך', halfOf(c.back)]);
+  return L;
+}
+
+/* ---------- views ---------- */
+const VIEWS = {};
+const SCREENS = {};
+
+function streak() {
+  const days = logDoc().days; let n = 0; let d = dstr();
+  if (!active(days[d])) d = addDays(d, -1);
+  while (active(days[d])) { n++; d = addDays(d, -1); }
+  return n;
+}
+function active(day) { return !!day && ((day.rev || 0) + (day.flu || []).length + (day.nm || 0) + (day.chunks || 0) + (day.ran || []).length) > 0; }
+
+function barChart(vals, labels) {
+  const W = 300, H = 90, pad = 16, n = vals.length, max = Math.max(5, ...vals);
+  const bw = (W - 8) / n;
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H + pad}" role="img" aria-label="דקות אימון ב-${n} הימים האחרונים">`;
+  s += `<line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>`;
+  vals.forEach((v, i) => {
+    const x = W - (i + 1) * bw + 2; const h = v ? Math.max(2, v / max * (H - 14)) : 0;
+    s += `<rect x="${x.toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(bw - 4).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${i === n - 1 ? 'var(--accent)' : 'var(--accent-soft)'}" stroke="var(--accent)" stroke-width="${i === n - 1 ? 0 : 1}"/>`;
+    if (i === 0 || i === n - 1 || i === Math.floor(n / 2)) s += `<text x="${(x + bw / 2 - 2).toFixed(1)}" y="${H + 12}" text-anchor="middle">${labels[i]}</text>`;
+  });
+  s += `<text x="${W}" y="10" text-anchor="end">${max} דק׳</text></svg>`;
+  return s;
+}
+function lineChart(vals, label) {
+  if (vals.length < 2) return `<p class="muted small">אחרי שני סבבים יופיע כאן גרף.</p>`;
+  const W = 300, H = 90, max = Math.max(...vals) * 1.15, min = 0;
+  const pts = vals.map((v, i) => [W - i / (vals.length - 1) * (W - 20) - 10, H - 8 - (v - min) / (max - min || 1) * (H - 24)]);
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const last = pts[pts.length - 1];
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">
+    <line x1="0" x2="${W}" y1="${H - 8}" y2="${H - 8}" stroke="var(--line)"/>
+    <path d="${d} L${last[0].toFixed(1)} ${H - 8} L${pts[0][0].toFixed(1)} ${H - 8}Z" fill="var(--accent-soft)" opacity=".7"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4.5" fill="var(--accent)"/>
+    <text x="${(last[0] + 8).toFixed(1)}" y="${(last[1] - 8).toFixed(1)}" text-anchor="start">${vals[vals.length - 1]}</text>
+  </svg>`;
+}
+
+VIEWS.today = () => {
+  const d = today(); const due = dueCards().length; const nCards = cards().length;
+  const fluDone = (d.flu || []).length > 0, revDone = (d.rev || 0) > 0 && due === 0, extraDone = (d.chunks || 0) > 0 || (d.nm || 0) > 0;
+  const days = logDoc().days;
+  const last14 = []; const lab = [];
+  for (let i = 13; i >= 0; i--) { const k = addDays(dstr(), -i); last14.push(Math.round(((days[k] || {}).sec || 0) / 60)); lab.push(heDate(k)); }
+  const fluSeries = Object.keys(days).sort().flatMap(k => (days[k].flu || []).map(x => x.n)).slice(-12);
+  let al = 0, tot = 0;
+  for (let i = 0; i < 14; i++) { const x = days[addDays(dstr(), -i)] || {}; al += x.alone || 0; tot += (x.alone || 0) + (x.cued || 0) + (x.miss || 0); }
+  const longTerm = cards().filter(c => (c.box || 0) >= 4).length;
+  const hr = new Date().getHours();
+  const hello = hr < 12 ? 'בוקר טוב' : hr < 18 ? 'צהריים טובים' : 'ערב טוב';
+  return `
+  <section class="panel">
+    <p class="eyebrow">${hello} · ${new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+    <h2>האימון של היום, 10–15 דקות</h2>
+    <div class="plan">
+      <div class="step ${fluDone ? 'done' : ''}"><span class="n">1</span><div class="t"><b>חימום שליפה</b><small>דקה אחת של שטף מילים. מעיר את מערכת השליפה.</small></div>
+        <button class="btn ${fluDone ? 'ghost' : 'primary'}" data-a="fluStart">${fluDone ? 'שוב' : 'התחל'}</button></div>
+      <div class="step ${revDone ? 'done' : ''}"><span class="n">2</span><div class="t"><b>חזרה על כרטיסים</b><small>${nCards ? (due ? due + ' כרטיסים מחכים לך היום' : 'אין כרטיסים לחזרה היום') : 'עוד אין כרטיסים. הוסף מה שאתה לומד.'}</small></div>
+        ${nCards ? `<button class="btn ${due ? 'primary' : 'ghost'}" data-a="review" ${due ? '' : 'disabled'}>${due ? 'התחל' : 'סיימת'}</button>` : `<button class="btn" data-a="tab" data-v="cards">הוסף</button>`}</div>
+      <div class="step ${extraDone ? 'done' : ''}"><span class="n">3</span><div class="t"><b>אחד לבחירה</b><small>קריאה בחלקים קטנים, או שיום תמונות.</small></div>
+        <div class="row"><button class="btn" data-a="tab" data-v="read">קריאה</button><button class="btn" data-a="nameStart">שיום</button></div></div>
+    </div>
+  </section>
+  <section class="stats" aria-label="התקדמות">
+    <div class="stat"><b>${streak()}</b><span>ימים ברצף</span></div>
+    <div class="stat"><b>${Math.round((d.sec || 0) / 60)}</b><span>דקות היום</span></div>
+    <div class="stat"><b>${tot ? Math.round(al / tot * 100) + '%' : '–'}</b><span>שליפה לבד, 14 יום</span></div>
+    <div class="stat"><b>${longTerm}</b><span>כרטיסים בזיכרון ארוך</span></div>
+  </section>
+  <section class="panel"><h3>שטף מילים לאורך זמן</h3><p class="muted small">כמה מילים שלפת בדקה, סבב אחרי סבב.</p>${lineChart(fluSeries, 'מילים בדקה לאורך הסבבים')}</section>
+  <section class="panel"><h3>דקות אימון, שבועיים אחרונים</h3>${barChart(last14, lab)}</section>
+  <section class="panel">
+    <h3>כלל עשר השניות</h3>
+    <p>אם תשובה לא עולה תוך כמה שניות, לא נלחמים בה. מבקשים רמז או מסתכלים על התשובה, אומרים אותה בקול וממשיכים. ניסיון שלא הצליח ואחריו התשובה מחזק את הזיכרון גם הוא.</p>
+  </section>`;
+};
+
+VIEWS.cards = () => {
+  const ds = decks(); const all_ = cards();
+  if (!all_.length) return `
+    <h2>הכרטיסים שלי</h2>
+    <div class="empty">
+      <p><b>עוד אין כרטיסים.</b></p>
+      <p class="muted small">כרטיס = שאלה קצרה ותשובה קצרה, במילים שלך. מושג מהקורס, מילה באנגלית, משהו שהממונה ביקש לזכור.</p>
+      <div class="row" style="justify-content:center"><button class="btn primary" data-a="cardNew">כרטיס חדש</button><button class="btn" data-a="starter">הוסף 8 כרטיסי דוגמה</button></div>
+    </div>`;
+  let list = all_.filter(c => UI.deckFilter === 'הכל' || (c.deck || 'כללי') === UI.deckFilter);
+  if (UI.q) { const q = UI.q.toLowerCase(); list = list.filter(c => (c.front + ' ' + c.back).toLowerCase().includes(q)); }
+  list.sort((a, b) => String(a.due).localeCompare(String(b.due)));
+  const due = dueCards().length;
+  return `
+  <div class="row"><h2 style="flex:1">הכרטיסים שלי</h2><button class="btn primary" data-a="cardNew">כרטיס חדש</button></div>
+  ${due ? `<button class="btn primary wide" data-a="review">חזרה עכשיו · ${due} כרטיסים</button>` : `<p class="muted small">אין כרטיסים לחזרה היום. ${all_.length} כרטיסים בבנק.</p>`}
+  <div class="row" role="group" aria-label="סינון לפי נושא">${['הכל', ...ds].map(x => `<button class="chip ${UI.deckFilter === x ? 'on' : ''}" data-a="deckFilter" data-v="${esc(x)}">${esc(x)}</button>`).join('')}</div>
+  <input type="search" id="cardSearch" placeholder="חיפוש בכרטיסים" value="${esc(UI.q)}" data-in="search">
+  <div class="list">${list.map(c => `
+    <button class="item" data-a="cardEdit" data-v="${c.id}">
+      <span class="emo" aria-hidden="true">${esc(c.emoji || '·')}</span>
+      <span class="txt"><b>${esc(c.front)}</b><small>${esc(c.back)}</small><small>${esc(c.deck || 'כללי')} · ${dueLabel(c)} ${c.ex ? '· <span class="chip ex">דוגמה</span>' : ''}</small></span>
+      ${boxDots(c.box)}
+    </button>`).join('') || '<p class="muted">אין תוצאות.</p>'}</div>
+  ${all_.some(c => c.ex) ? '<button class="btn ghost" data-a="dropExamples">מחק את כרטיסי הדוגמה</button>' : ''}`;
+};
+
+VIEWS.gym = () => {
+  const days = logDoc().days; const ks = Object.keys(days).sort();
+  const lastFlu = ks.flatMap(k => days[k].flu || []).slice(-1)[0];
+  const bestFlu = Math.max(0, ...ks.flatMap(k => (days[k].flu || []).map(x => x.n)));
+  const nm = ks.reduce((a, k) => { a.n += days[k].nm || 0; a.ok += days[k].nmOk || 0; return a; }, { n: 0, ok: 0 });
+  const ran = ks.flatMap(k => days[k].ran || []);
+  const lastRan = ran.slice(-1)[0];
+  return `
+  <h2>חדר האימון</h2>
+  <p class="muted">שלושה תרגילים קצרים שמכוונים בדיוק לשליפה ולמהירות השיום. כל אחד לוקח פחות משלוש דקות.</p>
+  <button class="tile" data-a="fluStart"><b>שטף מילים · דקה</b><span class="last">${lastFlu ? lastFlu.n + ' מילים' : 'חדש'}</span>
+    <small>מקבלים קטגוריה או אות, ושולפים כמה שיותר מילים בדקה. כשהזרם נגמר, קופצים לתת-קטגוריה. ${bestFlu ? 'השיא שלך: ' + bestFlu + '.' : ''}</small></button>
+  <button class="tile" data-a="nameStart"><b>שיום תמונות</b><span class="last">${nm.n ? Math.round(nm.ok / nm.n * 100) + '% הצלחה' : 'חדש'}</span>
+    <small>רואים תמונה ואומרים את השם. נתקעים? מקבלים רמזים לפי הסדר: קטגוריה, שימוש, אות ראשונה. השיטה מבוססת על טיפול לשליפת מילים (ניתוח מאפיינים סמנטי).</small></button>
+  <div class="tile" role="group" aria-label="שיום מהיר"><b>שיום מהיר</b><span class="last">${lastRan ? lastRan.s + ' ש׳' : 'חדש'}</span>
+    <small>40 פריטים ברשת. אומרים בקול כמה שיותר מהר, מימין לשמאל. מודד את מהירות השליפה האוטומטית.</small>
+    <div class="row" style="grid-column:1/-1">${Object.entries(RAN_SETS).map(([k, v]) => `<button class="btn" data-a="ranStart" data-v="${k}">${v.name}</button>`).join('')}</div></div>`;
+};
+
+VIEWS.read = () => {
+  const rs = all('read').sort((a, b) => (b.u || 0) - (a.u || 0));
+  return `
+  <h2>קריאה בחלקים</h2>
+  <p class="muted">מדביקים טקסט מהלימודים או מהעבודה. האפליקציה מחלקת אותו לחלקים קטנים. אחרי כל חלק כותבים את הרעיון במילים שלך, ובסוף שולפים הכל מהזיכרון.</p>
+  <form class="panel" data-form="readNew">
+    <label class="fld">כותרת<input type="text" id="readTitle" name="title" required placeholder="למשל: פרק 3, תיאוריות למידה" maxlength="60"></label>
+    <label class="fld">מה אני כבר יודע על הנושא?<span class="help">מילה או שתיים. מחמם את הזיכרון לפני שמתחילים.</span><input type="text" id="readPrior" name="prior" maxlength="120"></label>
+    <label class="fld">הטקסט<textarea id="readText" name="text" required placeholder="הדבק כאן את הטקסט"></textarea></label>
+    <button class="btn primary">חלק לי את זה</button>
+  </form>
+  ${rs.length ? `<h3>קריאות קודמות</h3><div class="list">${rs.map(r => `
+    <button class="item" data-a="readOpen" data-v="${r.id}"><span class="emo" aria-hidden="true">${r.done ? '✓' : '…'}</span>
+      <span class="txt"><b>${esc(r.title)}</b><small>${r.chunks.length} חלקים · ${r.done ? 'הושלם' : 'הגעת לחלק ' + (Math.min(r.pos, r.chunks.length - 1) + 1)}</small></span><span></span></button>`).join('')}</div>` : ''}`;
+};
+
+VIEWS.tasks = () => {
+  const ts = all('task').sort((a, b) => (a.done - b.done) || String(a.dl || '9').localeCompare(String(b.dl || '9')));
+  return `
+  <h2>משימות והוראות</h2>
+  <p class="muted">כשמקבלים הוראה, כותבים אותה מיד, שלב בכל שורה. ככה לא צריך לשלוף אותה אחר כך.</p>
+  <form class="panel" data-form="taskNew">
+    <label class="fld">מה המשימה?<input type="text" id="taskTitle" name="title" required maxlength="80"></label>
+    <label class="fld">מה בדיוק ביקשו?<span class="help">כל שורה תהפוך לשלב שאפשר לסמן.</span><textarea id="taskSteps" name="steps" placeholder="לבדוק את הדוח&#10;לשלוח לדנה&#10;לעדכן בטבלה"></textarea></label>
+    <label class="fld">עד מתי?<input type="date" id="taskDl" name="dl"></label>
+    <label class="fld">במילים שלי<span class="help">להגיד את זה בחזרה לעצמך זה כבר חצי מהזכירה.</span><input type="text" id="taskMine" name="mine" maxlength="200"></label>
+    <button class="btn primary">שמור משימה</button>
+  </form>
+  <div class="list">${ts.map(t => `
+    <div class="task">
+      <div class="row"><b style="flex:1;${t.done ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(t.title)}</b>${t.dl ? `<span class="chip">עד ${esc(heDate(t.dl))}</span>` : ''}</div>
+      ${t.mine ? `<p class="muted small">${esc(t.mine)}</p>` : ''}
+      ${(t.steps || []).map((s, i) => `<label class="check ${s.d ? 'done' : ''}"><input type="checkbox" data-a="stepToggle" data-v="${t.id}:${i}" ${s.d ? 'checked' : ''}><span>${esc(s.t)}</span></label>`).join('')}
+      <div class="row"><button class="btn" data-a="taskDone" data-v="${t.id}">${t.done ? 'החזר לפתוחות' : 'סיימתי'}</button><button class="btn ghost" data-a="taskCard" data-v="${t.id}">הפוך לכרטיס</button><button class="btn ghost" data-a="taskDel" data-v="${t.id}">מחק</button></div>
+    </div>`).join('')}</div>
+  <section class="panel"><h3>משפטים שקונים זמן</h3><p class="muted small">כשמישהו שואל ותשובה לא עולה. אפשר לתרגל אותם גם ככרטיסים.</p>
+    ${PHRASES.map((p, i) => `<div class="phrase"><span>${esc(p)}</span><button class="chip" data-a="say" data-v="${esc(p)}">הקרא</button></div>`).join('')}
+  </section>`;
+};
+
+/* ---------- review session ---------- */
+function startReview() {
+  const q = dueCards().slice(0, 20).map(c => c.id);
+  if (!q.length) { toast('אין כרטיסים לחזרה כרגע'); return; }
+  openScreen('review', { q, i: 0, phase: 'think', cue: 0, again: [], res: { alone: 0, cued: 0, miss: 0 } });
+  armThink();
+}
+function curCard() { const R = UI.screen; return S.items[R.q[R.i]]; }
+function recogOptions(c) {
+  const pool = shuffle(cards().filter(x => x.id !== c.id && x.back !== c.back));
+  const same = pool.filter(x => (x.deck || 'כללי') === (c.deck || 'כללי'));
+  const dis = [...new Set([...same, ...pool].map(x => x.back))].slice(0, 3);
+  return dis.length < 3 ? null : shuffle([c.back, ...dis]);
+}
+function armThink() {
+  const R = UI.screen; if (!R || R.type !== 'review') return;
+  const c = curCard(); if (!c) return;
+  if (R.opts) return;
+  const secs = prefs().think;
+  later(() => { if (UI.screen === R && R.phase === 'think' && R.cue === 0) { R.cue = 1; render(); } }, secs * 1000);
+}
+SCREENS.review = () => {
+  const R = UI.screen; const c = curCard();
+  if (!c) return reviewDone();
+  if (R.opts === undefined) R.opts = (c.box || 0) === 0 && !R.again.includes(c.id) ? recogOptions(c) : null;
+  const total = R.q.length; const pct = Math.round(R.i / total * 100);
+  const ladder = cueLadder(c);
+  let body = '';
+  if (R.opts && R.phase === 'think') {
+    body = `<p class="note">כרטיס חדש: קודם מזהים, אחר כך נשלוף בלי עזרה.</p><div class="opts">${R.opts.map((o, i) => `<button class="opt" data-a="pickOpt" data-v="${i}">${esc(o)}</button>`).join('')}</div>`;
+  } else if (R.opts && R.phase === 'picked') {
+    body = `<div class="opts">${R.opts.map((o, i) => `<div class="opt ${o === c.back ? 'right' : (i === R.picked ? 'wrong' : '')}">${esc(o)}</div>`).join('')}</div>
+      ${R.ok ? '<p class="note">נכון.</p>' : '<p class="note">התשובה הנכונה מסומנת בירוק. תגיד אותה בקול פעם אחת.</p>'}
+      <div class="btns two"><button class="btn" data-a="say" data-v="${esc(c.back)}">הקרא</button><button class="btn primary" data-a="next" autofocus>הבא</button></div>`;
+  } else if (R.phase === 'think') {
+    body = `
+      ${R.cue === 0 ? `<div class="timer"><i style="animation-duration:${prefs().think}s"></i></div>` : ''}
+      ${R.cue ? `<div class="cues">${ladder.slice(0, R.cue).map(([k, v]) => `<div class="cueline"><small>${esc(k)}</small><span class="${k.startsWith('אות') ? 'mask' : ''}">${esc(v)}</span></div>`).join('')}</div>` : ''}
+      <div class="btns">
+        <button class="btn primary" data-a="reveal" autofocus>נזכרתי, הצג תשובה</button>
+        <div class="btns two">
+          <button class="btn cue" data-a="moreCue" ${R.cue >= ladder.length ? 'disabled' : ''}>${R.cue ? 'עוד רמז' : 'רמז'}</button>
+          <button class="btn ghost" data-a="blank">לא עולה לי</button>
+        </div>
+      </div>
+      <p class="note">${R.cue ? 'רמז הוא חלק מהאימון, לא כישלון.' : 'תנסה להגיד את התשובה בקול לפני שאתה לוחץ.'}</p>`;
+  } else if (R.phase === 'check') {
+    body = `<div class="answer"><b>${esc(c.back)}</b>${c.link ? `<small class="muted">${esc(c.link)}</small>` : ''}</div>
+      <button class="btn" data-a="say" data-v="${esc(c.back)}">הקרא את התשובה</button>
+      ${R.cue ? `<div class="btns two"><button class="btn good" data-a="grade" data-v="cued">ידעתי עם רמז</button><button class="btn bad" data-a="grade" data-v="miss">טעיתי</button></div>`
+        : `<div class="btns three"><button class="btn good" data-a="grade" data-v="alone">ידעתי</button><button class="btn cue" data-a="grade" data-v="cued">חלקית</button><button class="btn bad" data-a="grade" data-v="miss">טעיתי</button></div>`}`;
+  } else if (R.phase === 'blank') {
+    body = `<div class="answer"><b>${esc(c.back)}</b>${c.link ? `<small class="muted">${esc(c.link)}</small>` : ''}</div>
+      <p class="note">זה בסדר. הניסיון לשלוף, ואחריו התשובה, מחזק את הזיכרון. תגיד את התשובה בקול פעמיים. הכרטיס יחזור בסוף הסבב.</p>
+      <div class="btns two"><button class="btn" data-a="say" data-v="${esc(c.back)}">הקרא</button><button class="btn primary" data-a="grade" data-v="miss" autofocus>אמרתי, הבא</button></div>`;
+  }
+  return `<section class="session">
+    <div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"><div class="progress"><i style="width:${pct}%"></i></div></div><span class="small muted">${R.i + 1} / ${total}</span></div>
+    <div class="prompt">
+      <span class="chip">${esc(c.deck || 'כללי')}</span>
+      ${c.emoji ? `<span class="emoji" aria-hidden="true">${esc(c.emoji)}</span>` : ''}
+      <span class="big">${esc(c.front)}</span>
+      <button class="chip" data-a="say" data-v="${esc(c.front)}">הקרא שאלה</button>
+    </div>
+    ${body}
+  </section>`;
+};
+function reviewDone() {
+  const R = UI.screen; const r = R.res; const n = r.alone + r.cued + r.miss;
+  return `<section class="session"><div class="prompt">
+    <h2>סבב הושלם</h2>
+    <p>${n} שליפות: ${r.alone} לבד, ${r.cued} עם רמז, ${r.miss} שעוד לא עלו.</p>
+    <p class="muted small">מה שלא עלה היום יחזור מחר. ככה זה עובד: כל חזרה מרווחת מחזקת את הדרך החוצה.</p>
+    <button class="btn primary wide" data-a="tab" data-v="today">חזרה למסך היום</button>
+  </div></section>`;
+}
+function grade(kind) {
+  const R = UI.screen; const c = curCard(); const t = dstr();
+  c.st = c.st || { seen: 0, alone: 0, cued: 0, miss: 0 }; c.st.seen++; c.st[kind]++;
+  if (kind === 'alone') { c.box = Math.min(7, (c.box || 0) + 1); c.due = addDays(t, BOX_DAYS[c.box]); }
+  else if (kind === 'cued') { c.box = Math.max(1, c.box || 0); c.due = addDays(t, 1); }
+  else { c.box = 0; c.due = addDays(t, 1); if (!R.again.includes(c.id)) { R.again.push(c.id); R.q.push(c.id); } }
+  put(c); R.res[kind]++; bump({ rev: 1, [kind]: 1 });
+  nextCard();
+}
+function nextCard() {
+  const R = UI.screen; clearTimers(); hush();
+  R.i++; R.phase = 'think'; R.cue = 0; R.opts = undefined; R.picked = null; R.ok = null;
+  render(); armThink();
+}
+
+/* ---------- fluency ---------- */
+function startFluency(mode) {
+  mode = mode || (Math.random() < .7 ? 'cat' : 'letter');
+  let p, subs;
+  if (mode === 'cat') { const f = pick(FLU); p = f.p; subs = shuffle(f.subs); }
+  else { const l = pick(LETTERS); p = 'מילים שמתחילות ב-' + l; subs = shuffle(LETTER_SUBS).map(s => s + ' שמתחילים ב-' + l); }
+  openScreen('flu', { mode, p, subs, w: [], taps: 0, input: 'type', phase: 'ready', left: 60, hintN: 0 });
+}
+function runFluency() {
+  const F = UI.screen; F.phase = 'run'; F.t0 = Date.now(); render();
+  every(() => {
+    if (UI.screen !== F) return;
+    const el = (Date.now() - F.t0) / 1000; F.left = Math.max(0, Math.ceil(60 - el));
+    const hn = Math.min(3, Math.floor(el / 15));
+    const c = $('#fluClock'); if (c) c.textContent = F.left;
+    if (hn !== F.hintN) { F.hintN = hn; const h = $('#fluHint'); if (h) h.innerHTML = fluHint(F); }
+    if (F.left <= 0) finishFluency();
+  }, 250);
+}
+function fluHint(F) { return F.hintN ? `<div class="cueline"><small>נגמר הזרם? נסה</small>${esc(F.subs[(F.hintN - 1) % F.subs.length])}</div>` : ''; }
+function finishFluency() {
+  const F = UI.screen; if (F.phase !== 'run') return; clearTimers();
+  F.phase = 'done'; F.n = F.input === 'type' ? F.w.length : F.taps;
+  const prev = Object.values(logDoc().days).flatMap(d => d.flu || []).filter(x => x.m === F.mode);
+  F.prev = prev.length ? prev[prev.length - 1].n : null;
+  bump({ flu: [{ m: F.mode, p: F.p, n: F.n }] });
+  render();
+}
+SCREENS.flu = () => {
+  const F = UI.screen;
+  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"></div><span class="chip">שטף מילים</span></div>`;
+  if (F.phase === 'ready') return `<section class="session">${head}
+    <div class="prompt"><span class="eyebrow">הקטגוריה</span><span class="big">${esc(F.p)}</span>
+      <p class="muted small">60 שניות. אין טעויות, רק מילים. כשנתקעים, קופצים לתת-קטגוריה אחרת. הרמזים יופיעו לבד כל 15 שניות.</p></div>
+    <div class="row" role="group" aria-label="איך לספור" style="justify-content:center">
+      <button class="chip ${F.input === 'type' ? 'on' : ''}" data-a="fluInput" data-v="type">להקליד</button>
+      <button class="chip ${F.input === 'tap' ? 'on' : ''}" data-a="fluInput" data-v="tap">להגיד בקול ולספור בלחיצה</button>
+    </div>
+    <div class="btns two"><button class="btn primary" data-a="fluGo" autofocus>התחל</button><button class="btn" data-a="fluOther">קטגוריה אחרת</button></div>
+  </section>`;
+  if (F.phase === 'run') return `<section class="session">${head}
+    <div class="prompt"><span class="big">${esc(F.p)}</span><span class="clock" id="fluClock" aria-live="off">${F.left}</span><div id="fluHint" class="cues">${fluHint(F)}</div></div>
+    ${F.input === 'type'
+      ? `<form data-form="fluWord" class="row"><input type="text" id="fluIn" name="w" autocomplete="off" autofocus placeholder="מילה ואז אנטר" style="flex:1"><button class="btn primary">הוסף</button></form>
+         <div class="words" id="fluWords">${F.w.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`
+      : `<button class="tapcount" data-a="fluTap" id="fluTap">${F.taps}</button><p class="note">לחיצה על כל מילה שאמרת בקול</p>`}
+    <button class="btn ghost" data-a="fluStop">עצור</button>
+  </section>`;
+  const diff = F.prev == null ? '' : F.n > F.prev ? `${F.n - F.prev} יותר מהפעם הקודמת.` : F.n === F.prev ? 'בדיוק כמו בפעם הקודמת.' : 'פחות מהפעם הקודמת. זה טבעי, יש ימים כאלה.';
+  return `<section class="session">${head}
+    <div class="prompt"><span class="eyebrow">${esc(F.p)}</span><span class="clock">${F.n}</span><p>מילים בדקה. ${diff}</p>
+      ${F.w.length ? `<div class="words">${F.w.map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>` : ''}</div>
+    <div class="btns two"><button class="btn primary" data-a="fluOther">סבב נוסף</button><button class="btn" data-a="tab" data-v="today">סיום</button></div>
+  </section>`;
+};
+
+/* ---------- picture naming with a cue ladder ---------- */
+function startNaming() {
+  openScreen('name', { q: shuffle(PICS).slice(0, 10), i: 0, phase: 'look', cue: 0, t0: Date.now(), res: [] });
+}
+SCREENS.name = () => {
+  const N = UI.screen; const it = N.q[N.i];
+  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"><div class="progress"><i style="width:${Math.round(N.i / N.q.length * 100)}%"></i></div></div><span class="small muted">${Math.min(N.i + 1, N.q.length)} / ${N.q.length}</span></div>`;
+  if (!it) {
+    const ok = N.res.filter(r => r.k !== 'miss').length, fast = N.res.filter(r => r.k === 'fast').length;
+    const lat = N.res.filter(r => r.ms).map(r => r.ms); const avg = lat.length ? (lat.reduce((a, b) => a + b, 0) / lat.length / 1000).toFixed(1) : '–';
+    return `<section class="session">${head}<div class="prompt"><h2>סיימת 10 תמונות</h2>
+      <p>${ok} מתוך 10 נשלפו, ${fast} מהן מהר. זמן ממוצע עד שהמילה עלתה: ${avg} ש׳.</p>
+      <p class="muted small">מילים שנשלפו עם רמז הן בדיוק המילים שהאימון מחזק.</p>
+      <div class="btns two" style="width:100%"><button class="btn primary" data-a="nameStart">עוד 10</button><button class="btn" data-a="tab" data-v="gym">חזרה</button></div></div></section>`;
+  }
+  const [emo, name, cat, feat] = it;
+  const L = [['קטגוריה', cat], ['מה הוא עושה / איפה', feat], ['אות ראשונה ואורך', maskOf(name)], ['תחילת המילה', halfOf(name)]];
+  let body;
+  if (N.phase === 'look') body = `
+    ${N.cue ? `<div class="cues">${L.slice(0, N.cue).map(([k, v]) => `<div class="cueline"><small>${k}</small><span class="${k.startsWith('אות') ? 'mask' : ''}">${esc(v)}</span></div>`).join('')}</div>` : '<p class="note">תגיד את השם בקול. ברגע שהוא עולה, לחץ.</p>'}
+    <div class="btns"><button class="btn primary" data-a="nameGot" autofocus>יש לי את המילה</button>
+      <button class="btn cue" data-a="nameCue" ${N.cue >= L.length ? 'disabled' : ''}>${N.cue ? 'עוד רמז' : 'תקוע, תן רמז'}</button>
+      <button class="btn ghost" data-a="nameGive">הראה לי</button></div>`;
+  else body = `<div class="answer"><b>${esc(name)}</b></div>
+    <button class="btn" data-a="say" data-v="${esc(name)}">הקרא</button>
+    ${N.phase === 'shown' ? `<p class="note">תגיד את המילה בקול שלוש פעמים, ותחשוב על ${esc(cat)} נוסף.</p><button class="btn primary" data-a="nameMark" data-v="miss">הבא</button>`
+      : `<div class="btns two"><button class="btn good" data-a="nameMark" data-v="${N.cue ? 'cued' : 'ok'}">זאת המילה</button><button class="btn bad" data-a="nameMark" data-v="miss">התכוונתי למשהו אחר</button></div>`}`;
+  return `<section class="session">${head}<div class="prompt"><span class="pic" role="img" aria-label="תמונה לשיום">${emo}</span></div>${body}</section>`;
+};
+
+/* ---------- rapid naming ---------- */
+function startRan(set) {
+  const it = RAN_SETS[set].items; const g = []; let last = null;
+  for (let i = 0; i < 40; i++) { let x; do { x = pick(it); } while (x === last); g.push(x); last = x; }
+  openScreen('ran', { set, g, phase: 'ready' });
+}
+SCREENS.ran = () => {
+  const A = UI.screen; const set = RAN_SETS[A.set];
+  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit">סיום</button><div class="grow"></div><span class="chip">שיום מהיר · ${set.name}</span></div>`;
+  const cell = x => set.dots ? `<span><i class="dot" style="background:${x}"></i></span>` : `<span>${x}</span>`;
+  if (A.phase === 'ready') return `<section class="session">${head}<div class="prompt">
+    <p>הרשת תופיע כשתלחץ התחל. אומרים כל פריט בקול, שורה אחרי שורה, מימין לשמאל, כמה שיותר מהר. בסוף לוחצים "סיימתי".</p>
+    <div class="row" style="justify-content:center">${set.items.map(cell).join('').replace(/<span>/g, '<span class="chip" style="font-size:1.2rem">')}</div></div>
+    <button class="btn primary" data-a="ranGo" autofocus>התחל</button></section>`;
+  if (A.phase === 'run') return `<section class="session">${head}<div class="grid-ran">${A.g.map(cell).join('')}</div>
+    <button class="btn primary wide" data-a="ranStop" autofocus>סיימתי</button></section>`;
+  const prev = A.prev;
+  return `<section class="session">${head}<div class="prompt"><span class="clock">${A.s}</span><p>שניות ל-40 פריטים${prev ? `. בפעם הקודמת: ${prev} ש׳.` : '.'}</p>
+    <p class="muted small">המטרה היא קצב אחיד בלי עצירות, לא מהירות בכל מחיר.</p></div>
+    <div class="btns two"><button class="btn primary" data-a="ranStart" data-v="${A.set}">שוב</button><button class="btn" data-a="tab" data-v="gym">חזרה</button></div></section>`;
+};
+
+/* ---------- reading in chunks ---------- */
+function chunkText(text) {
+  const paras = text.replace(/\r/g, '').split(/\n\s*\n|\n(?=\s*[-•\d])/).map(s => s.trim()).filter(Boolean);
+  const out = [];
+  paras.forEach(p => {
+    if (words(p).length <= 75) { out.push(p); return; }
+    const sents = p.match(/[^.!?׃]+[.!?׃]*["״']?\s*/g) || [p];
+    let cur = '';
+    sents.forEach(s => { if (cur && words(cur + s).length > 60) { out.push(cur.trim()); cur = ''; } cur += s; });
+    if (cur.trim()) out.push(cur.trim());
+  });
+  // fold tiny leftovers into their neighbour
+  const merged = [];
+  out.forEach(c => { if (merged.length && words(c).length < 12 && words(merged[merged.length - 1]).length < 70) merged[merged.length - 1] += '\n' + c; else merged.push(c); });
+  return merged;
+}
+SCREENS.reading = () => {
+  const r = S.items[UI.screen.id]; if (!r) return '<p>הקריאה לא נמצאה.</p>';
+  const n = r.chunks.length;
+  const head = `<div class="sesshead"><button class="iconbtn" data-a="exit" data-v="read">יציאה</button><div class="grow"><div class="progress"><i style="width:${Math.round((r.phase === 'recall' ? n : r.pos) / n * 100)}%"></i></div></div><span class="small muted">${r.phase === 'recall' ? 'שליפה' : (r.pos + 1) + ' / ' + n}</span></div>`;
+  if (r.phase !== 'recall') {
+    const c = r.chunks[r.pos];
+    return `<section class="session">${head}
+      <p class="eyebrow">${esc(r.title)} · ${r.pos === 0 ? 'רק חלק אחד. אפשר לעצור אחריו.' : 'חלק ' + (r.pos + 1)}</p>
+      <div class="reading">${esc(c.t)}</div>
+      <div class="row"><button class="btn" data-a="say" data-v="${esc(c.t)}">הקרא לי</button><button class="btn ghost" data-a="hush">עצור הקראה</button></div>
+      <form class="panel" data-form="chunkSum">
+        <label class="fld">מה הרעיון כאן, במילים שלך?<span class="help">3 עד 8 מילים. לא צריך משפט מושלם.</span>
+          <input type="text" id="chunkSum" name="s" value="${esc(c.s || '')}" maxlength="140" autocomplete="off"></label>
+        <div class="btns two"><button class="btn ghost" type="button" data-a="chunkPrev" ${r.pos === 0 ? 'disabled' : ''}>הקודם</button><button class="btn primary">${r.pos === n - 1 ? 'לשליפה מהזיכרון' : 'הבא'}</button></div>
+      </form>
+    </section>`;
+  }
+  const shown = r.rev || {};
+  return `<section class="session">${head}
+    <div class="panel"><h3>עכשיו בלי להסתכל</h3><p class="muted small">לכל חלק, נסה להיזכר מה היה הרעיון. רק אחר כך לחץ כדי לראות מה כתבת.</p></div>
+    <div class="list">${r.chunks.map((c, i) => `
+      <div class="task"><div class="row"><b style="flex:1">חלק ${i + 1}</b>${shown[i] ? `<span class="chip ${shown[i] === 'y' ? 'on' : ''}">${shown[i] === 'y' ? 'נזכרתי' : 'עוד לא'}</span>` : ''}</div>
+        <p class="muted small">מתחיל ב: «${esc(words(c.t).slice(0, 5).join(' '))} …»</p>
+        ${shown[i] ? `<div class="answer"><b style="font-size:1.05rem">${esc(c.s || '(לא כתבת סיכום לחלק הזה)')}</b></div>`
+          : `<div class="btns two"><button class="btn good" data-a="recallMark" data-v="${i}:y">נזכרתי</button><button class="btn" data-a="recallMark" data-v="${i}:n">לא עולה, הצג</button></div>`}
+      </div>`).join('')}</div>
+    <div class="btns"><button class="btn primary" data-a="readToCards">הפוך את הסיכומים לכרטיסים</button><button class="btn" data-a="readFinish">סיימתי</button></div>
+  </section>`;
+};
+
+/* ---------- sheets ---------- */
+function sheet(html) { $('#overlay').innerHTML = `<div class="sheet-bg" data-a="closeBg"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; const f = $('#overlay [autofocus]'); if (f) f.focus(); }
+function closeSheet() { $('#overlay').innerHTML = ''; clearTimeout(breathT); }
+
+function cardForm(c) {
+  const ds = [...new Set(['כללי', 'פסיכולוגיה', 'אנגלית', 'עבודה', ...decks()])];
+  sheet(`<div class="head"><h2>${c.id ? 'עריכת כרטיס' : 'כרטיס חדש'}</h2><button class="iconbtn" data-a="closeSheet">סגור</button></div>
+  <form class="stack" data-form="cardSave" data-v="${c.id || ''}">
+    <label class="fld">שאלה או מושג<span class="help">מה תראה כשתנסה להיזכר.</span><input type="text" id="cfFront" name="front" required value="${esc(c.front)}" autofocus maxlength="160"></label>
+    <label class="fld">התשובה<span class="help">קצר, עד 10 מילים. תשובה ארוכה? פצל לכמה כרטיסים.</span><input type="text" id="cfBack" name="back" required value="${esc(c.back)}" maxlength="200"></label>
+    <label class="fld">חיבור אישי<span class="help">למה זה מזכיר לך משהו שאתה כבר מכיר? חיבור כזה נותן לזיכרון עוד דרך להיכנס.</span><input type="text" id="cfLink" name="link" value="${esc(c.link)}" maxlength="160"></label>
+    <div class="row" style="align-items:flex-end">
+      <label class="fld" style="flex:2;min-width:160px">רמז ראשון<span class="help">לא חובה</span><input type="text" id="cfHint" name="hint" value="${esc(c.hint)}" maxlength="100"></label>
+      <label class="fld" style="flex:1;min-width:90px">סמל<span class="help">תמונה קטנה</span><input type="text" id="cfEmoji" name="emoji" value="${esc(c.emoji)}" maxlength="4"></label>
+    </div>
+    <label class="fld">נושא<input type="text" id="cfDeck" name="deck" list="deckList" value="${esc(c.deck || 'כללי')}" maxlength="30"><datalist id="deckList">${ds.map(d => `<option value="${esc(d)}">`).join('')}</datalist></label>
+    <button class="btn primary">שמור</button>
+    ${c.id ? `<div id="delZone"><button type="button" class="btn ghost bad" data-a="cardDelAsk" data-v="${c.id}">מחק כרטיס</button></div>` : ''}
+  </form>`);
+}
+
+let breathT;
+function sos() {
+  sheet(`<div class="head"><h2>עצירה קצרה</h2><button class="iconbtn" data-a="closeSheet">סגור</button></div>
+    <p>נתקעת. זה קורה, וזה לא אומר שלא למדת. המידע בדרך כלל שם, הדרך החוצה איטית. האבחונים שלך הראו את זה שוב ושוב: <b>זיהוי טוב משליפה.</b></p>
+    <div class="breath" id="breath">שאיפה</div>
+    <p class="note" id="breathNote">שלוש נשימות: 4 שניות פנימה, 6 החוצה.</p>
+    <div class="panel"><h3>ואז אחד מאלה</h3>
+      <ul class="why" style="margin:0;padding-inline-start:20px"><li>להסתכל על התשובה, להגיד אותה בקול ולהמשיך.</li><li>לכתוב מילה אחת שקשורה, אפילו רחוקה. היא תמשוך את השאר.</li><li>לעבור לחלק הבא ולחזור לזה בסוף.</li><li>מול אנשים: "שנייה, אני מסדר את המחשבה."</li></ul></div>
+    <button class="btn primary" data-a="closeSheet">חזרה</button>`);
+  let k = 0; const el = () => $('#breath');
+  const cycle = () => {
+    if (!el()) return;
+    if (k >= 6) { el().className = 'breath'; el().textContent = 'יופי'; $('#breathNote').textContent = 'אפשר לחזור.'; return; }
+    const inhale = k % 2 === 0; el().className = 'breath ' + (inhale ? 'in' : 'out'); el().textContent = inhale ? 'שאיפה' : 'נשיפה';
+    k++; breathT = setTimeout(cycle, inhale ? 4000 : 6000);
+  };
+  cycle();
+}
+
+function settings() {
+  const p = prefs();
+  sheet(`<div class="head"><h2>הגדרות ומידע</h2><button class="iconbtn" data-a="closeSheet">סגור</button></div>
+  <section class="panel">
+    <label class="fld">גודל טקסט: <span id="fsVal">${p.fs}</span><input type="range" id="setFs" min="15" max="23" step="1" value="${p.fs}" data-in="fs"></label>
+    <label class="fld">מהירות הקראה: <span id="rateVal">${p.rate}</span><input type="range" id="setRate" min="0.6" max="1.3" step="0.1" value="${p.rate}" data-in="rate"></label>
+    <label class="fld">זמן חשיבה לפני רמז אוטומטי<select id="setThink" data-in="think">${[8, 12, 20, 30].map(s => `<option value="${s}" ${p.think === s ? 'selected' : ''}>${s} שניות</option>`).join('')}</select></label>
+    <p class="small muted">${S.cloud ? 'הנתונים נשמרים בחשבון שלך ובמכשיר הזה.' : 'הנתונים נשמרים רק במכשיר הזה. כדאי לשמור גיבוי מדי פעם.'}</p>
+    <div class="row"><button class="btn" data-a="exportData">העתק גיבוי</button><button class="btn" data-a="importShow">שחזר מגיבוי</button></div>
+    <div id="importZone"></div>
+  </section>
+  ${whyHtml()}`);
+}
+function whyHtml() {
+  return `<section class="panel why">
+    <h3>למה האפליקציה בנויה ככה</h3>
+    <p class="small muted">מבוסס על האבחונים שלך מ-2005, 2010 ו-2017 ועל סיכומי הנוירולוג.</p>
+    <ul>
+      <li><b>שליפה היא הקושי המרכזי, והוא עקבי לאורך השנים.</b> שיום תמונות 61% ב-2005, שטף מילים לפי קטגוריה באחוזון 1 ב-2017. לכן יש אימון שליפה ישיר: שטף מילים ושיום עם רמזים.</li>
+      <li><b>זיהוי טוב משליפה.</b> בכל שלושת האבחונים, כשהיו לך אפשרויות לבחירה הצלחת הרבה יותר. לכן כרטיס חדש מתחיל בבחירה מתוך ארבע, ורק אחר כך עובר לשליפה חופשית. הרמזים בנויים כסולם, מהרחוק לקרוב.</li>
+      <li><b>חזרות עובדות אצלך.</b> ב-2010 עקומת הלמידה עם חזרות עלתה מעל הממוצע. לכן החזרה מרווחת: מחר, עוד יומיים, עוד ארבעה, עוד שבוע.</li>
+      <li><b>טקסט ארוך ודחוס קשה לזכור</b> (זכירת סיפור 23% ו-11% ב-2010). לכן הקריאה מחולקת לחלקים קטנים, עם סיכום במילים שלך אחרי כל חלק. זו גם ההמלצה מ-2005.</li>
+      <li><b>החוזקה שלך חזותית</b> (ביצועי 113, תפיסה חזותית באחוזון 100 ב-2017). לכן יש בכרטיסים מקום לסמל ולחיבור אישי, שנותנים לזיכרון עוד דרך להיכנס.</li>
+      <li><b>הלולאה של בחינה עצמית ותסכול</b> שתיארת: זמן חשיבה קצוב, רמז אוטומטי, וכפתור "נתקעתי" שעוצר את הלולאה במקום להילחם בה.</li>
+      <li><b>הוראות בעבודה:</b> כותבים מיד, שלב בכל שורה, ומנסחים במילים שלך. ככה לא צריך לשלוף אותן אחר כך.</li>
+    </ul>
+    <h3>מה האפליקציה לא עושה</h3>
+    <p class="small">היא לא מחזירה תאים שנפגעו ולא מחליפה אבחון או טיפול. משחקי מוח כלליים משפרים בעיקר את המשחק עצמו. לכן רוב האימון כאן הוא על החומר האמיתי שלך. השיטות (תרגול שליפה, חזרה מרווחת, רמזים מדורגים, ניתוח מאפיינים) נבדקו במחקר. שווה להראות את הנתונים מכאן גם למי שיעשה לך את האבחון הקוגניטיבי.</p>
+  </section>`;
+}
+
+/* ---------- actions ---------- */
+const ACT = {
+  tab: v => go(v),
+  sos: () => sos(),
+  settings: () => settings(),
+  closeSheet: () => closeSheet(),
+  closeBg: (v, el, e) => { if (e.target === el) closeSheet(); },
+  say: v => speak(v),
+  hush: () => hush(),
+  exit: v => { const s = UI.screen; if (s && s.type === 'reading') { const r = S.items[s.id]; if (r) put(r); } go(v || (s && (s.type === 'review' ? 'cards' : s.type === 'reading' ? 'read' : 'gym')) || 'today'); },
+  review: () => startReview(),
+  starter: () => { STARTER.forEach(s => put(newCard(Object.assign({ ex: true }, s)))); toast('נוספו 8 כרטיסי דוגמה'); render(); },
+  dropExamples: () => { cards().filter(c => c.ex).forEach(c => remove(c.id)); toast('כרטיסי הדוגמה נמחקו'); render(); },
+  deckFilter: v => { UI.deckFilter = v; render(); },
+  cardNew: () => cardForm({ deck: UI.deckFilter !== 'הכל' ? UI.deckFilter : 'כללי' }),
+  cardEdit: v => cardForm(S.items[v]),
+  cardDelAsk: v => { $('#delZone').innerHTML = `<div class="row"><span>למחוק את הכרטיס?</span><button type="button" class="btn bad" data-a="cardDel" data-v="${v}">כן, מחק</button><button type="button" class="btn ghost" data-a="closeSheet">ביטול</button></div>`; },
+  cardDel: v => { remove(v); closeSheet(); toast('הכרטיס נמחק'); render(); },
+  pickOpt: v => { const R = UI.screen; const c = curCard(); R.picked = +v; R.ok = R.opts[+v] === c.back; R.phase = 'picked';
+    c.st = c.st || { seen: 0, alone: 0, cued: 0, miss: 0 }; c.st.seen++;
+    if (R.ok) { c.box = Math.min(7, (c.box || 0) + 1); c.due = addDays(dstr(), BOX_DAYS[c.box]); c.st.cued++; R.res.cued++; bump({ rev: 1, cued: 1 }); }
+    else { c.box = 0; c.due = addDays(dstr(), 1); c.st.miss++; R.res.miss++; bump({ rev: 1, miss: 1 }); if (!R.again.includes(c.id)) { R.again.push(c.id); R.q.push(c.id); } }
+    put(c); render(); },
+  next: () => nextCard(),
+  reveal: () => { UI.screen.phase = 'check'; clearTimers(); render(); },
+  moreCue: () => { UI.screen.cue++; clearTimers(); render(); },
+  blank: () => { UI.screen.phase = 'blank'; clearTimers(); render(); speak(curCard().back); },
+  grade: v => grade(v),
+  fluStart: () => startFluency(),
+  fluOther: () => startFluency(UI.screen && UI.screen.mode),
+  fluInput: v => { UI.screen.input = v; render(); },
+  fluGo: () => runFluency(),
+  fluTap: () => { const F = UI.screen; if (F.phase !== 'run') return; F.taps++; const b = $('#fluTap'); if (b) b.textContent = F.taps; },
+  fluStop: () => finishFluency(),
+  nameStart: () => startNaming(),
+  nameGot: () => { const N = UI.screen; N.ms = Date.now() - N.t0; N.phase = 'check'; render(); },
+  nameCue: () => { UI.screen.cue++; render(); },
+  nameGive: () => { const N = UI.screen; N.phase = 'shown'; N.ms = null; render(); speak(N.q[N.i][1]); },
+  nameMark: v => { const N = UI.screen; let k = v; if (v === 'ok') k = (N.ms || 99999) < 3000 ? 'fast' : 'slow';
+    N.res.push({ k, ms: v === 'miss' ? null : N.ms }); bump({ nm: 1, nmOk: v === 'miss' ? 0 : 1 });
+    N.i++; N.phase = 'look'; N.cue = 0; N.ms = null; N.t0 = Date.now(); render(); },
+  ranStart: v => startRan(v),
+  ranGo: () => { const A = UI.screen; A.phase = 'run'; A.t0 = Date.now(); render(); },
+  ranStop: () => { const A = UI.screen; A.s = Math.round((Date.now() - A.t0) / 100) / 10;
+    const prev = Object.values(logDoc().days).flatMap(d => d.ran || []).filter(x => x.set === A.set); A.prev = prev.length ? prev[prev.length - 1].s : null;
+    bump({ ran: [{ set: A.set, s: A.s }] }); A.phase = 'done'; render(); },
+  readOpen: v => openScreen('reading', { id: v }),
+  chunkPrev: () => { const r = S.items[UI.screen.id]; saveChunk(r); r.pos = Math.max(0, r.pos - 1); put(r); render(); },
+  recallMark: v => { const r = S.items[UI.screen.id]; const [i, a] = v.split(':'); r.rev = r.rev || {}; r.rev[i] = a; put(r); render(); },
+  readToCards: () => { const r = S.items[UI.screen.id]; const deck = r.title.slice(0, 24); let n = 0;
+    r.chunks.forEach((c, i) => { if (!c.s || r.made) return; put(newCard({ deck, front: `«${words(c.t).slice(0, 6).join(' ')} …» מה הרעיון?`, back: c.s, hint: 'חלק ' + (i + 1) + ' מתוך ' + r.chunks.length })); n++; });
+    r.made = true; put(r); toast(n ? `נוצרו ${n} כרטיסים בנושא "${deck}"` : 'הכרטיסים כבר נוצרו, או שאין סיכומים'); },
+  readFinish: () => { const r = S.items[UI.screen.id]; r.done = true; put(r); go('read'); },
+  stepToggle: (v, el) => { const [id, i] = v.split(':'); const t = S.items[id]; t.steps[+i].d = el.checked; put(t); render(); },
+  taskDone: v => { const t = S.items[v]; t.done = !t.done; put(t); render(); },
+  taskDel: v => { remove(v); render(); },
+  taskCard: v => { const t = S.items[v]; cardForm({ deck: 'עבודה', front: t.title + ': מה בדיוק צריך לעשות?', back: (t.steps || []).map(s => s.t).join(', ') || t.mine || '' }); },
+  exportData: () => { const data = JSON.stringify({ app: 'shlifa', v: 1, items: S.items });
+    const ok = () => toast('הגיבוי הועתק. הדבק אותו בפתק או במייל לעצמך.');
+    const fallback = () => { $('#importZone').innerHTML = `<textarea id="exportBox" readonly>${esc(data)}</textarea><p class="small muted">סמן הכל והעתק.</p>`; $('#exportBox').select(); };
+    try { navigator.clipboard.writeText(data).then(ok, fallback); } catch (e) { fallback(); } },
+  importShow: () => { $('#importZone').innerHTML = `<textarea id="importBox" placeholder="הדבק כאן את הגיבוי"></textarea><button class="btn primary" data-a="importDo">שחזר</button>`; },
+  importDo: () => { try { const o = JSON.parse($('#importBox').value); if (!o.items) throw 0; let n = 0;
+      Object.values(o.items).forEach(it => { if (it && it.id && it.kind) { const l = S.items[it.id]; if (!l || (it.u || 0) > (l.u || 0)) { S.items[it.id] = it; pending.add(it.id); n++; } } });
+      saveLocal(); flush(); closeSheet(); render(); toast('שוחזרו ' + n + ' פריטים'); }
+    catch (e) { toast('זה לא נראה כמו גיבוי של האפליקציה. בדוק שהעתקת את כל הטקסט.'); } }
+};
+function saveChunk(r) { const inp = $('#chunkSum'); if (inp && r.chunks[r.pos]) r.chunks[r.pos].s = inp.value.trim(); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a; if (!ACT[a]) return;
+  if (a === 'stepToggle') { ACT[a](b.dataset.v, b, e); return; }
+  if (a !== 'closeBg') e.preventDefault();
+  if (a !== 'closeBg' && b.closest('.sheet-bg') && !['closeSheet', 'cardDelAsk', 'cardDel', 'exportData', 'importShow', 'importDo'].includes(a)) closeSheet();
+  ACT[a](b.dataset.v, b, e);
+});
+document.addEventListener('input', e => {
+  const k = e.target.dataset && e.target.dataset.in; if (!k) return;
+  if (k === 'search') { UI.q = e.target.value; const pos = e.target.selectionStart; render(); const s = $('#cardSearch'); if (s) { s.focus(); s.setSelectionRange(pos, pos); } }
+  if (k === 'fs') { $('#fsVal').textContent = e.target.value; setPref('fs', +e.target.value); }
+  if (k === 'rate') { $('#rateVal').textContent = e.target.value; setPref('rate', +e.target.value); }
+  if (k === 'think') setPref('think', +e.target.value);
+});
+document.addEventListener('submit', e => {
+  const f = e.target; const k = f.dataset.form; if (!k) return; e.preventDefault();
+  const d = Object.fromEntries(new FormData(f).entries());
+  if (k === 'cardSave') {
+    const id = f.dataset.v; const c = id ? S.items[id] : newCard({});
+    Object.assign(c, { front: d.front.trim(), back: d.back.trim(), link: d.link.trim(), hint: d.hint.trim(), emoji: d.emoji.trim(), deck: d.deck.trim() || 'כללי', ex: false });
+    put(c); closeSheet(); toast(id ? 'הכרטיס עודכן' : 'הכרטיס נשמר. הוא יופיע בחזרה של היום.'); render();
+  }
+  if (k === 'fluWord') {
+    const F = UI.screen; const w = (d.w || '').trim(); const inp = $('#fluIn');
+    if (w && F.phase === 'run' && !F.w.includes(w)) { F.w.push(w); $('#fluWords').insertAdjacentHTML('beforeend', `<span class="chip">${esc(w)}</span>`); }
+    if (inp) { inp.value = ''; inp.focus(); }
+  }
+  if (k === 'readNew') {
+    const text = d.text.slice(0, 60000); const parts = chunkText(text);
+    if (!parts.length) { toast('לא נמצא טקסט'); return; }
+    const r = { id: 'r' + rid(), kind: 'read', title: d.title.trim(), prior: d.prior.trim(), chunks: parts.map(t => ({ t, s: '' })), pos: 0, phase: 'read', done: false };
+    put(r); openScreen('reading', { id: r.id });
+  }
+  if (k === 'chunkSum') {
+    const r = S.items[UI.screen.id]; saveChunk(r); bump({ chunks: 1 });
+    if (r.pos < r.chunks.length - 1) r.pos++; else r.phase = 'recall';
+    put(r); render(); window.scrollTo(0, 0);
+  }
+  if (k === 'taskNew') {
+    const steps = (d.steps || '').split('\n').map(s => s.trim()).filter(Boolean).map(t => ({ t, d: false }));
+    put({ id: 't' + rid(), kind: 'task', title: d.title.trim(), steps, dl: d.dl || '', mine: d.mine.trim(), done: false });
+    f.reset(); toast('המשימה נשמרה'); render();
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#overlay').innerHTML) closeSheet(); });
+
+applyPrefs(); syncLabel(); render();
+connect();
+})();
+</script>
