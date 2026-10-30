@@ -436,7 +436,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .dfoot{border-top:1px solid var(--glass-b);background:color-mix(in srgb,var(--surface) 88%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
 .dfoot .primary.on{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);box-shadow:none}
 .td{border-radius:var(--r-lg);border:1px solid var(--glass-b);background:radial-gradient(120% 90% at 50% 0%,color-mix(in srgb,#9B7BFF 10%,var(--chalk)),var(--chalk))}
-.tdplay{border:1px solid var(--glass-b);background:var(--glass);border-radius:999px}
+.tdplay{border:1px solid var(--glass-b);background:var(--glass);border-radius:999px;white-space:nowrap;flex:none}
+.redm{color:#E5484D}
 .mus span{border:1px solid var(--glass-b);background:var(--glass)}
 .mus span.p{background:color-mix(in srgb,#9B7BFF 22%,transparent);border-color:var(--v2)}
 .cue{background:linear-gradient(135deg,rgba(155,123,255,.16),rgba(63,214,200,.10));border:1px solid rgba(155,123,255,.28);border-radius:var(--r-md)}
@@ -1437,6 +1438,21 @@ ZP.balance=e=>{const n=e.en;
   return /bosu/i.test(n)?zBosu(f):f;
 };
 ZP.walklat=e=>ZRAW_LATWALK();
+// standing cable hip abduction / adduction: the hip moves in the frontal plane (out to the side / back across the
+// midline), so it is built in 3D. Pelvis and trunk stay still, hands on the hips; the working leg (model's left in
+// the keys, +z) stays straight with the knee in line, and a cable runs from a low pulley to its ankle.
+function ZRAW_CABLEHIP(add){const k0=zkeys(ZST),G=-(GY+3.5);
+  for(const s of [["L",1],["R",-1]]){const sh=k0["sh"+s[0]],hp=k0["hp"+s[0]];
+    k0["el"+s[0]]=[sh[0]-5,sh[1]-27,sh[2]+s[1]*14];k0["wr"+s[0]]=[hp[0]+3,hp[1]+9,hp[2]+s[1]*9];}
+  const hp=k0.hpL,L=Math.hypot(hp[0]-k0.ftL[0],hp[1]-k0.ftL[1]);
+  const leg=(a,dx)=>{const k=Object.assign({},k0),ft=[hp[0]+(dx||0),hp[1]-L*Math.cos(a),hp[2]+L*Math.sin(a)];
+    k.ftL=ft;k.knL=[(hp[0]+ft[0])/2+1.5,(hp[1]+ft[1])/2,(hp[2]+ft[2])/2];return k;};
+  const out=leg(35*Math.PI/180),inn=add?leg(-Math.atan2(hp[2]-k0.hpR[2]+3,L),6):leg(-2*Math.PI/180);
+  const anchor=add?[hp[0],G+12,hp[2]+75]:[hp[0],G+12,k0.hpR[2]-70];
+  const pr=[{cable:{from:anchor,end:"ftL"}}];
+  const f=(K,lab)=>({kind:"raw",K,g:true,props3d:pr,az:1.3,flat:X(ZST,{label:lab})});
+  return add?[f(out,"רגל בצד"),f(inn,"הרגל חוצה פנימה")]:[f(inn,"רגליים יחד"),f(out,"הרגל לצד")];}
+ZP.cablehip=e=>ZRAW_CABLEHIP(/adduction/i.test(e.en));
 ZP.windmill=e=>{const b={H:[64,130],t:-35,L:[82,200],kb:[1,0],g:1},s=zS(b);
   return [zA(ZST,zOver(ZST),[0,1],{pr:[ZW()]}),X(zA(b,add(s,53,-90),[0,1],{pr:[ZW()]}),{A2:[s[0]+4,186],eb2:[0,1],label:"יד שנייה לרצפה"})];};
 
@@ -1489,7 +1505,7 @@ const ZRULES=[
  [/romanian|stiff-leg|good morning|pull-through|deadlift|rack pull/i,"hinge"],[/glute bridge|hip thrust|frog pump/i,"bridge"],[/reverse hyper/i,"revhyper"],
  [/leg curl|nordic|glute ham|hamstring walkout/i,"legcurl"],[/calf raise|tibialis/i,"calf"],
  [/fire hydrant/i,"hydrant"],[/kickback|donkey/i,"quadkick"],[/lateral walk|monster walk/i,"walklat"],[/clamshell/i,"clam"],[/side-lying hip abduction|side-lying adduction/i,"sidelie"],
- [/copenhagen/i,"copen"],[/adductor machine|abductor machine|ball squeeze/i,"adducmach"],[/cable hip/i,"sidelie"],
+ [/copenhagen/i,"copen"],[/adductor machine|abductor machine|ball squeeze/i,"adducmach"],[/cable hip/i,"cablehip"],
  [/handstand|wall walk|pike push/i,"ohp"],[/push-up/i,"pushup"],
  [/shoulder press|overhead press|arnold|push press|z press|landmine press|bottoms-up kettlebell press|band overhead|standing dumbbell press/i,"ohp"],
  [/chest press machine/i,"mpress"],[/cable chest press|band chest press/i,"cpress"],
@@ -1547,10 +1563,9 @@ function frames3d(ex,r){
 return {has:(ex,r)=>!!pick(ex,r), frames3d, GY, zframes, zpat, ILL};
 })();
 
-// ===== 3D mannequin viewer =====
+// ===== 3D viewer: anatomical model (shared engine with the Calisthenics app) =====
 const TD=(()=>{
 let loading=null, cur=null;
-const HGT=145;
 function load(){
   if(window.THREE) return Promise.resolve();
   if(loading) return loading;
@@ -1564,16 +1579,81 @@ function stop(){if(cur){cur.stop();cur=null;}}
 const JMAP={W:"wr",F:"ft",K:"kn",E:"el",H:"pelv",S:"neck",C:"head"};
 
 // 2D frame → named 3D points (Y up, 1 unit = 1 drawing px). Side view: left/right limbs split along Z.
-function to3d(fr){
+function to3d(fr){const k=to3dPts(fr),c=contactsOf(fr,k);
+  k._c=c;k._cw=["hL","hR","fL","fR"].map(n=>c[n]?1:0);return k;}
+// keys between two frames: points move in a straight line; contacts fade in/out with their weights
+function lerpKeys(a,b,t){
+  // keys turned about the vertical axis (a pirouette out of a handstand): turn both back, blend, turn by the blended
+  // angle, so the body turns instead of collapsing through the turning axis
+  if(a._ry||b._ry){const ra=a._ry||[0,b._ry[1]],rb=b._ry||[0,a._ry[1]],px=ra[1];
+    const un=(k,r)=>{const o={};for(const n in k){const p=k[n];o[n]=p;if(n[0]==="_"||!Array.isArray(p)||p.length!==3) continue;
+      const c=Math.cos(r),s=Math.sin(r),dx=p[0]-px;o[n]=[px+dx*c+p[2]*s,p[1],-dx*s+p[2]*c];}return o;};
+    const o=lerpKeys0(un(a,ra[0]),un(b,rb[0]),t),r=ra[0]+(rb[0]-ra[0])*t,c=Math.cos(r),s=Math.sin(r);
+    for(const n in o){const p=o[n];if(n[0]==="_"||!Array.isArray(p)||p.length!==3) continue;const dx=p[0]-px;o[n]=[px+dx*c-p[2]*s,p[1],dx*s+p[2]*c];}
+    o._ry=[r,px];return o;}
+  return lerpKeys0(a,b,t);}
+function lerpKeys0(a,b,t){const o={};
+  for(const n in a){const x=a[n],y=b[n];
+    if(n==="_c"){o._c={};for(const m of ["hL","hR","fL","fR"]){const p=x[m],q=y[m];
+        // the same support in both keys: its contact point moves with the hand / foot (rings, walking hands)
+        const step=p&&q&&(p.t!==q.t||((p.t==="flat"||p.t==="wall")&&Math.hypot(p.p[0]-q.p[0],p.p[1]-q.p[1],p.p[2]-q.p[2])>6));
+        if(p&&q&&!step) o._c[m]=Object.assign({},p,{p:p.p.map((z,i)=>z+(q.p[i]-z)*t)});
+        else o._c[m]=(t<0.5?(p||q):(q||p))||null;
+        // a step (foot from the floor onto the wall, a walking hand): let go, move free, then land
+        if(step) o._st=(o._st||[]).concat(m);
+        // landing / lifting off: the contact holds until the hand or foot really leaves and starts only when it arrives
+        else if(!p!==!q) o._lf=(o._lf||[]).concat([[m,!!q]]);}continue;}
+    if(!x||!y||!Array.isArray(x)){o[n]=x;continue;}o[n]=x.map((q,i)=>q+(y[i]-q)*t);}
+  // limbs turn about their joints between keys (direction and length interpolated around the shoulder / hip),
+  // so a hand swinging from overhead down to the floor goes around the shoulder instead of straight through it
+  for(const D of ["L","R"]) for(const [r0,m0,e0] of [["sh","el","wr"],["hp","kn","ft"]]){const R=r0+D;
+    if(!(a[R]&&b[R]&&a[m0+D]&&b[m0+D]&&a[e0+D]&&b[e0+D])) continue;
+    for(const J of [m0+D,e0+D]){const va=sub3(a[J],a[R]),vb=sub3(b[J],b[R]),la=Math.hypot(...va),lb=Math.hypot(...vb);
+      if(la<1e-6||lb<1e-6) continue;const d=slerpDir(va.map(x=>x/la),vb.map(x=>x/lb),t),l=la+(lb-la)*t;
+      o[J]=[o[R][0]+d[0]*l,o[R][1]+d[1]*l,o[R][2]+d[2]*l];}}
+  // bend planes between two keys: carry the first key's plane along with the limb's direction and turn it about
+  // that direction toward the second key's plane. It stays perpendicular to the limb all the way, so the IK never
+  // sees a plane lying along the arm (which made the elbow flip sides mid-move).
+  // the in-between direction is the limb's real one (from the interpolated points, in the parent's frame)
+  let bf=null;
+  for(const n in o){if(!/^_h(arm|leg)[LR]$/.test(n)) continue;const un="_u"+n.slice(2),ua=a[un],ub=b[un];if(!ua||!ub) continue;
+    const ha=a[n],hb=b[n],li=n[2]==="l",s=n.slice(-1);
+    if(!bf) bf=bodyFrame(o,{sg:a._sg||1});
+    const K=s==="L"?bf.KL:bf.KR,r0=o[(li?"hp":"sh")+K],e0=o[(li?"ft":"wr")+K];
+    let u=slerpDir(nrm3(ua),nrm3(ub),t);
+    if(r0&&e0){const q=(li?bf.Qr:bf.Qt).clone().invert(),w=new window.THREE.Vector3(e0[0]-r0[0],e0[1]-r0[1],e0[2]-r0[2]);
+      if(w.lengthSq()>1e-6){w.applyQuaternion(q).normalize();u=[w.x,w.y,w.z];}}
+    o[un]=u;
+    const Ha=transport(ha,nrm3(ua),nrm3(ub)),dl=Math.atan2(dot3(cross3(Ha,hb),nrm3(ub)),dot3(Ha,hb));
+    o[n]=rot3(transport(ha,nrm3(ua),u),u,dl*t);}
+  const ix={hL:0,hR:1,fL:2,fR:3},sm=(e0,e1,x)=>{const y=Math.max(0,Math.min(1,(x-e0)/(e1-e0)));return y*y*(3-2*y);};
+  if(o._st&&o._cw){for(const m of o._st){const i=ix[m];o._cw[i]=t<0.5?a._cw[i]*(1-2*t):b._cw[i]*(2*t-1);}delete o._st;}
+  if(o._lf&&o._cw){for(const [m,land] of o._lf){const i=ix[m];o._cw[i]=land?b._cw[i]*sm(0.55,1,t):a._cw[i]*(1-sm(0,0.45,t));}delete o._lf;}
+  return o;}
+function to3dPts(fr){
   if(fr.kind==="raw") return Object.assign({},fr.K);
   const P0=(p,z)=>[p[0],-p[1],z||0];
   // optional turn around the vertical axis (e.g. a pirouette out of a handstand)
   const rot=fr.rotY?fr.rotY*Math.PI/180:0, px=fr.pivot?fr.pivot[0]:0;
   const P=rot?(p,z)=>{const q=P0(p,z),dx=q[0]-px;return [px+dx*Math.cos(rot)-q[2]*Math.sin(rot),q[1],dx*Math.sin(rot)+q[2]*Math.cos(rot)];}:P0, k={};
+  if(rot) k._ry=[rot,px];
   if(fr.kind==="front"){const J=fr.J;
     Object.assign(k,{shL:P(J.sL),shR:P(J.sR),elL:P(J.eL),elR:P(J.eR),wrL:P(J.hL),wrR:P(J.hR),
       hpL:P(J.pL),hpR:P(J.pR),knL:P(J.kL),knR:P(J.kR),ftL:P(J.fL),ftR:P(J.fR),
       neck:P(J.neck),pelv:P([(J.pL[0]+J.pR[0])/2,J.pL[1]]),head:P(J.head)});
+    // a front drawing has no depth. In a real pull-up the body travels slightly behind the bar as it rises, so the
+    // head passes behind it and the bar ends in front of the throat / upper chest; the chest leads, the legs stay
+    // a little forward (slight hollow) and the elbows come down in front of the body. Hands stay on the bar.
+    const sy=J.sL[1]-J.by,f=Math.max(0,Math.min(1,(52-sy)/32)),e=f*f*(3-2*f);
+    if(e>0){const dz={neck:-21,head:-35,shL:-14,shR:-14,pelv:-6,hpL:-6,hpR:-6,knL:0,knR:0,ftL:7,ftR:7,elL:2,elR:2};
+      for(const n in dz) k[n]=[k[n][0],k[n][1],k[n][2]+dz[n]*e];}
+  } else if(fr.lie){const J=fr.J;
+    // lying on the side: the drawing plane is the body's frontal plane, so left/right split inside the plane
+    const dx=J.S[0]-J.H[0],dy=J.S[1]-J.H[1],d=Math.hypot(dx,dy)||1,n=[-dy/d,dx/d];
+    const Q=(p,o,z)=>P([p[0]+n[0]*o,p[1]+n[1]*o],z||0);
+    Object.assign(k,{shL:Q(J.S,14),shR:Q(J.S,-14),elL:Q(J.E,22,4),elR:Q(J.E,-22,4),wrL:Q(J.W,5,-7),wrR:Q(J.W,-5,-7),
+      hpL:Q(J.H,9),hpR:Q(J.H,-9),knL:Q(J.K,6),knR:Q(J.K,-6),ftL:Q(J.F,4),ftR:Q(J.F,-4),
+      neck:P(J.S),pelv:P(J.H),head:P(J.C)});
   } else {const J=fr.J;
     Object.assign(k,{shL:P(J.S,14),shR:P(J.S,-14),elL:P(J.E,14),elR:P(J.E2||J.E,-14),wrL:P(J.W,14),wrR:P(J.W2||J.W,-14),
       hpL:P(J.H,9),hpR:P(J.H,-9),knL:P(J.K,9),knR:P(J.K2||J.K,-9),ftL:P(J.F,9),ftR:P(J.F2||J.F,-9),
@@ -1581,27 +1661,558 @@ function to3d(fr){
     // moving equipment points (bands / weights) are carried as extra keys so they animate with the body
     (fr.pr||[]).forEach((q,i)=>{
       if(q.k==="band"){k["b"+i+"a"]=P(q.from);k["b"+i+"b"]=P(q.to);k["b"+i+"v"]=q.via?P(q.via):null;}
-      if(q.k==="wt"){k["w"+i]=P([q.at[0]+(q.dx||0),q.at[1]+(q.dy||0)]);}
+      if(q.k==="wt"){k["w"+i]=P([q.at[0]+(q.dx||0),q.at[1]+(q.dy||0)]);if(q.atRef==="W") k["_wh"+i]=true;}
     });
   }
   return k;
 }
+// ---------- anatomy model: skinned mesh driven by the same keypoints as the mannequin; active muscles glow red ----------
+let modelP=null;
+const MS=0.9;                      // model is in cm; 0.9 makes its torso and legs match the drawing units
+function loadModel(){
+  if(modelP) return modelP;
+  const T=window.THREE, base="model/";
+  const img=src=>new Promise((res,rej)=>{const t=new T.TextureLoader().load(base+src,res,undefined,rej);});
+  modelP=Promise.all([fetch(base+"anatomy.json").then(r=>{if(!r.ok)throw 0;return r.json();}),
+      fetch(base+"anatomy.bin").then(r=>{if(!r.ok)throw 0;return r.arrayBuffer();}),
+      img("anatomy_real.jpg"),img("anatomy_normal.jpg"),img("anatomy_groups.png")])
+    .then(([meta,buf,col,nor,grp])=>{
+      const n=meta.nv,o=meta.off,b=meta.bmin,s=meta.scale;
+      const pq=new Uint16Array(buf,o[0],n*3),nq=new Int8Array(buf,o[1],n*3),uq=new Uint16Array(buf,o[2],n*2),
+        jq=new Uint8Array(buf,o[3],n*4),wq=new Uint8Array(buf,o[4],n*4),iq=new Uint32Array(buf,o[5],meta.ni);
+      const pos=new Float32Array(n*3),nrm=new Float32Array(n*3),uv=new Float32Array(n*2),sw=new Float32Array(n*4);
+      for(let i=0;i<n*3;i++){pos[i]=b[i%3]+pq[i]/65535*s;nrm[i]=nq[i]/127;}
+      for(let i=0;i<n*2;i++) uv[i]=uq[i]/65535;
+      for(let i=0;i<n*4;i++) sw[i]=wq[i]/255;
+      const g=new T.BufferGeometry();
+      g.setAttribute("position",new T.BufferAttribute(pos,3));g.setAttribute("normal",new T.BufferAttribute(nrm,3));
+      g.setAttribute("uv",new T.BufferAttribute(uv,2));g.setAttribute("skinIndex",new T.Uint16BufferAttribute(Array.from(jq),4));
+      g.setAttribute("skinWeight",new T.BufferAttribute(sw,4));g.setIndex(new T.BufferAttribute(iq,1));
+      col.encoding=T.sRGBEncoding;col.anisotropy=4;
+      for(const t of [grp]){t.magFilter=T.NearestFilter;t.minFilter=T.NearestFilter;t.generateMipmaps=false;}
+      return {meta,geo:g,col,nor,grp};
+    }).catch(e=>{modelP=null;throw e;});
+  return modelP;
+}
+// CoachBuilder muscle names (MUS / MUSX) → the model's muscle groups; primary muscles glow fully, secondary less
+const MUSCLE_MAP={"ארבע ראשי":["quads"],"ישבן":["glutes"],"ישבן בינוני":["glutes"],"מרחיקי ירך":["glutes"],"מקרבים":["adductors"],
+  "ליבה":["abs","obliques"],"תאומים":["calves"],"סולאוס":["calves"],"שרירי כף הרגל":["calves"],"ירך אחורית":["hamstrings"],
+  "זוקפי גו":["erectors"],"גב רחב":["lats"],"טרס מייג'ור":["lats"],"יד קדמית":["biceps"],"ברכיאליס":["biceps"],"יד אחורית":["triceps"],
+  "כתף קדמית":["delts_front"],"כתף צידית":["delts_side"],"כתף אחורית":["delts_rear"],"שרוול מסובב":["delts_rear"],
+  "כתפיים":["delts_front","delts_side","delts_rear"],"כתפיים (כל הראשים)":["delts_front","delts_side","delts_rear"],
+  "מייצבי שכמה":["rhomboids","serratus"],"מעוינים":["rhomboids"],"טרפז אמצעי":["traps"],"טרפז עליון":["traps"],"טרפזים":["traps"],
+  "אמצע גב (מעוינים, טרפז אמצעי)":["rhomboids","traps"],"מרימי השכמה":["traps","neck"],"גב עליון":["traps","rhomboids"],"גב עליון וטרפזים":["traps","rhomboids"],
+  "חזה":["chest"],"חזה תחתון":["chest"],"אמות":["forearms"],"אחיזה":["forearms"],"בטן ישרה":["abs"],"בטן רוחבית":["abs","obliques"],
+  "אלכסונים":["obliques"],"ריבוע מותני":["obliques","erectors"],"מכופפי ירך":["hipflex"],"מפרק הירך":["glutes","hipflex"],
+  "רגליים":["quads","hamstrings","glutes","calves"],"רגליים (כוח מתפרץ)":["quads","hamstrings","glutes","calves"],
+  "קרסול":["calves","shins"],"יציבות קרסול וברך":["calves","shins"]};
+function muscleAct(mus,groups){
+  const a=new Float32Array(32),set=(names,v)=>(names||[]).forEach(nm=>(MUSCLE_MAP[nm]||[]).forEach(g=>{const i=groups.indexOf(g);if(i>0)a[i]=Math.max(a[i],v);}));
+  if(mus){set(mus[1],0.4);set(mus[0],1);}
+  return a;
+}
+function makeModel(M,act){
+  const T=window.THREE, bones={}, list=[];
+  for(const bd of M.meta.bones){const bn=new T.Bone();bn.name=bd.name;bones[bd.name]=bn;list.push(bn);
+    const p=bd.parent?M.meta.bones.find(x=>x.name===bd.parent).head:[0,0,0];
+    bn.position.set(bd.head[0]-p[0],bd.head[1]-p[1],bd.head[2]-p[2]);
+    if(bd.parent) bones[bd.parent].add(bn);}
+  const at=new T.DataTexture(new Uint8Array(32*4),32,1,T.RGBAFormat);at.magFilter=at.minFilter=T.NearestFilter;
+  for(let i=0;i<31;i++) at.image.data[i*4]=Math.round((act[i]||0)*255);
+  at.image.data[31*4]=act.some((x,i)=>i<31&&x>0)?255:0;at.needsUpdate=true;
+  // anatomy-atlas look: muscle surface from anatomy_real.jpg with its normal map for the muscle contours, a soft
+  // satin highlight; muscles that work in the exercise are brighter and glow, the others are a little muted
+  const mat=new T.MeshStandardMaterial({map:M.col,normalMap:M.nor,normalScale:new T.Vector2(1.25,1.25),roughness:0.48,metalness:0,skinning:true});
+  const uTime={value:0};
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.gMap={value:M.grp};sh.uniforms.aMap={value:at};sh.uniforms.uTime=uTime;
+    sh.fragmentShader="uniform sampler2D gMap;\nuniform sampler2D aMap;\nuniform float uTime;\n"+sh.fragmentShader
+      .replace("#include <emissivemap_fragment>",`#include <emissivemap_fragment>
+ float gid=floor(texture2D(gMap,vUv).r*255.0+0.5);
+ float act=texture2D(aMap,vec2((gid+0.5)/32.0,0.5)).r;
+ float any=texture2D(aMap,vec2(31.5/32.0,0.5)).r;
+ float pulse=0.82+0.18*sin(uTime*3.2);
+ float red=clamp((diffuseColor.r-diffuseColor.b)*2.2,0.0,1.0);
+ vec3 dim=mix(diffuseColor.rgb,vec3(dot(diffuseColor.rgb,vec3(0.3,0.5,0.2))),0.45)*0.78;
+ diffuseColor.rgb=mix(diffuseColor.rgb,dim,any*red*(1.0-act));
+ diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.35,0.9,0.85)+vec3(0.06,0.0,0.0),act*red);
+ totalEmissiveRadiance+=vec3(0.9,0.12,0.06)*act*red*0.32*pulse;`);
+  };
+  const mesh=new T.SkinnedMesh(M.geo,mat);mesh.frustumCulled=false;
+  const grp=new T.Group();grp.scale.setScalar(MS);grp.add(bones.root);grp.add(mesh);
+  grp.updateMatrixWorld(true);mesh.bind(new T.Skeleton(list));
+  const rest=restOf(M).R;
+  // vertices used to keep the body above the floor: everything except hands and feet
+  const nb=M.meta.bones.map(b=>b.name),skip=new Set(["handL","handR","footL","footR","fingL","fingR"].map(n=>nb.indexOf(n)).filter(i=>i>=0));
+  const si=M.geo.attributes.skinIndex,sw=M.geo.attributes.skinWeight,probe=[];
+  for(let i=0;i<si.count;i+=13){let w=0;for(let j=0;j<4;j++) if(skip.has(si.array[i*4+j])) w+=sw.array[i*4+j];if(w<0.2) probe.push(i);}
+  return {grp,mesh,bones,rest,probe,uTime,dispose(){mat.dispose();at.dispose();}};
+}
+// ---------- posing the anatomy model ----------
+// The drawings give joint points; the model has its own bone lengths. Each limb is solved with analytic two-bone IK
+// using the model's lengths: limbs that touch something (bar, rings, floor, box, wall, pole) reach the support exactly,
+// free limbs keep the drawn direction and bend. The elbow/knee bend plane comes from the drawing and is kept per
+// animation (prepKeys), so a straight arm never has to guess it and nothing flips between frames.
+// rest-pose reference frames measured from the mesh (cm, model space; +x = model's left, +z = front)
+const HAND_F={L:[0.18,-0.97,0.15],R:[-0.18,-0.97,0.15]}, HAND_N={L:[-0.955,-0.21,-0.21],R:[0.955,-0.21,-0.21]};
+const PALM={L:[3.2,-10.5,4.7],R:[-3.2,-10.5,4.7]};          // palm centre relative to the wrist (hand bone head)
+// heel, ball, toe tip, and the top of the foot (instep, toes) relative to the ankle: a foot resting on its top
+// (rear foot of a Bulgarian split squat, kneeling) must stay above the bench / floor too
+const FOOTP={L:[[3,-8.7,-3],[4.3,-8.7,14.5],[4.4,-8.2,20.5],[3,-2.5,5],[4,-4.8,12],[4.4,-6.6,19]],
+  R:[[-3,-8.7,-3],[-4.3,-8.7,14.5],[-4.4,-8.2,20.5],[-3,-2.5,5],[-4,-4.8,12],[-4.4,-6.6,19]]};
+const GROUND=()=>-(ILLV.GY+3.5);
+// what each hand / foot touches in a frame: {t:type, p:support point, n:surface normal, ax:bar axis}
+function contactsOf(fr,k){
+  const out={}, G=GROUND(), V3=(x,y,z)=>[x,y,z];
+  const supp=[];                                          // candidate supports in 3D (y up)
+  if(fr.kind==="front"){const J=fr.J;
+    if(J.eq==="rings") supp.push({t:"ring",hand:true,near:9}); else supp.push({t:"bar",ax:[1,0,0],y:-J.by,line:true});
+    if(J.box) supp.push({t:"flat",y:-(Math.max(J.fL[1],J.fR[1])+4),x1:-26,x2:26});
+  } else if(fr.kind==="raw"){
+    for(const q of fr.props3d||[]) if(q.pole) supp.push({t:"pole",x:q.pole[0],y1:q.pole[1],y2:q.pole[2]});
+    if(fr.g) supp.push({t:"flat",y:G});
+  } else {
+    for(const q of fr.pr||[]){
+      if(q.k==="bar") supp.push({t:"bar",ax:[0,0,1],x:q.at[0],y:-q.at[1]});
+      else if(q.k==="ring"){if(q.atRef==="W") supp.push({t:"ring",hand:true}); else if(q.atRef==="F") supp.push({t:"ring",foot:true});
+        else supp.push({t:"ring",x:q.at[0],y:-q.at[1]});}
+      else if(q.k==="hbar") supp.push({t:"bar",ax:[1,0,0],y:-q.y,x1:q.x1-3,x2:q.x2+3,zs:21});
+      else if(q.k==="box") supp.push({t:"flat",y:-q.y,x1:q.x-4,x2:q.x+q.w+4});
+      else if(q.k==="pad"){const a=q.at;supp.push({t:"flat",y:-(a[1]+3),x1:a[0]-12,x2:a[0]+12});}
+      else if(q.k==="wall") supp.push({t:"wall",x:q.x,y1:-ILLV.GY,y2:-q.y1});
+      else if(q.k==="pole") supp.push({t:"pole",x:q.x,y1:-q.y2,y2:-q.y1});
+    }
+    if(fr.g) supp.push({t:"flat",y:G});
+  }
+  for(const s of ["L","R"]) for(const [nm,key,isHand] of [["h"+s,"wr"+s,true],["f"+s,"ft"+s,false]]){
+    const p=k[key];if(!p) continue;let best=null,bd=1e9;
+    for(const q of supp){let d=1e9,c=null;
+      if(q.t==="ring"&&(q.hand||q.foot)){if(isHand?q.hand:q.foot){d=0;c={t:"ring",p:p.slice()};}}
+      else if(q.t==="ring"){d=Math.hypot(p[0]-q.x,p[1]-q.y);c={t:"ring",p:V3(q.x,q.y-6.5,p[2])};if(d>9)d=1e9;}   // held at its lower tube
+      else if(q.t==="bar"&&q.zs){d=Math.abs(p[1]-q.y);c={t:"bar",p:V3(p[0],q.y,(p[2]<0?-1:1)*q.zs),ax:q.ax};if(d>8||p[0]<q.x1||p[0]>q.x2)d=1e9;}
+      else if(q.t==="bar"&&q.line){d=Math.abs(p[1]-q.y);c={t:"bar",p:V3(p[0],q.y,p[2]),ax:q.ax};if(d>7)d=1e9;}
+      else if(q.t==="bar"){d=Math.hypot(p[0]-q.x,p[1]-q.y);c={t:"bar",p:V3(q.x,q.y,p[2]),ax:q.ax};if(d>8)d=1e9;}
+      else if(q.t==="flat"){const h=p[1]-q.y, inX=q.x1==null||(p[0]>=q.x1&&p[0]<=q.x2);
+        // a foot point is the ankle (drawn ~4 above the floor), a hand point sits on the surface
+        if(inX&&h>-4&&h<(isHand?8:10)){d=Math.abs(h-(isHand?0:4.5));c={t:"flat",p:V3(p[0],q.y,p[2]),n:[0,1,0],bar:!!q.bar};}}
+      else if(q.t==="wall"){const dx=p[0]-q.x;if(Math.abs(dx)<9&&p[1]>q.y1-2&&p[1]<q.y2+4){d=Math.abs(dx);const sg=(k.pelv[0]-q.x)>=0?1:-1;/* the side the body is on */c={t:"wall",p:V3(q.x+sg,p[1],p[2]),n:[sg,0,0]};}}
+      else if(q.t==="pole"&&isHand){const dx=p[0]-q.x;if(Math.abs(dx)<6.5&&p[1]>q.y1&&p[1]<q.y2){d=Math.abs(dx);c={t:"pole",p:V3(q.x,p[1],0),ax:[0,1,0]};}}
+      if(c&&d<bd){bd=d;best=c;}}
+    out[nm]=best;
+  }
+  return out;
+}
+// per-animation settings: which drawn side is the model's left (sg), plus the bend planes of every limb (prepKeys)
+// Which way the body faces decides which drawn limbs are the model's left and right. Side drawings show it twice:
+// the head is drawn a little in front of the neck, and knees/elbows bend the anatomical way. The bends win, because
+// a knee bending backwards is the worst error; the head offset only breaks ties. Front views face the viewer.
+function modelCfg(frames,keys,M){const f00=frames[0]||{};restOf(M);
+  const lie=!!f00.lie, side=f00.kind==="side"&&!lie;
+  const cfg={sg:1,hoff:side?4:0,g:frames.some(f=>f.g)};
+  if(f00.kind!=="front"){
+    let head=0;for(const k of keys){const up=sub3(k.neck,k.pelv),ho=sub3(k.head,k.neck),f=cross3(sub3(k.shR,k.shL),up);head+=dot3(ho,f)/(Math.hypot(...f)||1);}
+    const score=sg=>{const c={sg,hoff:cfg.hoff};let sc=0;
+      for(const k of keys){const bf=bodyFrame(k,c);
+        for(const s of ["L","R"]) LIMBS.forEach((L,li)=>{const K=s==="L"?bf.KL:bf.KR,h=limbHinge(k,K,L,li?bf.Qr:bf.Qt,s);
+          if(h) sc+=(li?1:0.25)*h.sn*h.h.dot(h.hf);});}
+      return sc;};
+    // the drawing's own facing (head offset, ~4 units per key) counts as much as a clearly bent knee;
+    // a slight elbow bend cannot overrule it (pike hold)
+    const d=score(1)-score(-1)+(side?0.6*head/4:0);
+    cfg.sg=Math.abs(d)>0.05?(d>0?1:-1):(head<0?-1:1);
+    if(lie&&Math.abs(d)<=0.15) cfg.sg=1;
+  }
+  prepKeys(keys,cfg);return cfg;}
+// drawn bend plane of one limb in its parent's frame (h), how bent it is (sn) and the natural plane for that direction (hf)
+function limbHinge(k,K,L,Qp,s){const T=window.THREE,v=a=>new T.Vector3(a[0],a[1],a[2]),rest=limbRest(REST.R,s,L);
+  const A1=v(k[L[4]+K]).sub(v(k[L[3]+K])),A2=v(k[L[5]+K]).sub(v(k[L[4]+K])),H=new T.Vector3().crossVectors(A1,A2);
+  const sn=H.length()/(A1.length()*A2.length()||1),iq=Qp.clone().invert();
+  const a1=A1.clone().applyQuaternion(iq).normalize();
+  const hf=rest.hr.clone().applyQuaternion(new T.Quaternion().setFromUnitVectors(rest.r1.clone().normalize(),a1));
+  // natural plane for the line joint → hand/foot (what the IK actually bends around)
+  const u=v(k[L[5]+K]).sub(v(k[L[3]+K])).applyQuaternion(iq).normalize();
+  const hn=rest.hr.clone().applyQuaternion(new T.Quaternion().setFromUnitVectors(rest.r1.clone().normalize(),u));
+  return {sn,h:H.lengthSq()>1e-9?H.applyQuaternion(iq).normalize():new T.Vector3(),hf,u,hn};}
+const sub3=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]], dot3=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+  cross3=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  nrm3=a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return [a[0]/l,a[1]/l,a[2]/l];}, lerp3=(a,b,t)=>a.map((x,i)=>x+(b[i]-x)*t),
+  // rotate v about unit axis k by angle a (Rodrigues)
+  rot3=(v,k,a)=>{const c=Math.cos(a),s=Math.sin(a),kv=cross3(k,v),d=dot3(k,v)*(1-c);return [v[0]*c+kv[0]*s+k[0]*d,v[1]*c+kv[1]*s+k[1]*d,v[2]*c+kv[2]*s+k[2]*d];},
+  // unit direction between unit a and unit b (great circle)
+  slerpDir=(a,b,t)=>{const c=Math.max(-1,Math.min(1,dot3(a,b))),th=Math.acos(c);if(th<1e-4) return nrm3(lerp3(a,b,t));
+    let ax=cross3(a,b);if(Math.hypot(...ax)<1e-6) ax=Math.abs(a[0])<0.9?cross3(a,[1,0,0]):cross3(a,[0,1,0]);return rot3(a,nrm3(ax),th*t);},
+  // carry v along the shortest rotation that takes unit a to unit b
+  transport=(v,a,b)=>{const ax=cross3(a,b),sn=Math.hypot(ax[0],ax[1],ax[2]),cs=dot3(a,b);if(sn<1e-6) return v.slice();return rot3(v,ax.map(x=>x/sn),Math.atan2(sn,cs));};
+// torso (Qt) and pelvis (Qr) orientation of a keypoint frame; lat = the model's left
+function bodyFrame(k,cfg){
+  const T=window.THREE,v=a=>new T.Vector3(a[0],a[1],a[2]);
+  const up=v(k.neck).sub(v(k.pelv)).normalize();
+  const basis=(l0,u)=>{const f=new T.Vector3().crossVectors(l0,u).normalize(),l=new T.Vector3().crossVectors(u,f).normalize();return new T.Matrix4().makeBasis(l,u,f);};
+  let lat=v(k.shR).sub(v(k.shL)).multiplyScalar(cfg.sg);lat.addScaledVector(up,-lat.dot(up));
+  if(lat.lengthSq()<1e-4) lat=new T.Vector3(1,0,0);lat.normalize();
+  let hl=v(k.hpR).sub(v(k.hpL)).multiplyScalar(cfg.sg);hl.addScaledVector(up,-hl.dot(up));
+  // hips follow their own line, faded toward the shoulders' when it is short or turned too far from them (no switch)
+  {const L=hl.length(),c=L>1e-6?hl.dot(lat)/L:0,x=Math.max(0,Math.min(1,(c-0.2)/0.5))*Math.max(0,Math.min(1,(L-0.5)/2)),w=x*x*(3-2*x);
+   hl=L>1e-6?lat.clone().lerp(hl.multiplyScalar(1/L),w):lat.clone();}hl.normalize();
+  const mt=basis(lat,up);
+  return {up,lat,fwd:new T.Vector3().crossVectors(lat,up).normalize(),Qt:new T.Quaternion().setFromRotationMatrix(mt),
+    Qr:new T.Quaternion().setFromRotationMatrix(basis(hl,up)),KL:cfg.sg>0?"R":"L",KR:cfg.sg>0?"L":"R"};
+}
+// fingers of a hand flat on the floor / box (world, horizontal): on the elbow-crease side (elbows point back in a
+// push-up: fingers forward); a leaning forearm (planche lean, arms lying beside the body) turns them toward its own
+// direction, through "fingers out" when the two are opposite
+function flatFingers(crease,fa,up,fwd,out,away){const T=window.THREE,hz=a=>new T.Vector3(a.x,0,a.z);
+  let B=hz(crease);if(B.length()<0.3){B=hz(up).add(hz(fwd));if(B.length()<0.2)B=hz(fwd);}if(B.lengthSq()<1e-6)B=hz(out);B.normalize();
+  // upside down (pike, handstand) the fingers point away from the head and turn out
+  if(away){const inv=Math.max(0,Math.min(1,(-up.y-0.2)/0.4)),aw=hz(away).normalize().addScaledVector(hz(out).normalize(),0.5);
+    if(inv>0&&aw.lengthSq()>1e-4){aw.normalize();B.multiplyScalar(1-inv).addScaledVector(aw,inv);if(B.lengthSq()<1e-4)B.copy(aw);B.normalize();}}
+  const hf=hz(fa),x=Math.max(0,Math.min(1,(hf.length()-0.2)/0.4)),wa=x*x*(3-2*x),F=B.clone();
+  if(wa>0){const hn=hf.clone().normalize();let dl=Math.atan2(B.x*hn.z-B.z*hn.x,B.dot(hn));
+    if(Math.abs(dl)>2.5){const mid=B.clone().applyAxisAngle(new T.Vector3(0,1,0),-Math.sign(dl)*Math.PI/2);if(mid.dot(out)<0) dl-=Math.sign(dl)*2*Math.PI;}
+    F.applyAxisAngle(new T.Vector3(0,1,0),-dl*wa);}
+  return F.addScaledVector(hz(out).normalize(),0.15).normalize();}
+// fingers on a bar: hanging below it they continue the forearm up and over; supporting on top of it (forearm
+// pointing down) they point forward over the bar. Blended by the forearm's slope so it never flips.
+function barFingers(fa,ax,fwd,upW){const T=window.THREE,pj=a=>a.clone().addScaledVector(ax,-a.dot(ax));
+  const fh=pj(fa),fs=pj(fwd);if(fs.lengthSq()<1e-4)fs.copy(pj(upW));fs.normalize();
+  const x=Math.max(0,Math.min(1,(fa.dot(upW)+0.75)/1.5)),b=x*x*(3-2*x);
+  // (the forearm's part across the bar keeps its length: a forearm lying along the bar has no say, and cannot flip it)
+  const F=fs.clone().multiplyScalar(1-b).addScaledVector(fh,b);
+  if(F.lengthSq()<1e-4)F.copy(fs);return F.normalize();}
+// rest geometry of the limbs (model space, cm)
+const LIMBS=[["uarm","farm","hand","sh","el","wr",[0,0,1]],["thigh","shin","foot","hp","kn","ft",[0,0,-1]]];
+function limbRest(R,s,L){const T=window.THREE,[b1,b2,b3]=L,r1=R[b2+s].clone().sub(R[b1+s]),r2=R[b3+s].clone().sub(R[b2+s]);
+  const a=r1.length()*MS,b=r2.length()*MS,inner=(L[0]==="uarm"?35:30)*Math.PI/180;   // max flexion ~145° elbow, ~150° knee
+  return {r1,r2,hr:new T.Vector3().crossVectors(r1,new T.Vector3(...L[6])).normalize(),a,b,dmin:Math.sqrt(a*a+b*b-2*a*b*Math.cos(inner))};}
+let REST=null;
+function restOf(M){if(REST&&REST.M===M) return REST;const T=window.THREE,R={};for(const bd of M.meta.bones) R[bd.name]=new T.Vector3(...bd.head);
+  REST={M,R};return REST;}
+// bend plane (hinge axis, in the parent's frame) of every limb in every key; straight limbs borrow it from the nearest bent key
+function prepKeys(keys,cfg){
+  const T=window.THREE;
+  const fr=keys.map(k=>bodyFrame(k,cfg));
+  // drawn length of every limb, measured on the keys: between two keys the points move in straight lines and
+  // the drawn elbow/knee can pass right through the shoulder/hip, so nothing may depend on the in-between bend
+  const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);cfg.len={};
+  for(const D of ["L","R"]) LIMBS.forEach(L=>{const ls=keys.map(k=>dist(k[L[3]+D],k[L[4]+D])+dist(k[L[4]+D],k[L[5]+D])).sort((a,b)=>a-b);
+    cfg.len[L[0]+D]=ls[ls.length>>1]||1;});
+  for(const s of ["L","R"]) LIMBS.forEach((L,li)=>{
+    // natural plane for a straight limb: the rest hinge carried along by the swing from rest to the drawn direction
+    const hs=keys.map((k,i)=>{const K=s==="L"?fr[i].KL:fr[i].KR,h=limbHinge(k,K,L,li?fr[i].Qr:fr[i].Qt,s);
+      return Object.assign(h,{h:h.sn>0.2?h.h:null});});
+    // joint limits: the upper arm / thigh can only rotate so far about its own axis (shoulder ~±105°, hip ~±40°).
+    // A drawn bend plane beyond that (a 2D side drawing cannot show an elbow flaring out) is turned toward the
+    // natural plane about the joint→hand line, so the hand still lands where it should. The angle is unwrapped
+    // across the keys first, so a plane near the limit never jumps from one side to the other.
+    const lim=li?40*Math.PI/180:0;let prev=null;
+    keys.forEach((k,i)=>{let h=hs[i].h;
+      // a straight limb takes the plane of the nearest bent key, carried along the change of limb direction
+      // (no bent key at all: the first key's natural plane, carried from key to key) - never a plane that
+      // depends on the arm's direction alone, which spins for raised arms
+      const tv=(x,a,b)=>{const r=transport([x.x,x.y,x.z],[a.x,a.y,a.z],[b.x,b.y,b.z]);return new T.Vector3(r[0],r[1],r[2]);};
+      if(!h){let bj=-1;for(let j=0;j<keys.length;j++) if(hs[j].h&&(bj<0||Math.abs(j-i)<Math.abs(bj-i))) bj=j;
+        h=bj>=0?tv(hs[bj].h,hs[bj].u,hs[i].u):(i&&hs[i-1].hFinal?tv(hs[i-1].hFinal,hs[i-1].u,hs[i].u):hs[i].hf);}
+      const u=hs[i].u,pj=a=>a.clone().addScaledVector(u,-a.dot(u)),hn=pj(hs[i].hn).normalize(),hp=pj(h);
+      if(lim&&hp.lengthSq()>1e-6&&hn.lengthSq()>0.5){hp.normalize();
+        let ph=Math.atan2(new T.Vector3().crossVectors(hn,hp).dot(u),hn.dot(hp));
+        if(prev!=null){while(ph-prev>Math.PI) ph-=2*Math.PI;while(ph-prev<-Math.PI) ph+=2*Math.PI;}prev=ph;
+        const a=Math.abs(ph),k0=0.6*lim,c=a<k0?a:k0+0.4*lim*Math.tanh((a-k0)/(0.4*lim));
+        h=hn.clone().applyAxisAngle(u,Math.sign(ph)*c);}
+      // weight on a flat hand: the elbow may point back or out, never toward the head (a side drawing of the bottom
+      // of an incline push-up shows the elbow up; in 3D that is an elbow flared out to the side)
+      const c=k._c&&k._c["h"+(s==="L"?fr[i].KL:fr[i].KR)];
+      if(!li&&c&&c.t==="flat"){const ol=x=>new T.Vector3().crossVectors(u,x),out=new T.Vector3(s==="L"?1:-1,0,0);
+        if(ol(h).y>0.05){let best=null;for(let a=5;a<=180&&!best;a+=5) for(const sg of [1,-1]){const hh=h.clone().applyAxisAngle(u,sg*a*Math.PI/180),o2=ol(hh);
+          if(o2.y<=0.05&&o2.dot(out)>=-0.05){best=hh;break;}}if(best) h=best;}}
+      hs[i].hFinal=h.clone();k._sg=cfg.sg;k["_h"+(li?"leg":"arm")+s]=[h.x,h.y,h.z];k["_u"+(li?"leg":"arm")+s]=[u.x,u.y,u.z];});
+  });
+  // bar grip: which way the palm faces is chosen once (neutral forearm + overhand) and then kept from key to key,
+  // so the hand never flips over while the forearm turns around the bar (muscle-up transition)
+  const v=a=>new T.Vector3(a[0],a[1],a[2]);
+  for(const s of ["L","R"]){let prev=null;const rest=limbRest(REST.R,s,LIMBS[0]);
+    keys.forEach((k,i)=>{const K=s==="L"?fr[i].KL:fr[i].KR,c=k._c&&k._c["h"+K],iq=fr[i].Qt.clone().invert();
+      if(c&&c.t==="bar"){const fa=v(k["wr"+K]).sub(v(k["el"+K])).applyQuaternion(iq).normalize(),ax=v(c.ax).applyQuaternion(iq).normalize();
+        const F=barFingers(fa,ax,new T.Vector3(0,0,1),new T.Vector3(0,1,0).applyQuaternion(iq)),n1=new T.Vector3().crossVectors(F,ax).normalize();
+        // compared and stored in world space: the hand stays on the bar while the body turns around it (skin the cat)
+        const n1w=n1.clone().applyQuaternion(fr[i].Qt);let sg;if(prev) sg=n1w.dot(prev)>=0?1:-1;
+        else{const Wf=new T.Quaternion().setFromRotationMatrix(new T.Matrix4());   // forearm frame from the bend plane
+          const h=v(k["_harm"+s]),fx=a=>{const x=a[0].clone().normalize(),y=a[1].clone().addScaledVector(x,-a[1].dot(x)).normalize();return new T.Matrix4().makeBasis(x,y,new T.Vector3().crossVectors(x,y));};
+          Wf.setFromRotationMatrix(fx([fa,h]).multiply(fx([rest.r2,rest.hr]).transpose()));
+          const N0=v(HAND_N[s]).applyQuaternion(Wf),pref=new T.Vector3(0,-1,1).normalize();
+          sg=(n1.dot(N0)+0.5*n1.dot(pref))>=0?1:-1;}
+        prev=n1w.multiplyScalar(sg);}
+      k["_g"+s]=prev?[prev.x,prev.y,prev.z]:[0,0,0];});
+    // flat hand: fingers decided where the hand is on the floor, carried to the keys around it
+    keys.forEach((k,i)=>{const K=s==="L"?fr[i].KL:fr[i].KR,c=k._c&&k._c["h"+K];k["_f"+s]=null;
+      if(c&&c.t==="flat"){const f=fr[i],H=v(k["_harm"+s]).applyQuaternion(f.Qt).normalize(),fa=v(k["wr"+K]).sub(v(k["el"+K])).normalize();
+        const F=flatFingers(new T.Vector3().crossVectors(H,fa).normalize(),fa,f.up,f.fwd,f.lat.clone().multiplyScalar(s==="L"?1:-1),v(k["wr"+K]).sub(v(k.head)));k["_f"+s]=[F.x,F.y,F.z];}});
+    keys.forEach((k,i)=>{if(k["_f"+s]) return;let bj=-1;for(let j=0;j<keys.length;j++) if(keys[j]["_f"+s]&&(bj<0||Math.abs(j-i)<Math.abs(bj-i))) bj=j;
+      k["_f"+s]=bj>=0?keys[bj]["_f"+s].slice():[0,0,0];});
+    // keys before the first grip take its palm direction too
+    const first=keys.find(k=>k["_g"+s][0]||k["_g"+s][1]||k["_g"+s][2]);if(first) keys.forEach(k=>{if(!(k["_g"+s][0]||k["_g"+s][1]||k["_g"+s][2])) k["_g"+s]=first["_g"+s].slice();});}
+}
+function poseModel(Mo,k,cfg){
+  const T=window.THREE,v=a=>new T.Vector3(a[0],a[1],a[2]),B=Mo.bones,R=Mo.rest;
+  const bf=bodyFrame(k,cfg),{up,lat,fwd,Qt,Qr,KL,KR}=bf;
+  const frame=(a,h)=>{const x=a.clone().normalize(),y=h.clone().sub(x.clone().multiplyScalar(h.dot(x))).normalize(),z=new T.Vector3().crossVectors(x,y);
+    return new T.Matrix4().makeBasis(x,y,z);};
+  // rotation taking (rest dir a, rest hinge h) to (target dir A, target hinge H)
+  const map=(a,h,A,H)=>new T.Quaternion().setFromRotationMatrix(frame(A,H).multiply(frame(a,h).transpose()));
+  const slerp=(a,b,t)=>a.clone().slerp(b,t);
+  // head: the drawings push the head 4 units forward to show the facing; take that out so the model does not nod
+  const hd=v(k.head).sub(v(k.neck)).addScaledVector(fwd,-cfg.hoff).normalize();
+  const Qh=new T.Quaternion().setFromRotationMatrix(frame(hd,lat).multiply(frame(new T.Vector3(0,1,0),new T.Vector3(1,0,0)).transpose()));
+  const W={root:Qr,spine:slerp(Qr,Qt,0.5),chest:Qt,neck:slerp(Qt,Qh,0.5),head:Qh};
+  const rests={};for(const s of ["L","R"]) LIMBS.forEach((L,li)=>rests[L[0]+s]=limbRest(R,s,L));
+  // shoulder blades follow the arm a little (scapulohumeral rhythm), capped so the shoulder does not hunch
+  for(const s of ["L","R"]){const K=s==="L"?KL:KR,rr=rests["uarm"+s];
+    const a1=v(k["wr"+K]).sub(v(k["sh"+K])).applyQuaternion(Qt.clone().invert()).normalize();
+    // elevation follows how high the arm is raised, protraction how far forward it reaches (no singular swing)
+    // pulling on a bar or rings (hand above the shoulder, elbow bending): the shoulder blades pull down and back,
+    // so the shoulders drop away from the ears instead of shrugging (a dead hang lets them rise)
+    const c0=k._c&&k._c["h"+K],hang=c0&&(c0.t==="bar"||c0.t==="ring")&&c0.p[1]>k["sh"+K][1];
+    const ext=v(k["wr"+K]).distanceTo(v(k["sh"+K]))/((cfg.len&&cfg.len["uarm"+K])||54),pull=hang?Math.max(0,Math.min(1,(0.97-ext)/0.45)):0;
+    const sd=s==="L"?1:-1,el=0.38*Math.max(0,Math.min(1,(a1.y+0.25)/1.25))*(1-pull)-0.12*pull,pr=0.22*Math.max(-1,Math.min(1,a1.z))-0.12*pull;
+    const qc=new T.Quaternion().setFromAxisAngle(new T.Vector3(0,0,1),sd*el).premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0,1,0),-sd*pr));
+    W["clav"+s]=Qt.clone().multiply(qc);}
+  // local rotations of the trunk chain, then the root position: the drawn pelvis point is the hip-joint centre
+  const setLocal=n=>{const b=B[n],p=b.parent&&b.parent.isBone?W[b.parent.name]:null;b.quaternion.copy(p?p.clone().invert().multiply(W[n]):W[n]);};
+  ["root","spine","chest","neck","head","clavL","clavR"].forEach(setLocal);
+  const hipC=R.thighL.clone().add(R.thighR).multiplyScalar(0.5);
+  const rootP=v(k.pelv).add(R.root.clone().sub(hipC).applyQuaternion(Qr).multiplyScalar(MS));
+  B.root.position.copy(rootP).multiplyScalar(1/MS);Mo.grp.position.set(0,0,0);
+  for(const n of ["uarmL","uarmR","thighL","thighR"]) B[n].quaternion.identity();
+  Mo.grp.updateMatrixWorld(true);
+  const wpos=n=>{const w=new T.Vector3();B[n].getWorldPosition(w);return w;};
+  const C=k._c||{}, CW=k._cw||[0,0,0,0];
+  // ---- targets: hands (wrist position + hand orientation) and feet (ankle position + foot orientation)
+  const tg={};
+  for(const s of ["L","R"]){const K=s==="L"?KL:KR,sgn=s==="L"?1:-1;
+    LIMBS.forEach((L,li)=>{const rr=rests[L[0]+s],base=wpos(L[0]+s);
+      const p1=v(k[L[3]+K]),p2=v(k[L[4]+K]),p3=v(k[L[5]+K]),A1=p2.clone().sub(p1),A2=p3.clone().sub(p2);
+      const H=v(k["_h"+(li?"leg":"arm")+s]||[1,0,0]).applyQuaternion(li?Qr:Qt).normalize();
+      // free limb: drawn direction from the joint, drawn amount of bend, model's own length
+      const ext=Math.min(0.999,p3.distanceTo(p1)/((cfg.len&&cfg.len[L[0]+K])||(A1.length()+A2.length())||1));
+      const free=base.clone().addScaledVector(p3.clone().sub(p1).normalize(),ext*(rr.a+rr.b));
+      const c=C[(li?"f":"h")+K], w=c?(CW[(li?2:0)+(K==="L"?0:1)]||0):0;
+      const t={base,H,free,c,w,rr,A2,ext,dir:p3.clone().sub(p1).normalize()};
+      if(c&&w>0.001){
+        if(!li){ // hand orientation on the support → wrist target = palm target − palm offset
+          // The hand must be reachable by turning the forearm (about ±90° from neutral), so every grip is chosen
+          // relative to the forearm's own frame: the elbow crease (from the bend plane) and the neutral palm.
+          // first guess of the forearm from the drawing (a squashed drawn forearm falls back to joint → hand);
+          // grips that depend on the forearm are redone with the solved forearm in solveLimbs
+          const orient=(fa,Hs,keep)=>{const hz=a=>new T.Vector3(a.x,0,a.z);let F,N;
+          const Wf=map(rr.r2,rr.hr,fa,Hs||H),N0=v(HAND_N[s]).applyQuaternion(Wf),crease=new T.Vector3().crossVectors(H,fa).normalize();
+          if(c.t==="flat"){ // palm flat on the floor / box: fingers as decided on the keys (a planted hand does not turn)
+            const fk=v(k["_f"+s]||[0,0,0]);F=fk.lengthSq()>0.01?new T.Vector3(fk.x,0,fk.z).normalize():flatFingers(crease,fa,up,fwd,lat.clone().multiplyScalar(sgn),p3.clone().sub(v(k.head)));
+            N=new T.Vector3(0,-1,0);}
+          else if(c.t==="wall"){N=v(c.n).negate();F=new T.Vector3(0,1,0);}
+          else if(c.t==="ring"){F=v(HAND_F[s]).applyQuaternion(Wf);N=N0.clone();}   // rings turn with the hands: the hand stays in line with the forearm
+          else if(c.t==="pole"){F=fa.clone();N=v(c.p).sub(p3);N.y=0;if(N.lengthSq()<1e-4)N=fwd.clone();}
+          else { // bar: fingers wrap around it, palm toward the bar; overhand unless the forearm is turned the other way
+            const ax=v(c.ax||[0,0,1]);F=barFingers(fa,ax,fwd,new T.Vector3(0,1,0));
+            const n1=new T.Vector3().crossVectors(F,ax).normalize(),g=v(k["_g"+s]||[0,0,0]);
+            N=n1.dot(g.lengthSq()>0.01?g:fwd.clone().sub(up))>=0?n1:n1.negate();}
+          N.addScaledVector(F,-N.dot(F));if(N.lengthSq()<1e-4)N=fwd.clone().addScaledVector(F,-fwd.dot(F));N.normalize();
+          t.Qc=map(v(HAND_F[s]),v(HAND_N[s]),F,N);t.F=F;t.N=N;
+          const pc=v(c.p);
+          if(c.t==="flat") pc.y+=c.bar?1.6:1.8; else if(c.t==="wall") pc.addScaledVector(v(c.n),1.8);
+          else pc.addScaledVector(N,-(c.t==="ring"?3.2:4.2)).addScaledVector(F,-2.2);   // the bar sits at the base of the fingers
+          if(keep) return;
+          // rings and poles turn with the hand: the wrist sits a palm-length short of the grip along the line from the
+          // shoulder, so the target does not depend on the hand's own twist (which follows the solved forearm)
+          if(c.t==="ring"||c.t==="pole"){const L0=((cfg.len&&cfg.len["uarm"+K])||54)*0.48,x=Math.max(0,Math.min(1,(A2.length()/L0-0.35)/0.35)),q=x*x*(3-2*x);
+            const dirF=v(c.p).sub(p1).normalize().lerp(A2.clone().normalize(),q).normalize();t.cT=v(c.p).addScaledVector(dirF,-10.2*MS);}
+          else t.cT=pc.sub(v(PALM[s]).applyQuaternion(t.Qc).multiplyScalar(MS));};
+          t.orient=orient;orient(A2.length()>0.45*rr.b/MS*MS?A2.clone().normalize():p3.clone().sub(p1).normalize());
+        } else { // foot: sole on the support, ankle placed so the lowest point of the foot touches it
+          const n=v(c.n||[0,1,0]),Wsh=map(rr.r2,rr.hr,A2,H),th=footAngle(Wsh,rr,n,1);
+          t.Qc=new T.Quaternion().setFromAxisAngle(rr.hr.clone().applyQuaternion(Wsh).normalize(),th).multiply(Wsh);
+          if(c.t==="ring") t.cT=p3.clone();
+          else {const pts=FOOTP[s].map(q=>v(q).applyQuaternion(t.Qc).multiplyScalar(MS));let lo=1e9;
+            for(const q of pts) lo=Math.min(lo,q.dot(n));
+            t.cT=p3.clone();const pl=v(c.p);t.cT.addScaledVector(n,pl.dot(n)-p3.dot(n)-lo);}
+        }
+      }
+      tg[L[0]+s]=t;});
+  }
+  // ---- whole-body placement: shift the root so every touching limb has the drawn direction and the drawn amount
+  // of bend, with the model's own lengths (least squares over the contacts, weighted; linear, so one step).
+  // With no contact the body stays on the drawn pelvis.
+  const hang=up.y>0.75&&["uarmL","uarmR"].some(n=>tg[n].c&&tg[n].w>0.5&&(tg[n].c.t==="bar"||tg[n].c.t==="ring")&&tg[n].c.p[1]>tg[n].base.y);
+  const want=t=>Math.max(t.rr.dmin*1.15,Math.min(t.ext,0.995)*(t.rr.a+t.rr.b));
+  // body shift for a given turn of the upper body about the hips (arms' bases and drawn directions turn with it)
+  const P=v(k.pelv),rot=(x,Q)=>x.clone().sub(P).applyQuaternion(Q).add(P);
+  const lsShift=Q=>{const dd=new T.Vector3();let ws=0;
+    for(const n in tg){const t=tg[n];if(!t.cT||t.w<0.01) continue;const arm=n.startsWith("uarm");
+      const tw=hang&&!arm?0:t.w,b=arm?rot(t.base,Q):t.base,dr=arm?t.dir.clone().applyQuaternion(Q):t.dir;
+      dd.addScaledVector(t.cT.clone().sub(b).addScaledVector(dr,-want(t)),tw);ws+=tw;}
+    if(ws) dd.multiplyScalar(1/Math.max(1,ws));return dd;};
+  // hands and feet both planted in a piked body (pike, downward dog): the model's arms are a little longer than
+  // the drawing's, so with the drawn hip angle straight arms and straight legs cannot both reach. The hip angle
+  // opens or closes a little (upper body turns about the hips) so they stay straight
+  if(["uarmL","uarmR","thighL","thighR"].every(n=>tg[n].c&&tg[n].c.t==="flat"&&tg[n].w>0.99)&&up.y<-0.2&&up.angleTo(v(k["kn"+KL]).sub(v(k["hp"+KL])))<2.6){
+    const hipFlex=up.angleTo(v(k["kn"+KL]).sub(v(k["hp"+KL])));
+    const piked=true,F=v(tg.thighL.c.p).add(v(tg.thighR.c.p)).multiplyScalar(0.5);
+    const lim=piked?0.25:0.2,rotAll=(x,Q)=>x.clone().sub(F).applyQuaternion(Q).add(F);
+    const moved=(n,Q)=>piked?(n.startsWith("uarm")?rot(tg[n].base,Q):tg[n].base):rotAll(tg[n].base,Q);
+    const dirOf=(n,Q)=>piked&&!n.startsWith("uarm")?tg[n].dir:tg[n].dir.clone().applyQuaternion(Q);
+    const shift=Q=>{const dd=new T.Vector3();let ws=0;for(const n in tg){const t=tg[n];
+      dd.addScaledVector(t.cT.clone().sub(moved(n,Q)).addScaledVector(dirOf(n,Q),-want(t)),t.w);ws+=t.w;}return dd.multiplyScalar(1/ws);};
+    const cost=a=>{const Q=new T.Quaternion().setFromAxisAngle(lat,a),dd=shift(Q);let c=a*a*30;
+      for(const n in tg){const t=tg[n];c+=(n.startsWith("thigh")?2:1)*(t.cT.distanceTo(moved(n,Q).add(dd))-want(t))**2;}return c;};
+    let best=0,bc=cost(0);for(let a=-lim;a<=lim+1e-4;a+=0.02){const c=cost(a);if(c<bc){bc=c;best=a;}}
+    if(Math.abs(best)<lim-0.01){const cm=cost(best-0.02),cp=cost(best+0.02),den=cm-2*bc+cp;if(den>1e-9) best+=0.02*(cm-cp)/(2*den);}
+    // only when it actually helps the legs stay straight
+    const legRes=a=>{const Q=new T.Quaternion().setFromAxisAngle(lat,a),dd=shift(Q);let c=0;for(const n of ["thighL","thighR"]){const t=tg[n];c+=Math.max(0,want(t)-t.cT.distanceTo(moved(n,Q).add(dd)));}return c;};
+    if(legRes(best)>legRes(0)-0.5) best=0;
+    if(Math.abs(best)>1e-4){const Q=new T.Quaternion().setFromAxisAngle(lat,best);
+      if(piked){for(const n of ["chest","neck","head","clavL","clavR"]) W[n]=Q.clone().multiply(W[n]);W.spine=slerp(Qr,W.chest,0.5);}
+      else{for(const n of ["root","spine","chest","neck","head","clavL","clavR"]) W[n]=Q.clone().multiply(W[n]);
+        const rw=wpos("root");B.root.position.copy(rotAll(rw,Q)).multiplyScalar(1/MS);}
+      ["root","spine","chest","neck","head","clavL","clavR"].forEach(setLocal);Mo.grp.updateMatrixWorld(true);
+      for(const n in tg){const t=tg[n];if(piked&&!n.startsWith("uarm")) continue;
+        t.base=wpos(n);t.dir.applyQuaternion(Q);t.free=piked?rot(t.free,Q):rotAll(t.free,Q);t.H.applyQuaternion(Q);}}
+    Mo.pitch=best;}
+  const d=lsShift(new T.Quaternion());{
+    // (hanging, the feet on a box or the floor take what is left: the knees bend)
+    // then make sure every firmly touching limb can actually reach (only pulls, and only by the missing length)
+    for(let it=0;it<8;it++){const acc=new T.Vector3();let c=0;
+      for(const n in tg){const t=tg[n];if(!t.cT||t.w<0.5) continue;const to=t.cT.clone().sub(t.base.clone().add(d)),L=to.length(),mx=(t.rr.a+t.rr.b)*0.995;
+        if(L>mx){acc.addScaledVector(to.normalize(),(L-mx)*t.w);c++;}}
+      if(!c) break;d.add(acc.multiplyScalar(1/c));}}
+  if(d.lengthSq()>0){B.root.position.addScaledVector(d,1/MS);Mo.grp.updateMatrixWorld(true);}
+  // ---- two-bone IK per limb with the model's lengths and the drawn bend plane
+  const ik=(S,Wt,a,b,H,dmin,ud)=>{const D=Wt.clone().sub(S);let dd=D.length();const u=D.normalize();
+    // a target closer than the fully bent limb: the direction to it is meaningless and swings around the joint;
+    // fade to the drawn joint → hand direction instead
+    if(ud&&dd<dmin*1.3){const x=Math.max(0,Math.min(1,(dd-0.4*dmin)/(0.9*dmin))),q=x*x*(3-2*x);u.multiplyScalar(q).addScaledVector(ud,1-q).normalize();}
+    dd=Math.max(dmin,Math.min(dd,(a+b)*0.9995));
+    let hp=H.clone().addScaledVector(u,-H.dot(u));if(hp.lengthSq()<1e-6){hp=new T.Vector3(0,0,1).cross(u);if(hp.lengthSq()<1e-6)hp=new T.Vector3(1,0,0);}
+    hp.normalize();const p=new T.Vector3().crossVectors(u,hp).normalize(),ca=Math.max(-1,Math.min(1,(a*a+dd*dd-b*b)/(2*a*dd))),sa=Math.sqrt(1-ca*ca);
+    const E=S.clone().addScaledVector(u,a*ca).addScaledVector(p,a*sa);return {E,Wp:S.clone().addScaledVector(u,dd),H:hp};};
+  const solveLimbs=()=>{for(const s of ["L","R"]) LIMBS.forEach((L,li)=>{
+    // a hand / foot that is not standing on the floor may still swing near it: if any part of it would go
+    // under the floor, the limb is solved again with its end raised by that much
+    // a foot standing on a flat support is re-solved once so its lowest point (heel, ball or toes, depending on how
+    // the ankle turned on the solved shin) sits exactly on the support
+    let lift=0;for(let pass=0;pass<2;pass++){solveOne(s,L,li,lift);const t=tg[L[0]+s];
+      if(li&&t.c&&t.c.t==="flat"&&t.w>=0.99){const e=t.c.p[1]-endLowest(s,li);if(Math.abs(e)<0.3) break;lift+=e;continue;}
+      if(!cfg.g||t.w>=0.99) break;const lo=endLowest(s,li);if(lo>GROUND()-0.3) break;lift=GROUND()-lo+0.3;}});
+  ["uarmL","uarmR","farmL","farmR","handL","handR","thighL","thighR","shinL","shinR","footL","footR"].forEach(setLocal);
+  Mo.grp.updateMatrixWorld(true);};
+  // lowest point of a hand (palm and fingers) or a foot (heel, ball, toes) from the end bone's position and rotation
+  const endLowest=(s,li)=>{const n=li?"foot"+s:"hand"+s,q=W[n],o=tg[(li?"thigh":"uarm")+s].endPos;
+    const pts=li?FOOTP[s]:[PALM[s],[PALM[s][0]*1.4,PALM[s][1]*1.6,PALM[s][2]*1.4]];let lo=1e9;
+    for(const p of pts) lo=Math.min(lo,v(p).applyQuaternion(q).multiplyScalar(MS).add(o).y-(li?0:1.8));return lo;};
+  const solveOne=(s,L,li,lift)=>{const t=tg[L[0]+s],rr=t.rr,S=wpos(L[0]+s);
+    const Wt=t.cT?t.free.clone().add(d).lerp(t.cT,t.w):t.free.clone().add(d);Wt.y+=lift;
+    // a free hand / foot never goes through the floor (the model's limbs are a little longer than the drawing's)
+    if(cfg.g&&t.w<0.5) Wt.y=Math.max(Wt.y,GROUND()+(li?8.5:4));
+    let r=ik(S,Wt,rr.a,rr.b,t.H,rr.dmin,t.dir);
+    // grips that follow the forearm (rings, pole): orient the hand on the solved forearm
+    // (a bar grip keeps the palm direction chosen per animation in prepKeys)
+    if(!li&&t.c&&t.w>0.001&&(t.c.t==="ring"||t.c.t==="pole")) t.orient(r.Wp.clone().sub(r.E).normalize(),r.H,true);
+    W[L[0]+s]=map(rr.r1,rr.hr,r.E.clone().sub(S),r.H);W[L[1]+s]=map(rr.r2,rr.hr,r.Wp.clone().sub(r.E),r.H);
+    const Wl=W[L[1]+s];
+    if(!li){let Qh2=Wl.clone();
+      if(t.Qc){
+        // blend from the free hand (in line with the forearm) to the grip; the blend keeps the same side of the
+        // quaternion sphere as the previous frame, so a grip ~180° away is reached the same way every frame
+        const rq=Wl.clone().invert().multiply(t.Qc),RQ=Mo._rq||(Mo._rq={});
+        if(RQ[s]?rq.dot(RQ[s])<0:rq.w<0) rq.set(-rq.x,-rq.y,-rq.z,-rq.w);RQ[s]=rq.clone();   // first frame: the short way
+        const ang=2*Math.acos(Math.max(-1,Math.min(1,rq.w))),sn=Math.sqrt(Math.max(0,1-rq.w*rq.w));
+        const part=sn>1e-6?new T.Quaternion().setFromAxisAngle(new T.Vector3(rq.x/sn,rq.y/sn,rq.z/sn),ang*t.w):new T.Quaternion();
+        Qh2=Wl.clone().multiply(part);
+        // spread the wrist twist: the forearm takes half of it (pronation/supination), so the wrist does not wring
+        const rel=Wl.clone().invert().multiply(Qh2),ax=rr.r2.clone().normalize(),dd=ax.x*rel.x+ax.y*rel.y+ax.z*rel.z;
+        // twist angle, unwrapped against the previous frame so it never jumps from +180° to -180° (reset when the
+        // hand lets go); the forearm takes half of it, at most ~95° (the rest of the range belongs to the wrist)
+        let phi=2*Math.atan2(dd,rel.w);const P=Mo._phi||(Mo._phi={}),pp=P[s];
+        if(pp!=null){while(phi-pp>Math.PI)phi-=2*Math.PI;while(phi-pp<-Math.PI)phi+=2*Math.PI;}
+        P[s]=phi;t.phi=phi*180/Math.PI;
+        const sh=Math.max(-1.66,Math.min(1.66,phi*0.5));W[L[1]+s]=Wl.clone().multiply(new T.Quaternion().setFromAxisAngle(ax,sh));}
+      else{if(Mo._phi) Mo._phi[s]=null;if(Mo._rq) Mo._rq[s]=null;}
+      W[L[2]+s]=Qh2;}
+    else {// feet: flat on what they stand on, pointed when free; a free foot close to the floor turns flat too
+      const nf=cfg.g&&t.w<0.5?Math.max(0,Math.min(1,(GROUND()+24-r.Wp.y)/14)):0;
+      const thF=footAngle(Wl,rr,new T.Vector3(0,1,0),nf),th=t.c?thF+(footAngle(Wl,rr,v(t.c.n||[0,1,0]),1)-thF)*t.w:thF;
+      W[L[2]+s]=new T.Quaternion().setFromAxisAngle(rr.hr.clone().applyQuaternion(Wl).normalize(),th).multiply(Wl);}
+    // the end bone's world position follows from the solved joint (needed by endLowest before the pose is applied)
+    t.endPos=r.Wp.clone();
+  };
+  solveLimbs();
+  // ---- nothing but hands and feet may sink into the floor (head at the bottom of a HSPU, knees, chest, back):
+  // lift the body by the deepest point and solve the limbs again, so hands and feet stay where they are
+  if(cfg.g){const pen=GROUND()-lowestPoint(Mo);
+    if(pen>0.2){d.y+=pen;B.root.position.y+=pen/MS;Mo.grp.updateMatrixWorld(true);solveLimbs();}}
+  // fingers: closed around a bar / ring / pole, open on the floor, relaxed when free
+  for(const s of ["L","R"]){const fb=B["fing"+s];if(!fb) continue;const t=tg["uarm"+s],grip=t.c&&(t.c.t==="bar"||t.c.t==="ring"||t.c.t==="pole");
+    const th=grip?0.3+1.45*t.w:(t.c&&(t.c.t==="flat"||t.c.t==="wall")?0.3*(1-t.w)+0.05*t.w:0.3);
+    fb.quaternion.setFromAxisAngle(new T.Vector3().crossVectors(v(HAND_F[s]),v(HAND_N[s])).normalize(),th);}
+  Mo.grp.updateMatrixWorld(true);
+  Mo.tg=tg;Mo.d=d;Mo.side={[KL]:"L",[KR]:"R"};
+}
+// where a hand holds something: just in front of the palm, inside the closed fingers (world)
+function gripPoint(Mo,s){const T=window.THREE,q=new T.Quaternion(),p=new T.Vector3();Mo.bones["hand"+s].getWorldQuaternion(q);Mo.bones["hand"+s].getWorldPosition(p);
+  const n=new T.Vector3(...HAND_N[s]).applyQuaternion(q);
+  return {p:p.add(new T.Vector3(...PALM[s]).applyQuaternion(q).multiplyScalar(MS)).addScaledVector(n,2.4),n,f:new T.Vector3(...HAND_F[s]).applyQuaternion(q)};}
+// lowest point of the body without the hands and feet (a fixed sample of vertices, skinned on the CPU)
+function lowestPoint(Mo){const T=window.THREE,m=Mo.mesh,P=m.geometry.attributes.position,v=Mo._v||(Mo._v=new T.Vector3());let lo=1e9;
+  for(const i of Mo.probe){v.fromBufferAttribute(P,i);m.boneTransform(i,v);v.applyMatrix4(m.matrixWorld);if(v.y<lo)lo=v.y;}
+  return lo;}
+// ankle angle about the knee hinge: the sole turns toward the support within the ankle's range; free feet point
+function footAngle(Wsh,rr,n,w){const T=window.THREE;
+  const ax=rr.hr.clone().applyQuaternion(Wsh).normalize(),s=new T.Vector3(0,-1,0).applyQuaternion(Wsh),t=n.clone().negate();
+  // positive angle about the hinge = toes down (plantar flexion): range 25° up to 50° down
+  let th=Math.atan2(ax.dot(new T.Vector3().crossVectors(s,t)),s.dot(t)-ax.dot(s)*ax.dot(t));
+  // the sole cannot face the support (plank, push-up): stand on the balls of the feet, toes tucked
+  const a=Math.abs(th),b=a<=0.9?0:a>=1.9?1:(a-0.9),bs=b*b*(3-2*b);
+  th=Math.max(-0.45,Math.min(0.9,th));th+=(-0.3-th)*bs;
+  const free=0.35;return free+(th-free)*w;}
 const SEG=[["neck","pelv",8.5],["shL","shR",5],["hpL","hpR",6.5],["shL","elL",4.6],["elL","wrL",4],
   ["shR","elR",4.6],["elR","wrR",4],["hpL","knL",6.2],["knL","ftL",5],["hpR","knR",6.2],["knR","ftR",5]];
 
-function build(host,frames){
-  const T=window.THREE, W=()=>host.clientWidth||300;
+function build(host,frames,opt){opt=opt||{};
+  const T=window.THREE, W=()=>host.clientWidth||300, HGT=opt.h||290;
   const renderer=new T.WebGLRenderer({antialias:true,alpha:true});
   renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.setSize(W(),HGT);
+  if(opt.model){renderer.outputEncoding=T.sRGBEncoding;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;}
   const cv=renderer.domElement;cv.className="tdcv";host.prepend(cv);
   const scene=new T.Scene(), cam=new T.PerspectiveCamera(35,W()/HGT,1,4000);
   scene.add(new T.HemisphereLight(0xffffff,0x667070,0.95));
   const dl=new T.DirectionalLight(0xffffff,0.75);dl.position.set(180,320,260);scene.add(dl);
+  if(opt.model){const fill=new T.DirectionalLight(0xdfe6ff,0.35);fill.position.set(-260,120,-120);scene.add(fill);
+    const rim=new T.DirectionalLight(0xffffff,0.45);rim.position.set(-60,260,-320);scene.add(rim);}
+  const mDark=new T.MeshStandardMaterial({color:0x4a4660,roughness:0.5,metalness:0.3});
   const mBody=new T.MeshStandardMaterial({color:css("--ink"),roughness:0.55,metalness:0.05});
   const mEq=new T.MeshStandardMaterial({color:css("--muted"),roughness:0.6});
   const mWall=new T.MeshStandardMaterial({color:css("--muted"),roughness:1,transparent:true,opacity:0.25});
   const mAcc=new T.MeshStandardMaterial({color:css("--accent"),roughness:0.5});
-  const mGround=new T.MeshStandardMaterial({color:css("--muted"),roughness:1,transparent:true,opacity:0.18});
+  const mBand=new T.MeshStandardMaterial({color:0xF0883E,roughness:0.45});   // resistance band: a flat elastic loop
+  // a band as a soft tube through the given points
+  const bandMesh=(m,pts)=>{if(m.geometry) m.geometry.dispose();m.geometry=new T.TubeGeometry(new T.CatmullRomCurve3(pts,false,"centripetal"),72,0.85,6,false);m.visible=true;};
+  // where the band meets the body: on the model when it is shown, otherwise on the drawn points
+  const bodyPt=(k,which)=>{if(Mo){const w=new T.Vector3(),g=n=>{Mo.bones[n].getWorldPosition(w);return w.clone();};
+      if(which==="hips") return {c:g("thighL").add(g("thighR")).multiplyScalar(0.5),lat:g("thighL").sub(g("thighR")).normalize(),hw:14};
+      if(which==="chest") return {c:g("chest").lerp(g("neck"),0.45),lat:g("uarmL").sub(g("uarmR")).normalize(),hw:15};
+      if(which==="knees"){const a=g("shinL"),b=g("shinR");return {c:a.clone().add(b).multiplyScalar(0.5),lat:a.clone().sub(b).normalize(),hw:a.distanceTo(b)/2+6};}
+      if(which==="feet"){const a=g("footL"),b=g("footR");return {c:a.clone().add(b).multiplyScalar(0.5).add(new T.Vector3(0,-6,0)),lat:a.clone().sub(b).normalize(),hw:a.distanceTo(b)/2+6};}
+      if(which==="hands"){const a=g("handL"),b=g("handR");return {c:a.add(b).multiplyScalar(0.5),lat:new T.Vector3(0,0,1),hw:3};}}
+    const P2=(n1,n2)=>V(k[n1]).add(V(k[n2])).multiplyScalar(0.5),L=(n1,n2)=>V(k[n1]).sub(V(k[n2])).normalize();
+    if(which==="hips") return {c:V(k.pelv),lat:L("hpL","hpR"),hw:13};
+    if(which==="chest") return {c:V(k.neck).lerp(V(k.pelv),0.2),lat:L("shL","shR"),hw:14};
+    if(which==="knees") return {c:P2("knL","knR"),lat:L("knL","knR"),hw:V(k.knL).distanceTo(V(k.knR))/2+5};
+    if(which==="feet") return {c:P2("ftL","ftR").add(new T.Vector3(0,-6,0)),lat:L("ftL","ftR"),hw:V(k.ftL).distanceTo(V(k.ftR))/2+5};
+    return {c:P2("wrL","wrR"),lat:new T.Vector3(0,0,1),hw:3};};
+  // a loop band from two anchor points around the far side of a body part (the side away from the anchors)
+  const loopPts=(A1,A2,b)=>{const mid=A1.clone().add(A2).multiplyScalar(0.5),wrap=b.c.clone().sub(mid).normalize();
+    let lat=b.lat.clone();if(lat.lengthSq()<1e-4) lat.set(0,0,1);
+    if(lat.dot(A1.clone().sub(A2))<0) lat.negate();
+    const r=Math.max(4,b.hw*0.45),s1=b.c.clone().addScaledVector(lat,b.hw),s2=b.c.clone().addScaledVector(lat,-b.hw);
+    return [A1,s1.clone().addScaledVector(wrap,r*0.4),s1.clone().addScaledVector(wrap,r).addScaledVector(lat,-b.hw*0.25),b.c.clone().addScaledVector(wrap,r*1.25),
+      s2.clone().addScaledVector(wrap,r).addScaledVector(lat,b.hw*0.25),s2.clone().addScaledVector(wrap,r*0.4),A2];};
   const keys=frames.map(to3d);
   const cyl=new T.CylinderGeometry(1,1,1,14), sph=new T.SphereGeometry(1,16,12), tor=new T.TorusGeometry(6.5,1.6,10,24);
   const V=p=>new T.Vector3(p[0],p[1],p[2]);
@@ -1615,62 +2226,108 @@ function build(host,frames){
   const joints={};for(const s of SEG) for(const k of [s[0],s[1]]) if(!joints[k]||joints[k].r<s[2]){
     if(joints[k]) scene.remove(joints[k].m);const m=new T.Mesh(sph,mBody);m.scale.setScalar(s[2]);scene.add(m);joints[k]={m,r:s[2]};}
   const head=new T.Mesh(sph,mBody);head.scale.setScalar(10.5);scene.add(head);
+  // anatomy model in place of the mannequin when it has loaded
+  let Mo=null;const f00=frames[0]||{};
+  let mCfg=null;
+  if(opt.model){try{Mo=makeModel(opt.model,opt.act||new Float32Array(32));scene.add(Mo.grp);mCfg=modelCfg(frames,keys,opt.model);
+    for(const s of segs) s.m.visible=false;for(const n in joints) joints[n].m.visible=false;head.visible=false;}catch(e){Mo=null;}}
   // equipment
   const GY=ILLV.GY, dyn=[], seen=new Set();
   const once=(q,fn)=>{const id=JSON.stringify(q);if(!seen.has(id)){seen.add(id);fn();}};
   const f0=frames[0];
   if(f0.kind==="raw"){
     for(const q of f0.props3d||[]) if(q.pole) staticCyl([q.pole[0],q.pole[1],0],[q.pole[0],q.pole[2],0],3);
-    if(f0.g){const g=new T.Mesh(new T.CylinderGeometry(115,115,1,40),mGround);g.position.set(f0.K.pelv?f0.K.pelv[0]:-40,-GY-4,0);scene.add(g);}
+    for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
+      // pulley column beside the body, the cable from its low pulley to the cuff
+      staticBox(a[0],a[1]+52,a[2]+(a[2]<0?-7:7),9,124,9,mDark);
+      dyn.push({cable:q.cable.end,from:V(a),m:new T.Mesh(cyl,mEq),cuff:new T.Mesh(tor,mAcc)});}
   } else if(f0.kind==="front"){const J=f0.J;
     if(J.eq==="bar"){const x1=Math.min(-75,J.hL[0]-15),x2=Math.max(75,J.hR[0]+15);staticCyl([x1,-J.by,0],[x2,-J.by,0],2.6);}
     else for(const s of ["L","R"]) dyn.push({ring:new T.Mesh(tor,mEq),strap:new T.Mesh(cyl,mEq),j:"wr"+s,len:60,axis:"z"});
     if(J.box){const y=Math.max(J.fL[1],J.fR[1])+4;staticBox(0,-(y+13),0,52,26,40);}
-    if(frames.some(f=>f.J.band)) dyn.push({fband:true,m1:new T.Mesh(cyl,mAcc),m2:new T.Mesh(cyl,mAcc),by:J.by});
+    if(frames.some(f=>f.J.band)) dyn.push({fband:true,m:new T.Mesh(new T.BufferGeometry(),mBand),by:J.by,rings:J.eq==="rings"});
     if(frames.some(f=>f.J.w)) dyn.push({fw:true,m:new T.Mesh(tor,mAcc)});
     if(frames.some(f=>f.J.towel)) dyn.push({towel:true,m:new T.Mesh(cyl,mAcc),by:J.by});
   } else {
     frames.forEach(fr=>(fr.pr||[]).forEach((q,i)=>{
       if(q.k==="bar") once(["bar",q.at],()=>staticCyl([q.at[0],-q.at[1],-45],[q.at[0],-q.at[1],45],2.6));
       else if(q.k==="hbar") once(["hbar",q.y,q.x1,q.x2],()=>{for(const z of [-21,21]) staticCyl([q.x1,-q.y,z],[q.x2,-q.y,z],2.6);});
-      else if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>{const h=q.h!=null?q.h:GY+3.5-q.y;staticBox(q.x+q.w/2,-(q.y+h/2),0,q.w,h,60);});
+      else if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
+        // a tall box reads as a solid cube next to the body: draw it as a table/bench (top + four legs)
+        if(h>35&&q.h==null){staticBox(cx,-(q.y+3),0,q.w+6,6,64);
+          for(const dx of [-1,1]) for(const dz of [-1,1]) staticCyl([cx+dx*(q.w/2-2),-(q.y+6),dz*28],[cx+dx*(q.w/2-2),-(GY+4),dz*28],1.8);}
+        else staticBox(cx,-(q.y+h/2),0,q.w,h,60);});
       else if(q.k==="wall") once(["wall",q.x],()=>{const h=GY+4-q.y1;staticBox(q.x,-(q.y1+h/2),0,2,h,130,mWall);});
       else if(q.k==="pole") once(["pole",q.x],()=>staticCyl([q.x,-q.y1,0],[q.x,-q.y2,0],3));
       else if(q.k==="ring") once(["ring",q.atRef||q.at],()=>{
         if(q.atRef&&JMAP[q.atRef]&&(q.atRef==="W"||q.atRef==="F")){for(const s of ["L","R"]) dyn.push({ring:new T.Mesh(tor,mEq),strap:new T.Mesh(cyl,mEq),j:JMAP[q.atRef]+s,len:q.len||55,axis:"x"});}
         else for(const z of [-14,14]){const m=new T.Mesh(tor,mEq);m.position.set(q.at[0],-q.at[1],z);m.rotation.y=Math.PI/2;scene.add(m);
           staticCyl([q.at[0],-q.at[1]+6,z],[q.at[0],-q.at[1]+(q.len||55),z],0.9);}});
-      else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,m1:new T.Mesh(cyl,mAcc),m2:new T.Mesh(cyl,mAcc)}));
-      else if(q.k==="wt") once(["wt",i],()=>dyn.push({wt:i,m:new T.Mesh(tor,mAcc)}));
+      else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,kind:q.viaRef==="K"?"knees":q.toRef==="H"?"hips":q.toRef==="S"?"chest":q.toRef==="W"?"hands":"line",
+        bars:(fr.pr||[]).some(z=>z.k==="hbar"),m:new T.Mesh(new T.BufferGeometry(),mBand)}));
+      else if(q.k==="wt") once(["wt",i],()=>dyn.push({wt:i,m:new T.Mesh(tor,mAcc),m2:new T.Mesh(tor,mAcc)}));
     }));
-    if(frames.some(f=>f.g)){const g=new T.Mesh(new T.CylinderGeometry(115,115,1,40),mGround);g.position.set(0,-GY-4,0);scene.add(g);dyn.push({ground:g});}
   }
-  for(const d of dyn) for(const k of ["ring","strap","m","m1","m2"]) if(d[k]) scene.add(d[k]);
+  for(const d of dyn) for(const k of ["ring","strap","m","m1","m2","cuff"]) if(d[k]) scene.add(d[k]);
   function pose(k){
+    if(Mo) poseModel(Mo,k,mCfg);
     for(const s of segs) place(s.m,V(k[s.a]),V(k[s.b]),s.r);
     for(const n in joints) joints[n].m.position.set(...k[n]);
     head.position.set(...k.head);
     for(const d of dyn){
-      if(d.ground){d.ground.position.x=(k.pelv[0]+k.head[0])/2;}
-      else if(d.ring){const w=k[d.j];d.ring.position.set(w[0],w[1]-1,w[2]);d.ring.rotation.y=d.axis==="x"?Math.PI/2:0;
-        place(d.strap,V([w[0],w[1]+6,w[2]]),V([w[0],w[1]+d.len,w[2]]),0.9);}
-      else if(d.band!=null){const a=k["b"+d.band+"a"],b=k["b"+d.band+"b"],v=k["b"+d.band+"v"];
-        if(!a){d.m1.visible=d.m2.visible=false;continue;}d.m1.visible=d.m2.visible=true;
-        const mid=v?[v[0],v[1]-12,0]:[(a[0]+b[0])/2,(a[1]+b[1])/2,0];place(d.m1,V(a),V(mid),1.6);place(d.m2,V(mid),V(b),1.6);}
-      else if(d.wt!=null){const w=k["w"+d.wt];if(w){d.m.visible=true;d.m.position.set(...w);}else d.m.visible=false;}
-      else if(d.fband){const fL=k.ftL,fR=k.ftR;place(d.m1,V([-6,-d.by,0]),V([fL[0],fL[1]-6,0]),1.4);place(d.m2,V([6,-d.by,0]),V([fR[0],fR[1]-6,0]),1.4);}
+      if(d.cable){// ends at the cuff just above the ankle: on the model's ankle when it is shown
+        let e=V(k[d.cable]);const lim=d.cable.slice(0,2)==="ft"?"foot":"hand";
+        if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones[lim+Mo.side[d.cable.slice(-1)]].getWorldPosition(w);e=w.add(new T.Vector3(0,lim==="foot"?3:0,0));}
+        place(d.m,d.from,e,0.7);d.cuff.position.copy(e);d.cuff.scale.setScalar(0.75);
+        d.cuff.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(0,1,0));continue;}
+      if(d.ring){const w=k[d.j];
+        if(Mo&&Mo.side&&d.j.startsWith("wr")){
+          // the ring hangs in the model's hand: its lower tube through the closed fingers, its plane across the palm
+          const g=gripPoint(Mo,Mo.side[d.j.slice(2)]),c=g.p.clone().add(new T.Vector3(0,6.5,0)),ax=new T.Vector3(g.n.x,0,g.n.z);
+          if(ax.lengthSq()<1e-3) ax.set(g.f.z,0,-g.f.x);
+          d.ring.position.copy(c);d.ring.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),ax.normalize());
+          place(d.strap,c.clone().add(new T.Vector3(0,6,0)),V([c.x,w[1]+d.len,c.z]),0.9);}
+        else{d.ring.position.set(w[0],w[1]-1,w[2]);d.ring.rotation.y=d.axis==="x"?Math.PI/2:0;
+          place(d.strap,V([w[0],w[1]+6,w[2]]),V([w[0],w[1]+d.len,w[2]]),0.9);}}
+      else if(d.band!=null){const a=k["b"+d.band+"a"],b=k["b"+d.band+"b"];
+        if(!a){d.m.visible=false;continue;}
+        if(d.kind==="knees"){
+          // a band tied across between the two bars (or the two ring straps); the knees rest on it and it sags below them
+          const bp=bodyPt(k,"knees"),y=a[1],zz=d.bars?21:Math.max(12,Math.abs(k.wrL[2]-k.wrR[2])/2);
+          bandMesh(d.m,loopPts(new T.Vector3(bp.c.x,y,zz),new T.Vector3(bp.c.x,y,-zz),Object.assign(bp,{lat:new T.Vector3(0,0,1)})));}
+        else if(d.kind==="hands"){const bp=bodyPt(k,"hands"),A=V(a);bandMesh(d.m,[A,A.clone().lerp(bp.c,0.5).add(new T.Vector3(0,-2,0)),bp.c]);}
+        else if(d.kind==="line") bandMesh(d.m,[V(a),V(a).lerp(V(b),0.5).add(new T.Vector3(0,-6,0)),V(b)]);
+        else {// looped over the bar / anchor, two strands down to the body part and around it
+          const bp=bodyPt(k,d.kind),A=V(a),l=bp.lat.clone().multiplyScalar(2.5);bandMesh(d.m,loopPts(A.clone().add(l),A.clone().sub(l),bp));}}
+      else if(d.wt!=null){const w=k["w"+d.wt];
+        if(w&&Mo&&Mo.side&&k["_wh"+d.wt]){// held weight: one in each of the model's hands, across the palm
+          [["L",d.m],["R",d.m2]].forEach(([s,m])=>{const g=gripPoint(Mo,s);m.visible=true;m.position.copy(g.p);m.scale.setScalar(0.8);
+            m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().crossVectors(g.f,g.n).normalize());});}
+        else if(w){d.m.visible=true;d.m.position.set(...w);d.m2.visible=false;}else d.m.visible=d.m2.visible=false;}
+      else if(d.fband){// looped over the bar (or the rings' straps) between the hands, both feet stand in the loop
+        const bp=bodyPt(k,"feet"),y=-d.by;bandMesh(d.m,loopPts(new T.Vector3(-3,y+1,0),new T.Vector3(3,y+1,0),bp));}
       else if(d.fw){const p=k.pelv;d.m.position.set(p[0],p[1]-14,4);}
       else if(d.towel){const w=k.wrR;place(d.m,V([w[0],-d.by,0]),V(w),1.4);}
     }
   }
-  const lerpK=(a,b,t)=>{const o={};for(const n in a){if(!a[n]||!b[n]){o[n]=a[n];continue;}o[n]=[0,1,2].map(i=>a[n][i]+(b[n][i]-a[n][i])*t);}return o;};
-  const seq=keys.length>1?[...keys.keys(),...[...keys.keys()].reverse().slice(1,-1)]:[0];
-  const HOLD=0.7, MOVE=1.15, STEP=HOLD+MOVE;
+  const lerpK=(a,b,t)=>lerpKeys(a,b,t);
+  // timeline of moves {a,b,hold,move}: normally there and back; a negative shows only the slow lowering, then snaps back to the start
+  const TL=[];
+  if(keys.length>1){
+    if(opt.neg){for(let i=0;i+1<keys.length;i++) TL.push({a:i,b:i+1,hold:i?0.15:0.6,move:2.6/(keys.length-1)});
+      TL.push({a:keys.length-1,b:0,hold:0.45,move:0.4});}
+    // one-way moves (kick-up, bail, muscle-up...): show only the active part, then snap back to the start
+    else if(opt.fwd){for(let i=0;i+1<keys.length;i++) TL.push({a:i,b:i+1,hold:i?0.25:0.6,move:opt.fast?0.55:opt.walk?0.7:1.1});
+      TL.push({a:keys.length-1,b:0,hold:0.6,move:0.4});}
+    else{const seq=[...keys.keys(),...[...keys.keys()].reverse().slice(1,-1)];
+      seq.forEach((k,i)=>TL.push({a:k,b:seq[(i+1)%seq.length],hold:0.7,move:1.15}));}
+  }
+  const TOTAL=TL.reduce((t,x)=>t+x.hold+x.move,0);
   // camera framing over every frame
-  const all=keys.flatMap(k=>Object.values(k).filter(Boolean));
+  const all=keys.flatMap(k=>Object.keys(k).filter(n=>n[0]!=="_"&&k[n]).map(n=>k[n]));
   const mn=[0,1,2].map(i=>Math.min(...all.map(p=>p[i]))), mx=[0,1,2].map(i=>Math.max(...all.map(p=>p[i])));
   const ctr=V(mn.map((v,i)=>(v+mx[i])/2)), size=Math.max(mx[0]-mn[0],mx[1]-mn[1],110);
-  let az=f0.kind==="front"?0.55:(f0.kind==="raw"?0.35:-0.75), el=0.22, dist=size*(f0.kind==="front"?2.0:2.25);
+  let az=f0.az!=null?f0.az:f0.kind==="front"?0.55:(f0.kind==="raw"?0.35:(Mo?0.8*(f0.face||1):-0.75)), el=0.22, dist=size*(f0.kind==="front"?2.0:2.25);
   function camUpdate(){cam.position.set(ctr.x+dist*Math.sin(az)*Math.cos(el),ctr.y+dist*Math.sin(el),ctr.z+dist*Math.cos(az)*Math.cos(el));cam.lookAt(ctr);}
   camUpdate();
   let drag=null;
@@ -1685,30 +2342,39 @@ function build(host,frames){
   if(btn) btn.onclick=()=>{playing=!playing;if(playing){t0=performance.now()-tPaused;loop();}setBtn();};
   function frameAt(sec){
     if(keys.length<2) return keys[0];
-    const total=seq.length*STEP, tt=sec%total, i=Math.floor(tt/STEP), local=tt-i*STEP;
-    const a=keys[seq[i]], b=keys[seq[(i+1)%seq.length]];
-    if(local<HOLD) return a;
-    const u=(local-HOLD)/MOVE, e=u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+    let tt=sec%TOTAL, x=TL[0];
+    for(const s of TL){x=s;if(tt<s.hold+s.move) break;tt-=s.hold+s.move;}
+    const a=keys[x.a], b=keys[x.b];
+    if(tt<x.hold) return a;
+    const u=Math.min(1,(tt-x.hold)/x.move), e=opt.neg&&x.b!==0?u:(u<0.5?2*u*u:1-Math.pow(-2*u+2,2)/2);
     return lerpK(a,b,e);
   }
   function loop(){if(!alive) return;cancelAnimationFrame(raf);
-    const sec=(performance.now()-t0)/1000;tPaused=sec*1000;pose(frameAt(sec));renderer.render(scene,cam);
+    const sec=(performance.now()-t0)/1000;tPaused=sec*1000;if(Mo)Mo.uTime.value=sec;pose(frameAt(sec));renderer.render(scene,cam);
     if(playing) raf=requestAnimationFrame(loop);}
   pose(keys[0]);renderer.render(scene,cam);if(playing) loop();
   const ro=new ResizeObserver(()=>{renderer.setSize(W(),HGT);cam.aspect=W()/HGT;cam.updateProjectionMatrix();renderer.render(scene,cam);});ro.observe(host);
-  return {stop(){alive=false;cancelAnimationFrame(raf);ro.disconnect();renderer.dispose();cyl.dispose();sph.dispose();tor.dispose();cv.remove();}};
+  return {stop(){alive=false;cancelAnimationFrame(raf);ro.disconnect();if(Mo)Mo.dispose();renderer.dispose();cyl.dispose();sph.dispose();tor.dispose();cv.remove();},
+    // for tests: show one moment of the timeline from a chosen angle
+    shot(sec,a,e){playing=false;cancelAnimationFrame(raf);if(a!=null){az=a;el=e;camUpdate();}pose(frameAt(sec));renderer.render(scene,cam);return cv.toDataURL("image/png");},
+    total:TOTAL,az0:az};
 }
 function fallback(host,ex,ring,msg){
   const m=host.querySelector(".tdmsg");if(m) m.textContent=msg;
 }
-async function mount(host,ex,ring){
-  stop();
-  try{await load();}catch(e){if(host.isConnected) fallback(host,ex,ring,"אין חיבור לתלת-ממד כרגע");return;}
+// fr: the exercise's frames (ILLV.zframes); info: {mus:[primary,secondary], en} for the glowing muscles and timing
+async function mount(host,fr,ring,info){
+  stop();info=info||{};
+  try{await load();}catch(e){if(host.isConnected) fallback(host,fr,ring,"אין חיבור לתלת-ממד כרגע");return;}
   if(!host.isConnected) return;
-  try{cur=build(host,ILLV.frames3d(ex,ring));host.querySelector(".tdmsg").textContent="";}
-  catch(e){fallback(host,ex,ring,"התלת-ממד לא נתמך במכשיר הזה");}
+  let M=null;try{M=await loadModel();}catch(e){M=null;}
+  if(!host.isConnected) return;
+  const en=info.en||"";
+  try{cur=build(host,ILLV.frames3d(fr,ring),{model:M,act:M?muscleAct(info.mus,M.meta.groups):null,neg:/Negative/i.test(en)});
+    host.querySelector(".tdmsg").innerHTML=M?'גוררים כדי לסובב · <b class="redm">מודגש</b> = השרירים שעובדים':"גוררים כדי לסובב";}
+  catch(e){fallback(host,fr,ring,"התלת-ממד לא נתמך במכשיר הזה");}
 }
-return {mount, stop};
+return {mount, stop, dbg:{load,loadModel,makeModel,poseModel,to3d,modelCfg,lerpKeys,build,muscleAct}};
 })();
 // ===================== exercise details: muscles, steps, mistakes =====================
 const MUS = {
@@ -2292,7 +2958,7 @@ function openInfo(id){
         ${alt.length?`<div class="altrow"><span class="ft">ציוד אחר</span>${alt.map(chip).join("")}</div>`:""}</div></div>`:""}
     </div>
     <div class="dfoot"><span class="tgt" id="dtgt">${esc(b.tgt)}</span><button type="button" class="primary${b.on?" on":""}" id="dbtn" data-act="dadd" data-id="${esc(id)}">${b.txt}</button></div>`, true);
-  if (fr){ const host = $("tdhost"); if (host) TD.mount(host, fr, false); }
+  if (fr){ const host = $("tdhost"); if (host) TD.mount(host, fr, false, {mus, en:e.en}); }
 }
 function openTrainee(edit){
   const t = edit ? cur() : null;
