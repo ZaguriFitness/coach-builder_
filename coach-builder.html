@@ -1106,7 +1106,8 @@ ZP.calf=e=>{const n=e.en;
 };
 ZP.sidelie=e=>[{H:[100,190],t:180,th:0,sh:0,A:[50,199],g:1},{H:[100,190],t:180,th:0,sh:0,L2:add([100,190],73,-32),A:[50,199],g:1,label:"רגל עולה"}];
 ZP.clam=e=>[{H:[100,190],t:180,th:-30,sh:120,A:[50,199],g:1},{H:[100,190],t:180,th:-30,sh:120,th2:-70,sh2:80,A:[50,199],g:1,label:"ברך נפתחת"}];
-ZP.copen=e=>[{H:[60,176],t:180,L:[133,166],A:[16,199],eb:[0,-1],g:1,pr:[box(120,169.5,36)]},{H:[64,160],t:ang([64,160],[15,170]),L:[133,166],A:[16,199],eb:[0,-1],g:1,pr:[box(120,169.5,36)],label:"אגן מורם"}];
+ZP.copen=e=>ZRAW_SIDEPLANK({copen:true,short:/short/i.test(e.en)});
+ZP.copen2D=e=>[{H:[60,176],t:180,L:[133,166],A:[16,199],eb:[0,-1],g:1,pr:[box(120,169.5,36)]},{H:[64,160],t:ang([64,160],[15,170]),L:[133,166],A:[16,199],eb:[0,-1],g:1,pr:[box(120,169.5,36)],label:"אגן מורם"}];
 ZP.walk=e=>[X(ZHALF,{t:-80,A:zHang(X(ZHALF,{t:-80})),eb:[0,1],L2:[44,200],pr:[box(68,150,40,4)]}),X(ZHALF,{t:-80,A:zHang(X(ZHALF,{t:-80})),eb:[0,1],L:[60,200],L2:[96,200],pr:[box(68,150,40,4)],label:"צעד"})];
 // support leg stays kneeling (th2/sh2), only one leg moves
 ZP.quadkick=e=>[ZQUAD,X(ZQUAD,{th:180,sh:-90,th2:90,sh2:180,label:"רגל דוחפת לתקרה"})];
@@ -1331,7 +1332,7 @@ ZP.rollout=e=>{const n=e.en;
   return [f(-45,[S1[0]+3,190]),X(f(-14,[S2[0]+52,190]),{label:"גלגול קדימה"})];
 };
 ZP.plank=e=>{const n=e.en;
-  if(/side plank/i.test(n)){if(/dip/i.test(n)) return [ILL["Side Plank"][0],X(zshift(ILL["Side Plank"][0],0,0),{H:[ILL["Side Plank"][0].H[0],ILL["Side Plank"][0].H[1]+12],label:"אגן יורד"})];return ILL["Side Plank"];}
+  if(/side plank/i.test(n)) return ZRAW_SIDEPLANK({dip:/dip/i.test(n),reach:/reach/i.test(n)});
   if(/bear/i.test(n)) return ILL["Bear Hold"]||[BEAR];
   if(/high plank/i.test(n)) return [X(PU[0],{label:"החזקה"})];
   if(/shoulder tap/i.test(n)){const p=PU[0];return [X(p,{label:"פלאנק"}),X(p,{A2:p.A,A:add(zS(p),20,170),eb:[0,1],label:"נגיעה בכתף"})];}
@@ -1453,6 +1454,37 @@ function ZRAW_CABLEHIP(add){const k0=zkeys(ZST),G=-(GY+3.5);
   const f=(K,lab)=>({kind:"raw",K,g:true,props3d:pr,az:1.3,flat:X(ZST,{label:lab})});
   return add?[f(out,"רגל בצד"),f(inn,"הרגל חוצה פנימה")]:[f(inn,"רגליים יחד"),f(out,"הרגל לצד")];}
 ZP.cablehip=e=>ZRAW_CABLEHIP(/adduction/i.test(e.en));
+// side planks: the body lies on its side, so they are built in 3D. Lying along x (feet → head), facing the viewer
+// (+z); the bottom side (L) is down. Bottom forearm on the floor with the elbow under the shoulder, body in one
+// straight line, feet stacked, top hand on the hip. o.dip: the hips lower and come back up; o.reach: the top arm
+// goes from straight up to under the body; o.copen: the top leg rests on a bench (o.short: on the knee), the
+// bottom leg hangs, then the hips lift and the bottom leg comes up to it.
+function ZRAW_SIDEPLANK(o){o=o||{};const G=-(GY+3.5),X0=150,yN=G+30+14,dir=a=>[Math.cos(a),Math.sin(a),0];
+  // bench under the top leg: under the ankle (full) or under the knee and shin (short lever)
+  const thB=Math.asin((yN-(G+29))/(o.short?87:123)),bw=()=>o.short?52:40,bx=()=>X0-(o.short?87:123)*Math.cos(thB)-(o.short?18:0);
+  const pose=(drop,arm,lift)=>{const N=[X0,yN,0];
+    // body line from the shoulders to the feet; on a bench the feet are higher, so the line is flatter
+    const fy=o.copen?G+34+4-9:G+13,th=Math.asin(Math.max(-0.9,Math.min(0.9,(yN-fy)/(o.short?87:123)))),u=dir(th);
+    const P=[N[0]-50*u[0],N[1]-50*u[1]-(drop||0),0],K=[P[0]-37*u[0],P[1]-37*u[1]+(drop||0)/2,0],F=[N[0]-123*u[0],N[1]-123*u[1],0];
+    const k={neck:N,head:[N[0]+17*u[0],N[1]+17*u[1],2],pelv:P,shL:[X0,yN-14,0],shR:[X0,yN+14,0],
+      elL:[X0,G+2,0],wrL:[X0,G+2,24],hpL:[P[0],P[1]-9,0],hpR:[P[0],P[1]+9,0],
+      knL:[K[0],K[1]-9,0],knR:[K[0],K[1]+9,0],ftL:[F[0],F[1]-9,0],ftR:[F[0],F[1]+9,0]};
+    if(o.copen){// top leg (R) on the bench; the bottom leg (L) hangs under it, or comes up to it when the hips lift
+      // full: the top ankle on the bench; short lever: the top knee and shin on it
+      if(o.short){const kn=[N[0]-87*u[0],G+34+5,0];k.knR=kn;k.ftR=[kn[0]-36,G+34+4,0];}
+      else {k.ftR=[F[0],G+34+4,0];k.knR=[K[0],(k.hpR[1]+G+38)/2,0];}
+      if(!lift){k.pelv=[P[0],G+20,0];k.hpL=[P[0],G+11,0];k.hpR=[P[0],G+29,0];k.ftL=[P[0]-62,G+4,6];k.knL=[P[0]-34,G+6,10];}
+      else {k.ftL=[bx()+bw()/2+10,G+22,4];k.knL=[(k.hpL[0]+bx()+bw()/2+10)/2,(k.hpL[1]+G+22)/2,4];}}
+    // top arm: hand on the hip, elbow out; or straight up / threaded under the chest
+    if(arm==="up"){k.elR=[X0,yN+40,0];k.wrR=[X0,yN+66,0];}
+    else if(arm==="under"){k.elR=[X0-6,yN+4,22];k.wrR=[X0-22,G+16,8];}
+    else {const hp=k.hpR;k.wrR=[hp[0]+4,hp[1]+5,7];k.elR=[(X0+hp[0])/2+2,(k.shR[1]+hp[1])/2+16,-6];}
+    return k;};
+  const f=(K,lab)=>({kind:"raw",K,g:true,props3d:o.copen?[{bench:[bx(),G,bw(),G+34]}]:[],az:0.45,el:0.42,flat:X(ZST,{label:lab})});
+  if(o.copen) return [f(pose(0,null,false),"רגל תחתונה למטה"),f(pose(0,null,true),"אגן ורגל עולים")];
+  if(o.reach) return [f(pose(0,"up"),"יד למעלה"),f(pose(0,"under"),"היד עוברת מתחת לגוף")];
+  if(o.dip) return [f(pose(0),"קו ישר"),f(pose(14),"אגן יורד")];
+  return [f(pose(0),"החזקה על הצד")];}
 ZP.windmill=e=>{const b={H:[64,130],t:-35,L:[82,200],kb:[1,0],g:1},s=zS(b);
   return [zA(ZST,zOver(ZST),[0,1],{pr:[ZW()]}),X(zA(b,add(s,53,-90),[0,1],{pr:[ZW()]}),{A2:[s[0]+4,186],eb2:[0,1],label:"יד שנייה לרצפה"})];};
 
@@ -1770,6 +1802,7 @@ function contactsOf(fr,k){
     if(J.box) supp.push({t:"flat",y:-(Math.max(J.fL[1],J.fR[1])+4),x1:-26,x2:26});
   } else if(fr.kind==="raw"){
     for(const q of fr.props3d||[]) if(q.pole) supp.push({t:"pole",x:q.pole[0],y1:q.pole[1],y2:q.pole[2]});
+    for(const q of fr.props3d||[]) if(q.bench) supp.push({t:"flat",y:q.bench[3],x1:q.bench[0]-q.bench[2]/2-4,x2:q.bench[0]+q.bench[2]/2+4});
     if(fr.g) supp.push({t:"flat",y:G});
   } else {
     for(const q of fr.pr||[]){
@@ -1794,7 +1827,9 @@ function contactsOf(fr,k){
       else if(q.t==="bar"){d=Math.hypot(p[0]-q.x,p[1]-q.y);c={t:"bar",p:V3(q.x,q.y,p[2]),ax:q.ax};if(d>8)d=1e9;}
       else if(q.t==="flat"){const h=p[1]-q.y, inX=q.x1==null||(p[0]>=q.x1&&p[0]<=q.x2);
         // a foot point is the ankle (drawn ~4 above the floor), a hand point sits on the surface
-        if(inX&&h>-4&&h<(isHand?8:10)){d=Math.abs(h-(isHand?0:4.5));c={t:"flat",p:V3(p[0],q.y,p[2]),n:[0,1,0],bar:!!q.bar};}}
+        if(inX&&h>-4&&h<(isHand?8:10)){d=Math.abs(h-(isHand?0:4.5));c={t:"flat",p:V3(p[0],q.y,p[2]),n:[0,1,0],bar:!!q.bar};
+          // forearm plank / side plank: the drawn elbow is on the floor too, so the whole forearm rests on it
+          const el=isHand&&k["el"+s];if(el&&el[1]-q.y<6&&Math.abs(el[1]-p[1])<6) c.fore=true;}}
       else if(q.t==="wall"){const dx=p[0]-q.x;if(Math.abs(dx)<9&&p[1]>q.y1-2&&p[1]<q.y2+4){d=Math.abs(dx);const sg=(k.pelv[0]-q.x)>=0?1:-1;/* the side the body is on */c={t:"wall",p:V3(q.x+sg,p[1],p[2]),n:[sg,0,0]};}}
       else if(q.t==="pole"&&isHand){const dx=p[0]-q.x;if(Math.abs(dx)<6.5&&p[1]>q.y1&&p[1]<q.y2){d=Math.abs(dx);c={t:"pole",p:V3(q.x,p[1],0),ax:[0,1,0]};}}
       if(c&&d<bd){bd=d;best=c;}}
@@ -2004,7 +2039,8 @@ function poseModel(Mo,k,cfg){
           // grips that depend on the forearm are redone with the solved forearm in solveLimbs
           const orient=(fa,Hs,keep)=>{const hz=a=>new T.Vector3(a.x,0,a.z);let F,N;
           const Wf=map(rr.r2,rr.hr,fa,Hs||H),N0=v(HAND_N[s]).applyQuaternion(Wf),crease=new T.Vector3().crossVectors(H,fa).normalize();
-          if(c.t==="flat"){ // palm flat on the floor / box: fingers as decided on the keys (a planted hand does not turn)
+          if(c.t==="flat"&&c.fore){F=new T.Vector3(fa.x,0,fa.z);if(F.lengthSq()<1e-4)F=fwd.clone();F.normalize();N=new T.Vector3(0,-1,0);}
+          else if(c.t==="flat"){ // palm flat on the floor / box: fingers as decided on the keys (a planted hand does not turn)
             const fk=v(k["_f"+s]||[0,0,0]);F=fk.lengthSq()>0.01?new T.Vector3(fk.x,0,fk.z).normalize():flatFingers(crease,fa,up,fwd,lat.clone().multiplyScalar(sgn),p3.clone().sub(v(k.head)));
             N=new T.Vector3(0,-1,0);}
           else if(c.t==="wall"){N=v(c.n).negate();F=new T.Vector3(0,1,0);}
@@ -2017,6 +2053,7 @@ function poseModel(Mo,k,cfg){
           N.addScaledVector(F,-N.dot(F));if(N.lengthSq()<1e-4)N=fwd.clone().addScaledVector(F,-fwd.dot(F));N.normalize();
           t.Qc=map(v(HAND_F[s]),v(HAND_N[s]),F,N);t.F=F;t.N=N;
           const pc=v(c.p);
+          if(c.t==="flat"&&c.fore){t.cT=pc.add(new T.Vector3(0,3.6,0));return;}
           if(c.t==="flat") pc.y+=c.bar?1.6:1.8; else if(c.t==="wall") pc.addScaledVector(v(c.n),1.8);
           else pc.addScaledVector(N,-(c.t==="ring"?3.2:4.2)).addScaledVector(F,-2.2);   // the bar sits at the base of the fingers
           if(keep) return;
@@ -2041,12 +2078,13 @@ function poseModel(Mo,k,cfg){
   // of bend, with the model's own lengths (least squares over the contacts, weighted; linear, so one step).
   // With no contact the body stays on the drawn pelvis.
   const hang=up.y>0.75&&["uarmL","uarmR"].some(n=>tg[n].c&&tg[n].w>0.5&&(tg[n].c.t==="bar"||tg[n].c.t==="ring")&&tg[n].c.p[1]>tg[n].base.y);
-  const want=t=>Math.max(t.rr.dmin*1.15,Math.min(t.ext,0.995)*(t.rr.a+t.rr.b));
+  const want=t=>t.c&&t.c.fore&&t.w>0.5?Math.hypot(t.rr.a-3,t.rr.b*0.97):Math.max(t.rr.dmin*1.15,Math.min(t.ext,0.995)*(t.rr.a+t.rr.b));
   // body shift for a given turn of the upper body about the hips (arms' bases and drawn directions turn with it)
   const P=v(k.pelv),rot=(x,Q)=>x.clone().sub(P).applyQuaternion(Q).add(P);
   const lsShift=Q=>{const dd=new T.Vector3();let ws=0;
     for(const n in tg){const t=tg[n];if(!t.cT||t.w<0.01) continue;const arm=n.startsWith("uarm");
-      const tw=hang&&!arm?0:t.w,b=arm?rot(t.base,Q):t.base,dr=arm?t.dir.clone().applyQuaternion(Q):t.dir;
+      // forearms resting on the floor set the shoulders' height (elbows down); the legs adapt to them
+      const tw=(hang&&!arm?0:t.w)*(t.c&&t.c.fore?4:1),b=arm?rot(t.base,Q):t.base,dr=arm?t.dir.clone().applyQuaternion(Q):t.dir;
       dd.addScaledVector(t.cT.clone().sub(b).addScaledVector(dr,-want(t)),tw);ws+=tw;}
     if(ws) dd.multiplyScalar(1/Math.max(1,ws));return dd;};
   // hands and feet both planted in a piked body (pike, downward dog): the model's arms are a little longer than
@@ -2237,6 +2275,7 @@ function build(host,frames,opt){opt=opt||{};
   const f0=frames[0];
   if(f0.kind==="raw"){
     for(const q of f0.props3d||[]) if(q.pole) staticCyl([q.pole[0],q.pole[1],0],[q.pole[0],q.pole[2],0],3);
+    for(const q of f0.props3d||[]) if(q.bench){const [cx,fy,w,ty]=q.bench,h=ty-fy;staticBox(cx,fy+h/2,0,w,h,50);}
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
       staticBox(a[0],a[1]+52,a[2]+(a[2]<0?-7:7),9,124,9,mDark);
@@ -2327,7 +2366,7 @@ function build(host,frames,opt){opt=opt||{};
   const all=keys.flatMap(k=>Object.keys(k).filter(n=>n[0]!=="_"&&k[n]).map(n=>k[n]));
   const mn=[0,1,2].map(i=>Math.min(...all.map(p=>p[i]))), mx=[0,1,2].map(i=>Math.max(...all.map(p=>p[i])));
   const ctr=V(mn.map((v,i)=>(v+mx[i])/2)), size=Math.max(mx[0]-mn[0],mx[1]-mn[1],110);
-  let az=f0.az!=null?f0.az:f0.kind==="front"?0.55:(f0.kind==="raw"?0.35:(Mo?0.8*(f0.face||1):-0.75)), el=0.22, dist=size*(f0.kind==="front"?2.0:2.25);
+  let az=f0.az!=null?f0.az:f0.kind==="front"?0.55:(f0.kind==="raw"?0.35:(Mo?0.8*(f0.face||1):-0.75)), el=f0.el!=null?f0.el:0.22, dist=size*(f0.kind==="front"?2.0:2.25);
   function camUpdate(){cam.position.set(ctr.x+dist*Math.sin(az)*Math.cos(el),ctr.y+dist*Math.sin(el),ctr.z+dist*Math.cos(az)*Math.cos(el));cam.lookAt(ctr);}
   camUpdate();
   let drag=null;
