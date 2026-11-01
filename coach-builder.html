@@ -465,6 +465,25 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   button:active,.grp:active,.tr:active,.chip:active,.plus:active{transform:scale(.97)}
   .mbox{animation:pop .24s ease}
   @keyframes pop{from{transform:translateY(8px);opacity:.6}to{transform:none;opacity:1}}}
+/* rest timer */
+.rtbtn{border-color:color-mix(in srgb,var(--v2) 55%,transparent);color:var(--accent);font-weight:600}
+.rtimer{position:fixed;z-index:80;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(360px,calc(100% - 24px));
+  display:grid;grid-template-columns:84px minmax(0,1fr);grid-template-rows:auto auto;gap:6px 14px;align-items:center;padding:12px 14px;border-radius:24px;
+  border:1px solid var(--glass-b);background:color-mix(in srgb,var(--surface) 82%,transparent);-webkit-backdrop-filter:blur(22px) saturate(1.6);backdrop-filter:blur(22px) saturate(1.6);
+  box-shadow:0 22px 50px -14px rgba(0,0,0,.55);color:var(--ink)}
+.rtring{grid-row:1/3;width:84px;height:84px;transform:rotate(-90deg)}
+.rtbg{fill:none;stroke:color-mix(in srgb,var(--muted) 22%,transparent);stroke-width:8}
+.rtfg{fill:none;stroke:url(#rtg);stroke-width:8;stroke-linecap:round;stroke-dasharray:276.5;stroke-dashoffset:0}
+.rtmid{display:grid;min-width:0}
+.rtmid b{font-size:2.1rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.rtmid small{color:var(--muted);font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rtbtns{display:flex;gap:6px}
+.rtbtns button{flex:1;border:1px solid var(--glass-b);background:var(--glass);border-radius:999px;padding:7px 4px;font-size:.85rem;font-weight:600;font-variant-numeric:tabular-nums}
+.rtbtns button:disabled{opacity:.4}
+.rtbtns .rtx{flex:none;width:36px;color:var(--muted)}
+.rtimer.done{border-color:var(--t1);box-shadow:0 0 0 4px rgba(63,214,200,.25),0 22px 50px -14px rgba(0,0,0,.55)}
+.rtimer.done .rtmid small{color:var(--t1);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.rtimer.done{animation:rtpulse 1s ease 3}@keyframes rtpulse{50%{transform:translateX(-50%) scale(1.04)}}}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -2889,6 +2908,7 @@ function itemRow(it,i,list){
     </div>
     <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערה למתאמן (טמפו, דגשים, התקדמות)" id="f-n-${i}">
     <div class="itacts">
+      <button type="button" class="mini rtbtn" data-act="rest" data-i="${i}" aria-label="טיימר מנוחה">⏱ מנוחה</button>
       <button type="button" class="mini" data-act="up" data-i="${i}" ${upOk?"":"disabled"} aria-label="הזז למעלה" title="הזז למעלה בסדר">↑ למעלה</button>
       <button type="button" class="mini" data-act="down" data-i="${i}" ${downOk?"":"disabled"} aria-label="הזז למטה" title="הזז למטה בסדר">↓ למטה</button>
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
@@ -3278,6 +3298,67 @@ function downloadDoc(kind){
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
+// ===================== rest timer =====================
+// counts down from the exercise's rest time; floats above everything so it keeps running while you move around
+// the program. Time comes from the clock (not from ticks), so it stays right when the phone locks or the tab sleeps.
+const RT = {end:0, total:0, left:0, paused:false, raf:0, name:"", audio:null};
+function parseRest(v){
+  v = String(v||"").trim(); let m;
+  if ((m = v.match(/^(\d+):(\d{1,2})/))) return (+m[1])*60 + (+m[2]);   // 1:30
+  if ((m = v.match(/\d+/))) return +m[0];                                 // 60, 60-90 → 60
+  return 0;
+}
+function restEl(){
+  let el = $("rtimer"); if (el) return el;
+  el = document.createElement("div"); el.id = "rtimer"; el.className = "rtimer"; el.setAttribute("role","timer"); el.dir = "rtl";
+  el.innerHTML = `<svg class="rtring" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="rtg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9B7BFF"/><stop offset="1" stop-color="#3FD6C8"/></linearGradient></defs>
+      <circle cx="50" cy="50" r="44" class="rtbg"/><circle cx="50" cy="50" r="44" class="rtfg" id="rtfg"/></svg>
+    <div class="rtmid"><b id="rtnum">0:00</b><small id="rtname"></small></div>
+    <div class="rtbtns"><button type="button" dir="ltr" data-rt="minus" aria-label="פחות 15 שניות">−15</button><button type="button" data-rt="pause" id="rtpause">השהה</button><button type="button" dir="ltr" data-rt="plus" aria-label="עוד 15 שניות">+15</button><button type="button" data-rt="stop" class="rtx" aria-label="סגירת הטיימר">✕</button></div>`;
+  document.body.appendChild(el);
+  el.addEventListener("click", ev => { const b = ev.target.closest("[data-rt]"); if (!b) return; const a = b.dataset.rt;
+    if (a === "stop") return stopRest();
+    if (a === "pause"){ if (RT.paused){ RT.paused = false; RT.end = Date.now() + RT.left*1000; tickRest(); } else { RT.left = Math.max(0,(RT.end-Date.now())/1000); RT.paused = true; } paintRest(); return; }
+    const d = a === "plus" ? 15 : -15;
+    if (RT.left <= 0 && !RT.paused){ if (d < 0) return; RT.end = Date.now() + d*1000; RT.total = d; el.classList.remove("done"); tickRest(); return; }
+    if (RT.paused) RT.left = Math.max(1, RT.left + d); else RT.end = Math.max(Date.now()+1000, RT.end + d*1000);
+    RT.total = Math.max(RT.total + d, 1); paintRest(); });
+  return el;
+}
+function startRest(v, name){
+  const sec = parseRest(v);
+  if (!sec){ toast("רשמו קודם זמן מנוחה בשניות"); return; }
+  // sound needs a tap to start: create it now, while we are inside the tap
+  try { RT.audio = RT.audio || new (window.AudioContext||window.webkitAudioContext)(); RT.audio.resume && RT.audio.resume(); } catch(e){ RT.audio = null; }
+  const el = restEl(); el.hidden = false; el.classList.remove("done");
+  Object.assign(RT, {end: Date.now() + sec*1000, total: sec, left: sec, paused: false, name: name||""});
+  $("rtname").textContent = RT.name; tickRest();
+}
+function stopRest(){ cancelAnimationFrame(RT.raf); RT.left = 0; RT.paused = false; const el = $("rtimer"); if (el) el.hidden = true; }
+function fmtSec(t){ t = Math.ceil(t); return Math.floor(t/60) + ":" + String(t%60).padStart(2,"0"); }
+function paintRest(){
+  const left = RT.paused ? RT.left : Math.max(0,(RT.end-Date.now())/1000);
+  $("rtnum").textContent = fmtSec(left);
+  $("rtfg").style.strokeDashoffset = String(276.5 * (1 - (RT.total ? left/RT.total : 0)));
+  $("rtpause").textContent = RT.paused ? "המשך" : "השהה";
+  $("rtpause").disabled = !RT.paused && left <= 0;
+}
+function tickRest(){
+  cancelAnimationFrame(RT.raf); if (RT.paused) return;
+  const left = (RT.end - Date.now())/1000; paintRest();
+  if (left <= 0){ RT.left = 0; $("rtimer").classList.add("done"); $("rtname").textContent = "סוף המנוחה! לסט הבא"; ringRest(); return; }
+  RT.raf = requestAnimationFrame(tickRest);
+}
+function ringRest(){
+  try { navigator.vibrate && navigator.vibrate([300,120,300,120,500]); } catch(e){}
+  const a = RT.audio; if (!a) return;
+  try { [0,0.32,0.64].forEach((t,i) => { const o = a.createOscillator(), g = a.createGain(); o.type = "sine"; o.frequency.value = i===2 ? 1175 : 880;
+    g.gain.setValueAtTime(0.0001, a.currentTime+t); g.gain.exponentialRampToValueAtTime(0.35, a.currentTime+t+0.02); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+t+0.26);
+    o.connect(g).connect(a.destination); o.start(a.currentTime+t); o.stop(a.currentTime+t+0.3); }); } catch(e){}
+}
+// back from a locked phone / another app: catch up (the end may have passed meanwhile)
+document.addEventListener("visibilitychange", () => { if (!document.hidden && $("rtimer") && !$("rtimer").hidden && !RT.paused && RT.left !== 0) tickRest(); });
+
 function copyProgram(){
   const text = programText(cur());
   const fallback = () => {
@@ -3319,6 +3400,7 @@ document.addEventListener("click", ev => {
     case "delDay": if (armed !== "day"){ armed = "day"; renderPanel(); return; } t.days.splice(activeDay,1); activeDay = Math.max(0,activeDay-1); armed = null; save(activeId); renderAll(); break;
     case "rm": { const d = curDay(); d.items.splice(+b.dataset.i,1); save(activeId); renderTrainees(); renderLibrary(); renderPanel(); renderBar(); break; }
     case "up": case "down": { const d = curDay(), i = +b.dataset.i, j = a==="up"?i-1:i+1; [d.items[i], d.items[j]] = [d.items[j], d.items[i]]; save(activeId); renderPanel(); break; }
+    case "rest": { const v = $("f-rest-"+b.dataset.i), it = curDay().items[+b.dataset.i]; startRest(v ? v.value : "", it ? (BYID[it.x]||{he:it.he||""}).he : ""); break; }
     case "easier": swap(+b.dataset.i, -1); break;
     case "harder": swap(+b.dataset.i, 1); break;
     case "copy": copyProgram(); break;
