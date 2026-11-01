@@ -3084,7 +3084,9 @@ function openCustom(){
 function programText(t){
   const lines = [`תוכנית אימון · ${t.name}`, [t.goal, t.level?LVL[t.level]:""].filter(Boolean).join(" · ")];
   if (t.notes) lines.push(t.notes);
+  const any = t.days.some(d => d.items.length);
   for (const d of t.days){
+    if (any && !d.items.length) continue;   // workouts without exercises are left out, like in the document
     sortDay(d);
     lines.push("", `▪ ${d.name}`);
     let lastG = null;
@@ -3112,22 +3114,22 @@ const DOC_COLS = [ // right → left
   {k:"i",  t:"עצימות\n(RIR/RPE 1–10)", w:0.15},
   {k:"n",  t:"הערות", w:0.30},
 ];
-const DOC_MIN = 4; // rows per body area: filled exercises first, then empty lines to write in
 const planFull = t => t.days.length === 1 ? "פול באדי (אימון גוף מלא)" : "אימון מפוצל " + LET.slice(0, t.days.length);
 function docRows(t){
-  // per workout: body-area sections in the program order, only areas that have exercises
-  return t.days.map(d => {
+  // per workout: body-area sections in the program order, only areas that have exercises, one row per exercise
+  // (no empty rows); workouts with no exercises are left out
+  const days = t.days.map(d => {
     sortDay(d);
     const secs = [];
     for (const G of GROUPS){
       const items = d.items.filter(it => (BYID[it.x]||{}).g === G.k);
-      while (items.length < DOC_MIN) items.push(null);
-      secs.push({title:G.he, items});
+      if (items.length) secs.push({title:G.he, items});
     }
     const other = d.items.filter(it => !BYID[it.x]);
     if (other.length) secs.push({title:"אחר", items:other});
     return {name:d.name, secs};
-  });
+  }).filter(d => d.secs.length);
+  return days.length ? days : [{name:(t.days[0]||{}).name||"", secs:[]}];
 }
 function cellText(it, k){
   if (!it) return "";
@@ -3150,8 +3152,8 @@ function wrapLines(ctx, text, maxW){
   return out;
 }
 async function buildProgramCanvas(t){
-  try { await document.fonts.ready; await document.fonts.load('700 30px "Secular One"'); await document.fonts.load('400 22px "Assistant"'); await document.fonts.load('700 22px "Assistant"'); } catch(e){}
-  const FB = '"Assistant", system-ui, sans-serif', FD = '"Secular One", "Assistant", system-ui, sans-serif';
+  try { await document.fonts.ready; await Promise.all(['700 30px "Rubik"','400 22px "Rubik"','700 22px "Rubik"'].map(f => document.fonts.load(f))); } catch(e){}
+  const FB = '"Rubik", system-ui, sans-serif', FD = '"Rubik", system-ui, sans-serif';
   const {W, pad} = DOC, tw = W - pad*2, colX = [];
   let x = W - pad; for (const c of DOC_COLS){ const w = Math.round(c.w * tw); colX.push({...c, right:x, w}); x -= w; }
   const days = docRows(t), cv = document.createElement("canvas"), ctx = cv.getContext("2d");
@@ -3160,7 +3162,7 @@ async function buildProgramCanvas(t){
   const measure = () => {
     let y = pad + 150;
     for (const d of days){
-      if (days.length > 1) y += 58;
+      if (t.days.length > 1) y += 58;
       y += HEADH;
 
       for (const s of d.secs){ y += SECH; for (const it of s.items){ y += rowH(it); } }
@@ -3176,7 +3178,7 @@ async function buildProgramCanvas(t){
   ctx.fillStyle = "#FFFFFF"; ctx.fillRect(0, 0, W, H);
   // header
   ctx.fillStyle = DOC.accent; ctx.fillRect(0, 0, W, 10);
-  ctx.textAlign = "right"; ctx.fillStyle = DOC.ink; ctx.font = "400 52px " + FD; ctx.fillText("תוכנית אימונים", W - pad, pad);
+  ctx.textAlign = "right"; ctx.fillStyle = DOC.ink; ctx.font = "700 50px " + FD; ctx.fillText("תוכנית אימונים", W - pad, pad);
   ctx.font = "700 26px " + FB; ctx.fillStyle = DOC.muted;
   const lab = (label, val, y) => { ctx.font = "700 26px " + FB; ctx.fillStyle = DOC.muted; ctx.fillText(label, W - pad, y); const lw = ctx.measureText(label + " ").width; ctx.font = "700 26px " + FB; ctx.fillStyle = DOC.ink; ctx.fillText(val, W - pad - lw, y); };
   lab("שם המתאמן/ת:", t.name, pad + 74);
@@ -3184,7 +3186,7 @@ async function buildProgramCanvas(t){
   let y = pad + 150;
   const hline = (yy, col, wdt) => { ctx.strokeStyle = col || DOC.line; ctx.lineWidth = wdt || 1.5; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke(); };
   for (const d of days){
-    if (days.length > 1){ ctx.font = "400 34px " + FD; ctx.fillStyle = DOC.accent; ctx.textAlign = "right"; ctx.fillText(d.name, W - pad, y + 12); y += 58; }
+    if (t.days.length > 1){ ctx.font = "700 32px " + FD; ctx.fillStyle = DOC.accent; ctx.textAlign = "right"; ctx.fillText(d.name, W - pad, y + 12); y += 58; }
     // column header
     ctx.fillStyle = DOC.accent; ctx.fillRect(pad, y, tw, HEADH);
     for (const c of colX){
@@ -3197,7 +3199,7 @@ async function buildProgramCanvas(t){
     for (const s of d.secs){
       ctx.fillStyle = DOC.soft; ctx.fillRect(pad, y, tw, SECH);
       ctx.fillStyle = DOC.accent; ctx.fillRect(W - pad - 6, y, 6, SECH);
-      ctx.fillStyle = DOC.ink; ctx.font = "400 26px " + FD; ctx.textAlign = "right"; ctx.fillText(s.title, W - pad - CP - 6, y + 9);
+      ctx.fillStyle = DOC.ink; ctx.font = "600 25px " + FD; ctx.textAlign = "right"; ctx.fillText(s.title, W - pad - CP - 6, y + 9);
       y += SECH;
       s.items.forEach((it, idx) => {
         const lines = rowLines(it), h = Math.max(...lines.map(l => l.length)) * LH + CP*2;
