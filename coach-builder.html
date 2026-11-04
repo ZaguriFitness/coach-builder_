@@ -2915,7 +2915,6 @@ function renderPanelInner(p, t){
     <div class="pfoot">
       <button type="button" class="ghost pclose" data-act="close">סגור</button>
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
-      <button type="button" class="ghost" data-act="copy">העתק תוכנית</button>
       <button type="button" class="ghost" data-act="dup">שכפל למתאמן חדש</button>
       <button type="button" class="danger ${armed==="t"?"arm":""}" data-act="delT">${armed==="t"?`למחוק את ${esc(t.name)}?`:"מחק מתאמן"}</button>
     </div>`;
@@ -3106,28 +3105,6 @@ function openCustom(){
     F.g = c.g; F.sub = "all"; F.q = ""; $("q").value = "";
     closeModal(); renderLibrary(); toast(`${he} נוסף לספרייה`);
   });
-}
-function programText(t){
-  const lines = [`תוכנית אימון · ${t.name}`, [t.goal, t.level?LVL[t.level]:""].filter(Boolean).join(" · ")];
-  if (t.notes) lines.push(t.notes);
-  const any = t.days.some(d => d.items.length);
-  for (const d of t.days){
-    if (any && !d.items.length) continue;   // workouts without exercises are left out, like in the document
-    sortDay(d);
-    lines.push("", `▪ ${d.name}`);
-    let lastG = null;
-    if (!d.items.length) lines.push("(ריק)");
-    d.items.forEach((it,i) => {
-      const e = BYID[it.x] || {he:it.he||""};
-      if (e.g && e.g !== lastG){ const G = GROUPS.find(x=>x.k===e.g); lines.push(`— ${G?G.he:""} —`); lastG = e.g; }
-      let s = `${i+1}. ${e.he} · ${it.s}×${it.r}`;
-      if (it.w) s += ` · ${it.w}${/^[\d.]+$/.test(it.w)?" ק\"ג":""}`;
-      if (it.i) s += ` · עצימות ${it.i}`;
-      if (it.rest && it.rest !== "0") s += ` · מנוחה ${it.rest} שנ'`;
-      lines.push(s); if (it.n) lines.push(`   ${it.n}`);
-    });
-  }
-  return lines.join("\n");
 }
 
 // ===================== program document (image / PDF) for sending on WhatsApp =====================
@@ -3387,14 +3364,6 @@ function ringRest(){
 // back from a locked phone / another app: catch up (the end may have passed meanwhile)
 document.addEventListener("visibilitychange", () => { if (!document.hidden && $("rtimer") && !$("rtimer").hidden && !RT.paused && RT.left !== 0) tickRest(); });
 
-function copyProgram(){
-  const text = programText(cur());
-  const fallback = () => {
-    openModal(`<h2>העתקת התוכנית</h2><p class="hint">הטקסט מסומן. העתיקו אותו ושלחו בוואטסאפ או במייל.</p><textarea id="ctext" style="min-height:260px">${esc(text)}</textarea><div class="macts"><button class="ghost" type="button" data-act="cancel">סגור</button></div>`);
-    const ta = $("ctext"); ta.focus(); ta.select();
-  };
-  try { navigator.clipboard.writeText(text).then(() => toast("התוכנית הועתקה. אפשר להדביק בוואטסאפ"), fallback); } catch(e){ fallback(); }
-}
 
 let downOnOverlay = false;
 document.addEventListener("pointerdown", ev => { downOnOverlay = ev.target === $("modal"); }, true);
@@ -3434,7 +3403,6 @@ document.addEventListener("click", ev => {
     case "rest": { const v = $("f-rest-"+b.dataset.i), it = curDay().items[+b.dataset.i]; startRest(v ? v.value : "", it ? (BYID[it.x]||{he:it.he||""}).he : ""); break; }
     case "easier": swap(+b.dataset.i, -1); break;
     case "harder": swap(+b.dataset.i, 1); break;
-    case "copy": copyProgram(); break;
     case "send": openSend(); break;
     case "savepng": saveDoc("png", b.dataset.n); break;
     case "savepdf": saveDoc("pdf", b.dataset.n); break;
