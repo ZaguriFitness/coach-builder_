@@ -2789,8 +2789,14 @@ function tokOk(t, hay){
   const t2 = t.length > 3 && "בהולכש".includes(t[0]) ? t.slice(1) : null;
   if (t2 && hay.includes(t2)) return true;
   const s = SYN[t] || (t2 && SYN[t2]);
-  return s ? hay.includes(s) : false;
+  if (s && hay.includes(s)) return true;
+  // Hebrew spelled with or without the vowel letters (פלנק / פלאנק, קרוסאובר / קרוסובר): compare without א ו י
+  if (t.length >= 3){ const k = skel(t), k2 = t2 && skel(t2), h = skelHay(hay);
+    if ((k.length >= 2 && h.includes(k)) || (k2 && k2.length >= 2 && h.includes(k2))) return true; }
+  return false;
 }
+const skel = x => x.replace(/[אוי]/g, ""), SKEL = new Map();
+function skelHay(h){ let v = SKEL.get(h); if (v == null){ v = skel(h); SKEL.set(h, v); } return v; }
 function matchQ(e, toks){ if (!e._hay){ e._hay = hayOf(e); e._hay0 = e._hay.replace(/ /g,""); } if (toks.every(t => tokOk(t, e._hay))) return true; const j = toks.join(""); return toks.length > 1 && j.length > 3 && e._hay0.includes(j); }
 function filtered(){
   const gq = norm(F.q).split(" ").filter(Boolean), cq = norm(F.q2).split(" ").filter(Boolean);
