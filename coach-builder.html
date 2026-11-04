@@ -514,7 +514,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
           <button class="ghost accent" id="newEx" type="button">+ תרגיל משלי</button>
         </div></div>
       <div class="groups" id="groups"></div>
-      <div class="chips" id="subs"></div>
       <div class="filters">
         <div class="fhead"><button type="button" class="ftog" id="ftog" data-act="ftog" aria-expanded="false"><span>סינון</span><small id="fcount"></small><i aria-hidden="true">⌄</i></button><div class="factive" id="factive"></div></div>
         <div class="fbody" id="fbody" hidden>
@@ -538,7 +537,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div class="pkhead">
       <div class="pktop"><div><h2 id="pktitle"></h2><div class="pmeta" id="pkfor"></div></div></div>
       <div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div>
-      <div class="chips" id="pksubs"></div>
     </div>
     <div class="pkbody" id="pklist"></div>
     <div class="pkfoot"><button type="button" class="ghost pkclose" data-act="pkclose">סגור</button></div>
@@ -2760,11 +2758,6 @@ function renderGroups(){
     const n = EX.filter(e => e.g === g.k).length;
     return `<button type="button" class="grp" data-act="grp" data-g="${g.k}" aria-pressed="${!F.q && F.g===g.k}">${g.he}<small>${n} תרגילים</small></button>`;
   }).join("");
-  const G = GROUPS.find(g => g.k === F.g);
-  if (F.q){ $("subs").innerHTML = ""; return; }
-  const base = EX.filter(e => e.g === F.g);
-  $("subs").innerHTML = `<button type="button" class="chip" data-act="sub" data-s="all" aria-pressed="${F.sub==="all"}">הכל <small>${base.length}</small></button>` +
-    Object.entries(G.subs).map(([k,v]) => `<button type="button" class="chip" data-act="sub" data-s="${k}" aria-pressed="${F.sub===k}" title="${v}">${SUBSHORT[v]||v} <small>${base.filter(e=>e.sub===k).length}</small></button>`).join("");
 }
 
 function renderFilters(){
@@ -2836,7 +2829,14 @@ function renderLibrary(){
     $("lib").innerHTML = `<div class="subhead"><h3>${F.q?"תוצאות חיפוש":F.q2.trim()?`חיפוש ב${esc(GROUPS.find(g=>g.k===F.g).he)}`:esc(GROUPS.find(g=>g.k===F.g).subs[F.sub])}</h3><span>${list.length} תרגילים</span></div><ul class="list">${list.map(card).join("")}</ul>`;
     return;
   }
-  $("lib").innerHTML = `<div class="subhead"><h3>הכל</h3><span>${list.length} תרגילים</span></div><ul class="list">${list.map(card).join("")}</ul>`;
+  $("lib").innerHTML = bySub(Gc, list);
+}
+// exercises of one body area under a heading per sub-category (in the area's own order)
+function bySub(G, list){
+  if (!G) return `<ul class="list">${list.map(card).join("")}</ul>`;
+  return Object.entries(G.subs).map(([k,v]) => { const xs = list.filter(e => e.sub === k); if (!xs.length) return "";
+    return `<div class="subhead"><h3>${esc(v)}</h3><span>${xs.length} תרגילים</span></div><ul class="list">${xs.map(card).join("")}</ul>`; }).join("")
+    + (list.some(e => !G.subs[e.sub]) ? `<ul class="list">${list.filter(e => !G.subs[e.sub]).map(card).join("")}</ul>` : "");
 }
 
 // ===== exercise picker for one body area (opened from the trainee's program) =====
@@ -2852,13 +2852,10 @@ function renderPicker(){
   $("pktitle").textContent = `תרגילי ${G.he}`;
   $("pkfor").textContent = t ? `מוסיף ל${t.name}${t.days.length > 1 ? " · " + d.name : ""}` : "";
   const base = EX.filter(e => e.g === PK.g), toks = norm(PK.q).split(" ").filter(Boolean);
-  $("pksubs").hidden = toks.length > 0;
-  $("pksubs").innerHTML = `<button type="button" class="chip" data-act="pksub" data-s="all" aria-pressed="${PK.sub==="all"}">הכל <small>${base.length}</small></button>` +
-    Object.entries(G.subs).map(([k,v]) => `<button type="button" class="chip" data-act="pksub" data-s="${k}" aria-pressed="${PK.sub===k}" title="${v}">${SUBSHORT[v]||v} <small>${base.filter(e=>e.sub===k).length}</small></button>`).join("");
-  const list = base.filter(e => toks.length ? matchQ(e, toks) : (PK.sub === "all" || e.sub === PK.sub)).sort((a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
+  const list = base.filter(e => toks.length ? matchQ(e, toks) : true).sort((a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
   if (!list.length){ $("pklist").innerHTML = `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
-  if (toks.length || PK.sub !== "all"){ $("pklist").innerHTML = `<ul class="list">${list.map(card).join("")}</ul>`; return; }
-  $("pklist").innerHTML = `<div class="subhead"><h3>הכל</h3><span>${list.length} תרגילים</span></div><ul class="list">${list.map(card).join("")}</ul>`;
+  if (toks.length){ $("pklist").innerHTML = `<ul class="list">${list.map(card).join("")}</ul>`; return; }
+  $("pklist").innerHTML = bySub(G, list);
 }
 let armed = null;
 // program order: legs → back → chest → shoulders → arms (front, back, forearms) → core → functional → mobility
@@ -3107,7 +3104,7 @@ function openCustom(){
     const he = $("c-he").value.trim(); if (!he) return;
     const c = {id:"u-"+uid(), he, en:$("c-en").value.trim(), g:$("c-g").value, sub:$("c-sub").value, eq:$("c-eq").value, lvl:+$("c-lvl").value, type:$("c-type").value, cue:$("c-cue").value.trim()};
     CUSTOM.push(c); rebuild(); saveCustom();
-    F.g = c.g; F.sub = c.sub; F.q = ""; $("q").value = "";
+    F.g = c.g; F.sub = "all"; F.q = ""; $("q").value = "";
     closeModal(); renderLibrary(); toast(`${he} נוסף לספרייה`);
   });
 }
@@ -3423,7 +3420,6 @@ document.addEventListener("click", ev => {
       closeModal(); renderAll(); toast(`${e ? e.he : "התרגיל"} נמחק מהספרייה`); break; }
     case "dadd": { const id = b.dataset.id; if (!cur()){ toggle(id); break; } toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
     case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); break;
-    case "sub": F.sub = b.dataset.s; renderLibrary(); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
     case "clearF": F.lvl.clear(); F.type.clear(); F.eq.clear(); renderLibrary(); break;
@@ -3455,7 +3451,6 @@ document.addEventListener("click", ev => {
       gs.forEach(g => all ? OPEN.delete(g) : OPEN.add(g)); saveOpen(); renderPanel(); break; }
     case "addgrp": openPicker(b.dataset.g); break;
     case "pkclose": closePicker(); break;
-    case "pksub": PK.sub = b.dataset.s; renderPicker(); $("pklist").scrollTop = 0; break;
     case "addgrp_old": { F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear();
       $("panel").classList.remove("open"); renderLibrary(); const el = $("groups"); window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 80));
       const G = GROUPS.find(x=>x.k===F.g); toast(`מציג תרגילי ${G?G.he:""}. אפשר לחפש בתוך ${G?G.he:"הקטגוריה"} או ללחוץ +`); break; }
