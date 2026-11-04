@@ -1216,7 +1216,11 @@ function ZRAW_FLY(inc){const b=inc?ZINCL({A:[46,92]}):ZBP([38,117],[0,1]);
   const kTop=zkeys(b),k2=zkeys(b);for(const s of [["L",1],["R",-1]]){const sh=k2["sh"+s[0]];
     k2["el"+s[0]]=[sh[0]+2,sh[1]-2,sh[2]+s[1]*27];k2["wr"+s[0]]=[sh[0]+4,sh[1]+4,sh[2]+s[1]*52];}
   const lo=inc?ZINCL({A:[46,140],eb:[0,1]}):ZBP([42,162],[0,1]);
-  return [{kind:"raw",K:k2,g:true,props3d:[],flat:zp(X(lo,{label:"פתיחה"}),ZW())},{kind:"raw",K:kTop,g:true,props3d:[],flat:zp(X(b,{label:"סגירה מעל החזה"}),ZW())}];}
+  // incline bench: a backrest along the back, from the seat up behind the shoulders
+  let pr=[];if(inc){const P=kTop.pelv,N=kTop.neck,d=[N[0]-P[0],N[1]-P[1]],l=Math.hypot(d[0],d[1]),u=[d[0]/l,d[1]/l],n=[-u[1],u[0]];
+    const bk=n[1]<0?n:[-n[0],-n[1]],o=12,a=[P[0]+bk[0]*o-u[0]*6,P[1]+bk[1]*o-u[1]*6],c=[N[0]+bk[0]*o+u[0]*4,N[1]+bk[1]*o+u[1]*4];
+    pr=[{slab:[a,c,40,5]},{post:[a,[a[0],-(GY+3.5)]]}];}
+  return [{kind:"raw",K:k2,g:true,props3d:pr,flat:zp(X(lo,{label:"פתיחה"}),ZW())},{kind:"raw",K:kTop,g:true,props3d:pr,flat:zp(X(b,{label:"סגירה מעל החזה"}),ZW())}];}
 function ZRAW_APART(){const b=zA(ZST,zFwd(ZST,4),[0,1]);const k1=zkeys(b),k2=zkeys(b);
   for(const s of [["L",1],["R",-1]]){const sh=k2["sh"+s[0]];k2["el"+s[0]]=[sh[0]+12,sh[1]-1,sh[2]+s[1]*25];k2["wr"+s[0]]=[sh[0]+16,sh[1]-3,sh[2]+s[1]*50];}
   return [{kind:"raw",K:k1,g:true,props3d:[],flat:X(b,{label:"ידיים קדימה",pr:[ZC([140,82])]})},{kind:"raw",K:k2,g:true,props3d:[],flat:X(b,{label:"פתיחה לצדדים"})}];}
@@ -1828,6 +1832,7 @@ function contactsOf(fr,k){
   } else if(fr.kind==="raw"){
     for(const q of fr.props3d||[]) if(q.pole) supp.push({t:"pole",x:q.pole[0],y1:q.pole[1],y2:q.pole[2]});
     for(const q of fr.props3d||[]) if(q.bench) supp.push({t:"flat",y:q.bench[3],x1:q.bench[0]-q.bench[2]/2-4,x2:q.bench[0]+q.bench[2]/2+4});
+    for(const q of (fr.flat&&fr.flat.pr)||[]) if(q.k==="box") supp.push({t:"flat",y:-q.y,x1:q.x-4,x2:q.x+q.w+4});
     if(fr.g) supp.push({t:"flat",y:G});
   } else {
     for(const q of fr.pr||[]){
@@ -2301,6 +2306,16 @@ function build(host,frames,opt){opt=opt||{};
   if(f0.kind==="raw"){
     for(const q of f0.props3d||[]) if(q.pole) staticCyl([q.pole[0],q.pole[1],0],[q.pole[0],q.pole[2],0],3);
     for(const q of f0.props3d||[]) if(q.bench){const [cx,fy,w,ty]=q.bench,h=ty-fy;staticBox(cx,fy+h/2,0,w,h,50);}
+    for(const q of f0.props3d||[]) if(q.slab){const [a,c,wd,th]=q.slab,len=Math.hypot(c[0]-a[0],c[1]-a[1]),m=new T.Mesh(new T.BoxGeometry(len,th,wd),mEq);
+      m.position.set((a[0]+c[0])/2,(a[1]+c[1])/2,0);m.rotation.z=Math.atan2(c[1]-a[1],c[0]-a[0]);scene.add(m);}
+    for(const q of f0.props3d||[]) if(q.post) staticCyl([q.post[0][0],q.post[0][1],0],[q.post[1][0],q.post[1][1],0],2.2);
+    // 3D frames made from a side drawing keep that drawing's bench / box and its hand-held weights
+    frames.forEach(fr=>((fr.flat&&fr.flat.pr)||[]).forEach(q=>{
+      if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
+        if(h>35&&q.h==null){staticBox(cx,-(q.y+3),0,q.w+6,6,64);
+          for(const dx of [-1,1]) for(const dz of [-1,1]) staticCyl([cx+dx*(q.w/2-2),-(q.y+6),dz*28],[cx+dx*(q.w/2-2),-(GY+4),dz*28],1.8);}
+        else staticBox(cx,-(q.y+h/2),0,q.w,h,60);});
+      else if(q.k==="wt"&&q.at==="W") once(["held"],()=>dyn.push({held:true,m:new T.Mesh(tor,mAcc),m2:new T.Mesh(tor,mAcc)}));}));
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
       staticBox(a[0],a[1]+52,a[2]+(a[2]<0?-7:7),9,124,9,mDark);
@@ -2339,6 +2354,9 @@ function build(host,frames,opt){opt=opt||{};
     for(const n in joints) joints[n].m.position.set(...k[n]);
     head.position.set(...k.head);
     for(const d of dyn){
+      if(d.held){[["L",d.m],["R",d.m2]].forEach(([s,m])=>{m.visible=true;m.scale.setScalar(0.8);
+          if(Mo&&Mo.side){const g=gripPoint(Mo,s);m.position.copy(g.p);m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().crossVectors(g.f,g.n).normalize());}
+          else m.position.set(...k["wr"+s]);});continue;}
       if(d.cable){// ends at the cuff just above the ankle: on the model's ankle when it is shown
         let e=V(k[d.cable]);const lim=d.cable.slice(0,2)==="ft"?"foot":"hand";
         if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones[lim+Mo.side[d.cable.slice(-1)]].getWorldPosition(w);e=w.add(new T.Vector3(0,lim==="foot"?3:0,0));}
@@ -2766,7 +2784,9 @@ function renderFilters(){
 const FIN = {"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
 const norm = s => String(s||"").toLowerCase().replace(/[ךםןףץ]/g, c => FIN[c]).replace(/[׳״'"`\-–.,()]/g," ").replace(/\s+/g," ").trim();
 const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה","הילו":"הילה","מכשיר":"מכונ","מכשירימ":"מכונ","מכונה":"מכונ","משקולת":"משקול","דמבל":"משקול","דמבלס":"משקול","בר":"מוט","גומיה":"גומי","גומיות":"גומי","קטלבלס":"קטלבל","טבעת":"טבעות","כבל":"כבל","פולי":"פולי"};
-function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], TYPES[e.type]].join(" ")); }
+// other names people search by (per body area · sub-category)
+const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים horizontal adduction", "shoulders.rear":"הרחקה אופקית horizontal abduction"};
+function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], TYPES[e.type], ALIAS[e.g+"."+e.sub]||""].join(" ")); }
 function tokOk(t, hay){
   if (hay.includes(t)) return true;
   const t2 = t.length > 3 && "בהולכש".includes(t[0]) ? t.slice(1) : null;
