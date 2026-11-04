@@ -511,7 +511,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <main>
       <div class="searchbar"><div class="search">
           <input id="q" type="search" placeholder="חיפוש תרגיל כללי" autocomplete="off" enterkeyhint="search" aria-label="חיפוש תרגיל">
-          <button class="ghost" id="qclear" type="button" hidden>נקה</button>
           <button class="ghost accent" id="newEx" type="button">+ תרגיל משלי</button>
         </div></div>
       <div class="groups" id="groups"></div>
@@ -525,7 +524,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         </div>
       </div>
       <div class="target" id="target"></div>
-      <div class="cathead" id="catbox"><h2 id="cattitle"></h2><div class="catsearch"><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"><button class="ghost" id="q2clear" type="button" hidden>נקה</button></div></div>
+      <div class="cathead" id="catbox"><h2 id="cattitle"></h2><div class="catsearch"><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div></div>
       <div id="lib"></div>
     </main>
 
@@ -538,7 +537,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <div class="pkwrap">
     <div class="pkhead">
       <div class="pktop"><div><h2 id="pktitle"></h2><div class="pmeta" id="pkfor"></div></div></div>
-      <div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"><button class="ghost" id="pkqclear" type="button" hidden>נקה</button></div>
+      <div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div>
       <div class="chips" id="pksubs"></div>
     </div>
     <div class="pkbody" id="pklist"></div>
@@ -2838,7 +2837,7 @@ function renderLibrary(){
 // ===== exercise picker for one body area (opened from the trainee's program) =====
 const PK = {g:"legs", sub:"all", q:""};
 function openPicker(g){
-  PK.g = g; PK.sub = "all"; PK.q = ""; $("pkq").value = ""; $("pkqclear").hidden = true;
+  PK.g = g; PK.sub = "all"; PK.q = ""; $("pkq").value = "";
   const G = GROUPS.find(x => x.k === g); $("pkq").placeholder = `חיפוש ב${G ? G.he : ""}`;
   $("panel").classList.remove("open"); $("picker").hidden = false; renderPicker(); $("pklist").scrollTop = 0;
 }
@@ -3414,7 +3413,7 @@ document.addEventListener("click", ev => {
     case "cancel": pendingAdd = null; closeModal(); break;
     case "info": case "open": openInfo(b.dataset.id); break;
     case "dadd": { const id = b.dataset.id; if (!cur()){ toggle(id); break; } toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
-    case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; $("q2clear").hidden = true; F.type.clear(); F.eq.clear(); renderLibrary(); break;
+    case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); break;
     case "sub": F.sub = b.dataset.s; renderLibrary(); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
@@ -3448,7 +3447,7 @@ document.addEventListener("click", ev => {
     case "addgrp": openPicker(b.dataset.g); break;
     case "pkclose": closePicker(); break;
     case "pksub": PK.sub = b.dataset.s; renderPicker(); $("pklist").scrollTop = 0; break;
-    case "addgrp_old": { F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; $("qclear").hidden = true; F.q2 = ""; $("q2").value = ""; $("q2clear").hidden = true; F.type.clear(); F.eq.clear();
+    case "addgrp_old": { F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear();
       $("panel").classList.remove("open"); renderLibrary(); const el = $("groups"); window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 80));
       const G = GROUPS.find(x=>x.k===F.g); toast(`מציג תרגילי ${G?G.he:""}. אפשר לחפש בתוך ${G?G.he:"הקטגוריה"} או ללחוץ +`); break; }
     case "find": { setAdding(true); $("panel").classList.remove("open"); const q = $("q"); q.readOnly = false; q.focus(); window.scrollTo(0, 0); break; }
@@ -3466,17 +3465,14 @@ function setAdding(on){
 $("newEx").addEventListener("click", openCustom);
 document.addEventListener("keydown", ev => { if (ev.key === "Escape"){ if (!$("modal").hidden) closeModal(); else if (!$("picker").hidden) closePicker(); else $("panel").classList.remove("open"); } });
 let qT;
-$("q").addEventListener("input", ev => { $("qclear").hidden = !ev.target.value; clearTimeout(qT); qT = setTimeout(() => { F.q = ev.target.value; renderLibrary(); }, 120); });
+$("q").addEventListener("input", ev => { clearTimeout(qT); qT = setTimeout(() => { F.q = ev.target.value; renderLibrary(); }, 120); });
 $("q").addEventListener("keydown", ev => { if (ev.key === "Enter") ev.target.blur(); });
 let q2T;
-$("q2").addEventListener("input", ev => { $("q2clear").hidden = !ev.target.value; clearTimeout(q2T); q2T = setTimeout(() => { F.q2 = ev.target.value; renderLibrary(); }, 120); });
+$("q2").addEventListener("input", ev => { clearTimeout(q2T); q2T = setTimeout(() => { F.q2 = ev.target.value; renderLibrary(); }, 120); });
 $("q2").addEventListener("keydown", ev => { if (ev.key === "Enter") ev.target.blur(); });
-$("q2clear").addEventListener("click", () => { $("q2").value = ""; F.q2 = ""; $("q2clear").hidden = true; renderLibrary(); });
 let pkT;
-$("pkq").addEventListener("input", ev => { $("pkqclear").hidden = !ev.target.value; clearTimeout(pkT); pkT = setTimeout(() => { PK.q = ev.target.value; renderPicker(); }, 120); });
+$("pkq").addEventListener("input", ev => { clearTimeout(pkT); pkT = setTimeout(() => { PK.q = ev.target.value; renderPicker(); }, 120); });
 $("pkq").addEventListener("keydown", ev => { if (ev.key === "Enter") ev.target.blur(); });
-$("pkqclear").addEventListener("click", () => { $("pkq").value = ""; PK.q = ""; $("pkqclear").hidden = true; renderPicker(); });
-$("qclear").addEventListener("click", () => { const q = $("q"); q.value = ""; F.q = ""; $("qclear").hidden = true; renderLibrary(); });
 $("panel").addEventListener("input", ev => {
   const el = ev.target, t = cur(); if (!t) return;
   if (el.id === "dayName"){ curDay().name = el.value; save(activeId); renderBar(); $("target").querySelectorAll("b")[1] && ($("target").querySelectorAll("b")[1].textContent = el.value); return; }
