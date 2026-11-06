@@ -1722,7 +1722,7 @@ function to3dPts(fr){
     // moving equipment points (bands / weights) are carried as extra keys so they animate with the body
     (fr.pr||[]).forEach((q,i)=>{
       if(q.k==="band"){k["b"+i+"a"]=P(q.from);k["b"+i+"b"]=P(q.to);k["b"+i+"v"]=q.via?P(q.via):null;}
-      if(q.k==="wt"){k["w"+i]=P([q.at[0]+(q.dx||0),q.at[1]+(q.dy||0)]);if(q.atRef==="W") k["_wh"+i]=true;}
+      if(q.k==="wt"){k["w"+i]=P([q.at[0]+(q.dx||0),q.at[1]+(q.dy||0)]);if(q.atRef==="W") k["_wh"+i]=true;if(q.atRef) k["_wa"+i]=q.atRef;}
     });
   }
   return k;
@@ -2258,6 +2258,52 @@ function build(host,frames,opt){opt=opt||{};
   const mEq=new T.MeshStandardMaterial({color:css("--muted"),roughness:0.6});
   const mWall=new T.MeshStandardMaterial({color:css("--muted"),roughness:1,transparent:true,opacity:0.25});
   const mAcc=new T.MeshStandardMaterial({color:css("--accent"),roughness:0.5});
+  // ---- gym equipment: real shapes instead of rings (sizes in model units, about 0.9 cm) ----
+  const mIron=new T.MeshStandardMaterial({color:0x2a2a30,roughness:0.42,metalness:0.6}),mSteel=new T.MeshStandardMaterial({color:0xbfc2ca,roughness:0.25,metalness:0.9});
+  const mRub=new T.MeshStandardMaterial({color:0x151518,roughness:0.85}),mBall=new T.MeshStandardMaterial({color:0x34343a,roughness:0.75}),mBag=new T.MeshStandardMaterial({color:0x5b5338,roughness:0.95});
+  const mRim=new T.MeshStandardMaterial({color:0xff8a1f,roughness:0.5});
+  // with the anatomy model the output is sRGB, so these colours are given in sRGB and converted
+  if(opt.model) for(const m of [mIron,mSteel,mRub,mBall,mBag,mRim]) m.color.convertSRGBToLinear();
+  const eqGeo=[];const G_=g=>{eqGeo.push(g);return g;};
+  const cylZ=(r,len,mat,z,seg)=>{const m=new T.Mesh(G_(new T.CylinderGeometry(r,r,len,seg||24)),mat);m.rotation.x=Math.PI/2;m.position.z=z||0;return m;};
+  const KIT={
+    db(){const g=new T.Group();g.add(cylZ(1.5,13,mSteel));for(const z of [-9.8,9.8]) g.add(cylZ(6.2,6.5,mIron,z,6));for(const z of [-6.3,6.3]) g.add(cylZ(2.6,0.8,mSteel,z));return g;},
+    bb(){const g=new T.Group();g.add(cylZ(1.2,176,mSteel));
+      for(const sd of [-1,1]){g.add(cylZ(2.3,36,mSteel,sd*70));g.add(cylZ(3.4,2.2,mSteel,sd*51.5));
+        g.add(cylZ(20,3.4,mRub,sd*55,40));g.add(cylZ(20,0.6,mRim,sd*56.9,40));g.add(cylZ(15.5,3,mRub,sd*58.6,36));g.add(cylZ(3.6,2.4,mRim,sd*61.6));}return g;},
+    kb(){const g=new T.Group(),h=new T.Mesh(G_(new T.TorusGeometry(5.2,1.25,10,24,Math.PI)),mIron);h.position.y=-5.4;g.add(h);
+      for(const x of [-5.2,5.2]){const l=new T.Mesh(G_(new T.CylinderGeometry(1.25,1.4,4,10)),mIron);l.position.set(x,-6.6,0);g.add(l);}
+      const b=new T.Mesh(G_(new T.SphereGeometry(8.4,24,18)),mIron);b.position.y=-14.5;b.scale.y=0.94;g.add(b);return g;},
+    mb(){const g=new T.Group();g.add(new T.Mesh(G_(new T.SphereGeometry(11,28,20)),mBall));const r=new T.Mesh(G_(new T.TorusGeometry(11.05,0.55,8,48)),mRim);g.add(r);return g;},
+    sd(){const g=new T.Group();g.add(cylZ(12,42,mBag,0,18));for(const z of [-21,21]){const c=new T.Mesh(G_(new T.SphereGeometry(12,18,12)),mBag);c.scale.z=0.35;c.position.z=z;g.add(c);}return g;},
+    plate(){const g=new T.Group(),m=new T.Mesh(G_(new T.CylinderGeometry(13,13,2.4,36)),mRub);g.add(m);const h=new T.Mesh(G_(new T.CylinderGeometry(2.6,2.6,2.6,16)),mSteel);g.add(h);return g;}};
+  const kitOf=(eq,en)=>/plate/i.test(en||"")?"plate":({db:"db",bb:"bb",kb:"kb",mb:"mb",sd:"sd"})[eq]||"db";
+  const KIND=kitOf(opt.eq,opt.en), PAIR=KIND==="db"||(KIND==="kb"&&!(/swing|goblet|sumo|deadlift|halo|around|figure/i.test(opt.en||"")&&!/single|one-arm/i.test(opt.en||"")));   // one in each hand, or one object held by both hands
+  const newKit=()=>{const a=KIT[KIND](),b=PAIR?KIT[KIND]():null;scene.add(a);if(b) scene.add(b);return {a,b};};
+  const Zax=new T.Vector3(0,0,1),Yax=new T.Vector3(0,1,0);
+  const aim=(o,ax)=>{o.quaternion.setFromUnitVectors(Zax,ax.clone().normalize());};
+  const bonePos=n=>{const w=new T.Vector3();Mo.bones[n].getWorldPosition(w);return w;};
+  const boneFwd=n=>{const q=new T.Quaternion();Mo.bones[n].getWorldQuaternion(q);return new T.Vector3(0,0,1).applyQuaternion(q);};
+  // place a carried weight on the model: in the hands (W), across the upper back / front rack (S) or the hips (H)
+  function placeKit(kit,where,w){const {a,b}=kit;a.visible=true;if(b) b.visible=false;
+    if(!(Mo&&Mo.side)){a.position.set(...w);return;}
+    const up=bonePos("neck").sub(bonePos("root")).normalize(),lat=bonePos("uarmL").sub(bonePos("uarmR")).normalize(),fwd=boneFwd("chest");
+    if(where==="S"){const sh=bonePos("uarmL").add(bonePos("uarmR")).multiplyScalar(0.5);
+      if(KIND==="sd"){a.position.copy(bonePos("uarmL")).addScaledVector(up,8);aim(a,fwd);return;}
+      const front=/front squat|zercher/i.test(opt.en||"");
+      a.position.copy(sh).addScaledVector(up,front&&/zercher/i.test(opt.en)?-16:2).addScaledVector(fwd,front?9:-7);aim(a,lat);return;}
+    if(where==="H"){a.position.copy(bonePos("thighL").add(bonePos("thighR")).multiplyScalar(0.5)).addScaledVector(fwd,13);aim(a,lat);return;}
+    if(where!=="W"){a.position.set(...w);aim(a,lat);return;}
+    const gL=gripPoint(Mo,"L"),gR=gripPoint(Mo,"R"),dist=gL.p.distanceTo(gR.p),mid=gL.p.clone().add(gR.p).multiplyScalar(0.5);
+    const kbOrient=(o,g)=>{const press=g.f.y>0.35,bd=press?g.n.clone().negate():new T.Vector3(0,-1,0),Y=bd.clone().negate().normalize();
+      let X=new T.Vector3().crossVectors(g.f,g.n);X.addScaledVector(Y,-X.dot(Y));if(X.lengthSq()<1e-4) X=lat.clone();X.normalize();
+      o.quaternion.setFromRotationMatrix(new T.Matrix4().makeBasis(X,Y,new T.Vector3().crossVectors(X,Y)));o.position.copy(g.p);};
+    if(PAIR&&dist<15){// both hands on one dumbbell / kettlebell (goblet)
+      a.position.copy(mid);if(KIND==="db") aim(a,up);else kbOrient(a,{p:mid,f:up,n:fwd.clone().negate()});return;}
+    if(PAIR){[[a,gL],[b,gR]].forEach(([o,g])=>{o.visible=true;if(KIND==="db"){o.position.copy(g.p);aim(o,new T.Vector3().crossVectors(g.f,g.n));}else kbOrient(o,g);});return;}
+    const ax=dist>6?gR.p.clone().sub(gL.p):lat;a.position.copy(mid);
+    if(KIND==="plate") a.quaternion.setFromUnitVectors(Yax,new T.Vector3().crossVectors(ax,up).normalize().lengthSq()>0.01?new T.Vector3().crossVectors(ax,up).normalize():fwd);
+    else aim(a,ax);}
   const mBand=new T.MeshStandardMaterial({color:0xF0883E,roughness:0.45});   // resistance band: a flat elastic loop
   // a band as a soft tube through the given points
   const bandMesh=(m,pts)=>{if(m.geometry) m.geometry.dispose();m.geometry=new T.TubeGeometry(new T.CatmullRomCurve3(pts,false,"centripetal"),72,0.85,6,false);m.visible=true;};
@@ -2315,7 +2361,7 @@ function build(host,frames,opt){opt=opt||{};
         if(h>35&&q.h==null){staticBox(cx,-(q.y+3),0,q.w+6,6,64);
           for(const dx of [-1,1]) for(const dz of [-1,1]) staticCyl([cx+dx*(q.w/2-2),-(q.y+6),dz*28],[cx+dx*(q.w/2-2),-(GY+4),dz*28],1.8);}
         else staticBox(cx,-(q.y+h/2),0,q.w,h,60);});
-      else if(q.k==="wt"&&q.at==="W") once(["held"],()=>dyn.push({held:true,m:new T.Mesh(tor,mAcc),m2:new T.Mesh(tor,mAcc)}));}));
+      else if(q.k==="wt"&&q.at==="W") once(["held"],()=>dyn.push({held:true,kit:newKit()}));}));
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
       staticBox(a[0],a[1]+52,a[2]+(a[2]<0?-7:7),9,124,9,mDark);
@@ -2342,9 +2388,11 @@ function build(host,frames,opt){opt=opt||{};
         if(q.atRef&&JMAP[q.atRef]&&(q.atRef==="W"||q.atRef==="F")){for(const s of ["L","R"]) dyn.push({ring:new T.Mesh(tor,mEq),strap:new T.Mesh(cyl,mEq),j:JMAP[q.atRef]+s,len:q.len||55,axis:"x"});}
         else for(const z of [-14,14]){const m=new T.Mesh(tor,mEq);m.position.set(q.at[0],-q.at[1],z);m.rotation.y=Math.PI/2;scene.add(m);
           staticCyl([q.at[0],-q.at[1]+6,z],[q.at[0],-q.at[1]+(q.len||55),z],0.9);}});
+      else if(q.k==="band"&&opt.eq==="lm") once(["band",i],()=>{const pl=new T.Group();pl.add(cylZ(20,3.4,mRub,0,40));pl.add(cylZ(3.6,6,mSteel,3));
+        const base=new T.Mesh(G_(new T.CylinderGeometry(5,7,4,16)),mIron);scene.add(pl);scene.add(base);dyn.push({band:i,lm:true,m:new T.Mesh(cyl,mSteel),pl,base});});
       else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,kind:q.viaRef==="K"?"knees":q.toRef==="H"?"hips":q.toRef==="S"?"chest":q.toRef==="W"?"hands":"line",
         bars:(fr.pr||[]).some(z=>z.k==="hbar"),m:new T.Mesh(new T.BufferGeometry(),mBand)}));
-      else if(q.k==="wt") once(["wt",i],()=>dyn.push({wt:i,m:new T.Mesh(tor,mAcc),m2:new T.Mesh(tor,mAcc)}));
+      else if(q.k==="wt") once(["wt",i],()=>dyn.push({wt:i,kit:newKit()}));
     }));
   }
   for(const d of dyn) for(const k of ["ring","strap","m","m1","m2","cuff"]) if(d[k]) scene.add(d[k]);
@@ -2354,9 +2402,7 @@ function build(host,frames,opt){opt=opt||{};
     for(const n in joints) joints[n].m.position.set(...k[n]);
     head.position.set(...k.head);
     for(const d of dyn){
-      if(d.held){[["L",d.m],["R",d.m2]].forEach(([s,m])=>{m.visible=true;m.scale.setScalar(0.8);
-          if(Mo&&Mo.side){const g=gripPoint(Mo,s);m.position.copy(g.p);m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().crossVectors(g.f,g.n).normalize());}
-          else m.position.set(...k["wr"+s]);});continue;}
+      if(d.held){placeKit(d.kit,"W",k.wrL);continue;}
       if(d.cable){// ends at the cuff just above the ankle: on the model's ankle when it is shown
         let e=V(k[d.cable]);const lim=d.cable.slice(0,2)==="ft"?"foot":"hand";
         if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones[lim+Mo.side[d.cable.slice(-1)]].getWorldPosition(w);e=w.add(new T.Vector3(0,lim==="foot"?3:0,0));}
@@ -2373,6 +2419,9 @@ function build(host,frames,opt){opt=opt||{};
           place(d.strap,V([w[0],w[1]+6,w[2]]),V([w[0],w[1]+d.len,w[2]]),0.9);}}
       else if(d.band!=null){const a=k["b"+d.band+"a"],b=k["b"+d.band+"b"];
         if(!a){d.m.visible=false;continue;}
+        if(d.lm){// landmine: the bar's end in a pivot on the floor, the other end in the hands with a plate on it
+          const pv=V(a),h=Mo&&Mo.side?gripPoint(Mo,"L").p.add(gripPoint(Mo,"R").p).multiplyScalar(0.5):V(b),u=h.clone().sub(pv).normalize();
+          place(d.m,pv,h.clone().addScaledVector(u,32),1.25);d.pl.position.copy(h).addScaledVector(u,18);aim(d.pl,u);d.base.position.copy(pv);continue;}
         if(d.kind==="knees"){
           // a band tied across between the two bars (or the two ring straps); the knees rest on it and it sags below them
           const bp=bodyPt(k,"knees"),y=a[1],zz=d.bars?21:Math.max(12,Math.abs(k.wrL[2]-k.wrR[2])/2);
@@ -2382,10 +2431,7 @@ function build(host,frames,opt){opt=opt||{};
         else {// looped over the bar / anchor, two strands down to the body part and around it
           const bp=bodyPt(k,d.kind),A=V(a),l=bp.lat.clone().multiplyScalar(2.5);bandMesh(d.m,loopPts(A.clone().add(l),A.clone().sub(l),bp));}}
       else if(d.wt!=null){const w=k["w"+d.wt];
-        if(w&&Mo&&Mo.side&&k["_wh"+d.wt]){// held weight: one in each of the model's hands, across the palm
-          [["L",d.m],["R",d.m2]].forEach(([s,m])=>{const g=gripPoint(Mo,s);m.visible=true;m.position.copy(g.p);m.scale.setScalar(0.8);
-            m.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3().crossVectors(g.f,g.n).normalize());});}
-        else if(w){d.m.visible=true;d.m.position.set(...w);d.m2.visible=false;}else d.m.visible=d.m2.visible=false;}
+        if(w) placeKit(d.kit,k["_wa"+d.wt]||"",w);else {d.kit.a.visible=false;if(d.kit.b) d.kit.b.visible=false;}}
       else if(d.fband){// looped over the bar (or the rings' straps) between the hands, both feet stand in the loop
         const bp=bodyPt(k,"feet"),y=-d.by;bandMesh(d.m,loopPts(new T.Vector3(-3,y+1,0),new T.Vector3(3,y+1,0),bp));}
       else if(d.fw){const p=k.pelv;d.m.position.set(p[0],p[1]-14,4);}
@@ -2436,7 +2482,7 @@ function build(host,frames,opt){opt=opt||{};
     if(playing) raf=requestAnimationFrame(loop);}
   pose(keys[0]);renderer.render(scene,cam);if(playing) loop();
   const ro=new ResizeObserver(()=>{renderer.setSize(W(),HGT);cam.aspect=W()/HGT;cam.updateProjectionMatrix();renderer.render(scene,cam);});ro.observe(host);
-  return {stop(){alive=false;cancelAnimationFrame(raf);ro.disconnect();if(Mo)Mo.dispose();renderer.dispose();cyl.dispose();sph.dispose();tor.dispose();cv.remove();},
+  return {stop(){alive=false;cancelAnimationFrame(raf);ro.disconnect();if(Mo)Mo.dispose();renderer.dispose();cyl.dispose();sph.dispose();tor.dispose();eqGeo.forEach(g=>g.dispose());cv.remove();},
     // for tests: show one moment of the timeline from a chosen angle
     shot(sec,a,e){playing=false;cancelAnimationFrame(raf);if(a!=null){az=a;el=e;camUpdate();}pose(frameAt(sec));renderer.render(scene,cam);return cv.toDataURL("image/png");},
     total:TOTAL,az0:az};
@@ -2452,7 +2498,7 @@ async function mount(host,fr,ring,info){
   let M=null;try{M=await loadModel();}catch(e){M=null;}
   if(!host.isConnected) return;
   const en=info.en||"";
-  try{cur=build(host,ILLV.frames3d(fr,ring),{model:M,act:M?muscleAct(info.mus,M.meta.groups):null,neg:/Negative/i.test(en)});
+  try{cur=build(host,ILLV.frames3d(fr,ring),{model:M,act:M?muscleAct(info.mus,M.meta.groups):null,neg:/Negative/i.test(en),eq:info.eq,en});
     host.querySelector(".tdmsg").innerHTML=M?'גוררים כדי לסובב · <b class="redm">מודגש</b> = השרירים שעובדים':"גוררים כדי לסובב";}
   catch(e){fallback(host,fr,ring,"התלת-ממד לא נתמך במכשיר הזה");}
 }
@@ -3048,7 +3094,7 @@ function openInfo(id){
         ${alt.length?`<div class="altrow"><span class="ft">ציוד אחר</span>${alt.map(chip).join("")}</div>`:""}</div></div>`:""}
     </div>
     <div class="dfoot"><span class="tgt" id="dtgt">${esc(b.tgt)}</span>${e.own?`<button type="button" class="danger" data-act="delown" data-id="${esc(id)}">מחק תרגיל</button>`:""}<button type="button" class="primary${b.on?" on":""}" id="dbtn" data-act="dadd" data-id="${esc(id)}">${b.txt}</button></div>`, true);
-  if (fr){ const host = $("tdhost"); if (host) TD.mount(host, fr, false, {mus, en:e.en}); }
+  if (fr){ const host = $("tdhost"); if (host) TD.mount(host, fr, false, {mus, en:e.en, eq:e.eq}); }
 }
 function openTrainee(edit){
   const t = edit ? cur() : null;
