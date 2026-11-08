@@ -2870,8 +2870,11 @@ const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה"
 // other names people search by (per body area · sub-category)
 const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק דק פרפר horizontal adduction", "shoulders.rear":"הרחקה אופקית כתף אחורית horizontal abduction",
   "shoulders.side":"הרחקת כתף הרחקה לצדדים כתף צידית lateral raise"};
-const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"משקולות חופשיות מוט אולימפי", kb:"משקולות חופשיות", cb:"כבלים קרוסאובר פולי"};
+const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"מוט אולימפי", cb:"כבלים קרוסאובר פולי"};
 function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||""].join(" ")); }
+// search words without the joining words people type ("פולי עליון עם מוט")
+const STOP = new Set(["עם","של","את","גם"].map(w => norm(w)));
+const qtoks = q => norm(q).split(" ").filter(t => t && !STOP.has(t));
 function tokOk(t, hay){
   if (hay.includes(t)) return true;
   const t2 = t.length > 3 && "בהולכש".includes(t[0]) ? t.slice(1) : null;
@@ -2887,7 +2890,7 @@ const skel = x => x.replace(/[אוי]/g, ""), SKEL = new Map();
 function skelHay(h){ let v = SKEL.get(h); if (v == null){ v = skel(h); SKEL.set(h, v); } return v; }
 function matchQ(e, toks){ if (!e._hay){ e._hay = hayOf(e); e._hay0 = e._hay.replace(/ /g,""); } if (toks.every(t => tokOk(t, e._hay))) return true; const j = toks.join(""); return toks.length > 1 && j.length > 3 && e._hay0.includes(j); }
 function filtered(){
-  const gq = norm(F.q).split(" ").filter(Boolean), cq = norm(F.q2).split(" ").filter(Boolean);
+  const gq = qtoks(F.q), cq = qtoks(F.q2);
   const toks = gq.length ? gq : cq, q = toks.length > 0;
   return EX.filter(e => {
     if (gq.length){ if (!matchQ(e, gq)) return false; }
@@ -2945,7 +2948,7 @@ function renderPicker(){
   const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay(); if (!G) return;
   $("pktitle").textContent = `תרגילי ${G.he}`;
   $("pkfor").textContent = t ? `מוסיף ל${t.name}${t.days.length > 1 ? " · " + d.name : ""}` : "";
-  const base = EX.filter(e => e.g === PK.g), toks = norm(PK.q).split(" ").filter(Boolean);
+  const base = EX.filter(e => e.g === PK.g), toks = qtoks(PK.q);
   const list = base.filter(e => toks.length ? matchQ(e, toks) : true).sort((a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
   if (!list.length){ $("pklist").innerHTML = `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
   if (toks.length){ $("pklist").innerHTML = `<ul class="list">${list.map(card).join("")}</ul>`; return; }
