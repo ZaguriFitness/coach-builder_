@@ -2656,10 +2656,16 @@ let BASE = [];
   }
 })();
 let CUSTOM = [];
+let NAMES = {};          // your own wording for built-in exercises: {id: name}
 let EX = [], BYID = {};
 function rebuild(){
   EX = BASE.concat(CUSTOM.map(c => ({...c, own:true})));
-  BYID = {}; for (const e of EX) BYID[e.id] = e;
+  BYID = {};
+  for (const e of EX){
+    if (e.he0 === undefined) e.he0 = e.he;
+    e.he = (!e.own && NAMES[e.id]) || e.he0; e._hay = null;
+    BYID[e.id] = e;
+  }
 }
 rebuild();
 
@@ -2694,9 +2700,9 @@ const pending = {}, timers = {}, chain = {};
 function loadLocal(){
   let d = {};
   try{ d = JSON.parse(localStorage.getItem(LS) || "{}") || {}; }catch(e){}
-  Object.assign(T, d.trainees || {}); CUSTOM = d.custom || []; rebuild();
+  Object.assign(T, d.trainees || {}); CUSTOM = d.custom || []; NAMES = d.names || {}; rebuild();
 }
-function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({trainees:T, custom:CUSTOM})); }catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify({trainees:T, custom:CUSTOM, names:NAMES})); }catch(e){} }
 function save(id){
   if (!db){ saveLocal(); return; }
   pending[id] = true;
@@ -2715,7 +2721,7 @@ function flush(id){
 let customBusy = Promise.resolve();
 function saveCustom(){
   if (!db){ saveLocal(); return; }
-  customBusy = customBusy.then(() => db.doc("custom/exercises").set({list:CUSTOM}).catch(() => toast("שמירת התרגיל נכשלה")));
+  customBusy = customBusy.then(() => db.doc("custom/exercises").set({list:CUSTOM, names:NAMES}).catch(() => toast("השמירה נכשלה. בדקו חיבור ונסו שוב.")));
 }
 function attachDb(d){
   db = d;
@@ -2730,6 +2736,7 @@ function attachDb(d){
   }, () => { ready = true; renderAll(); toast("לא הצלחתי לטעון את המתאמנים"); });
   db.doc("custom/exercises").onSnapshot(s => {
     CUSTOM = s.exists ? (s.data().list || []).map(x => ({...x})) : [];
+    NAMES = s.exists ? {...(s.data().names || {})} : {};
     rebuild(); renderLibrary(); renderPanel();
   }, () => {});
 }
@@ -2775,7 +2782,7 @@ async function initCloud(){
       if (snap.empty){
         const b = fs.batch();
         for (const [id, t] of Object.entries(T)) b.set(wrap.collection("trainees").doc(id), JSON.parse(JSON.stringify(t)));
-        if (CUSTOM.length) b.set(wrap.doc("custom/exercises"), {list:CUSTOM});
+        if (CUSTOM.length || Object.keys(NAMES).length) b.set(wrap.doc("custom/exercises"), {list:CUSTOM, names:NAMES});
         await b.commit();
       }
     } catch(e){ toast("הסנכרון נכשל. בדקו חיבור ונסו שוב."); CLOUD.user = null; return; }
@@ -2873,7 +2880,7 @@ const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק �
 // other names for single exercises
 const EXALIAS = {"Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
 const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"מוט אולימפי", cb:"כבלים קרוסאובר פולי"};
-function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||""].join(" ")); }
+function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||""].join(" ")); }
 // search words without the joining words people type ("פולי עליון עם מוט")
 const STOP = new Set(["עם","של","את","גם"].map(w => norm(w)));
 const qtoks = q => norm(q).split(" ").filter(t => t && !STOP.has(t));
@@ -3140,8 +3147,31 @@ function openInfo(id){
         ${harder.length?`<div class="altrow"><span class="ft">קשה יותר</span>${harder.map(chip).join("")}</div>`:""}
         ${alt.length?`<div class="altrow"><span class="ft">ציוד אחר</span>${alt.map(chip).join("")}</div>`:""}</div></div>`:""}
     </div>
-    <div class="dfoot"><span class="tgt" id="dtgt">${esc(b.tgt)}</span>${e.own?`<button type="button" class="danger" data-act="delown" data-id="${esc(id)}">מחק תרגיל</button>`:""}<button type="button" class="primary${b.on?" on":""}" id="dbtn" data-act="dadd" data-id="${esc(id)}">${b.txt}</button></div>`, true);
+    <div class="dfoot"><span class="tgt" id="dtgt">${esc(b.tgt)}</span><button type="button" class="ghost" data-act="rename" data-id="${esc(id)}">✎ שינוי שם</button>${e.own?`<button type="button" class="danger" data-act="delown" data-id="${esc(id)}">מחק תרגיל</button>`:""}<button type="button" class="primary${b.on?" on":""}" id="dbtn" data-act="dadd" data-id="${esc(id)}">${b.txt}</button></div>`, true);
   if (fr){ const host = $("tdhost"); if (host) TD.mount(host, fr, false, {mus, en:e.en, eq:e.eq}); }
+}
+function openRename(id){
+  const e = BYID[id]; if (!e) return;
+  const orig = e.own ? "" : e.he0, changed = !e.own && NAMES[id];
+  openModal(`<h2>שינוי שם התרגיל</h2>
+    <form id="rnform" class="mbox" style="padding:0;border:0;max-height:none;overflow:visible">
+      <label>שם התרגיל<input id="rn-name" required maxlength="120" value="${esc(e.he)}"></label>
+      ${orig ? `<p class="hint">השם המקורי: ${esc(orig)}</p>` : ""}
+      <div class="macts"><button class="primary" type="submit">שמור</button>${changed?`<button class="ghost" type="button" data-act="renreset" data-id="${esc(id)}">חזרה לשם המקורי</button>`:""}<button class="ghost" type="button" data-act="open" data-id="${esc(id)}">ביטול</button></div>
+    </form>`);
+  const inp = $("rn-name"); try { inp.select(); } catch(err){}
+  $("rnform").addEventListener("submit", ev => { ev.preventDefault(); renameEx(id, inp.value); });
+}
+function renameEx(id, name){
+  const e = BYID[id]; if (!e) return;
+  name = String(name || "").replace(/\s+/g, " ").trim();
+  if (e.own){
+    if (!name) return;
+    const c = CUSTOM.find(c => c.id === id); if (c) c.he = name;
+  } else if (!name || name === e.he0) delete NAMES[id];
+  else NAMES[id] = name;
+  rebuild(); saveCustom(); renderAll(); openInfo(id);
+  toast(name && name !== e.he0 ? "השם עודכן" : "חזר השם המקורי");
 }
 function openTrainee(edit){
   const t = edit ? cur() : null;
@@ -3481,6 +3511,8 @@ document.addEventListener("click", ev => {
     case "editT": openTrainee(true); break;
     case "cancel": pendingAdd = null; closeModal(); break;
     case "info": case "open": openInfo(b.dataset.id); break;
+    case "rename": openRename(b.dataset.id); break;
+    case "renreset": renameEx(b.dataset.id, ""); break;
     case "delown": { // your own exercise: first tap asks, second deletes it from the library (programs keep their copy)
       if (!b.classList.contains("arm")){ b.classList.add("arm"); b.textContent = "למחוק את התרגיל?"; break; }
       const id = b.dataset.id, e = BYID[id]; CUSTOM = CUSTOM.filter(c => c.id !== id); rebuild(); saveCustom();
