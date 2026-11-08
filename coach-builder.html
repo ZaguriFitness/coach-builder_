@@ -3000,7 +3000,7 @@ function renderLibrary(){
   renderGroups(); renderFilters();
   const t = cur(), d = curDay(), Gc = GROUPS.find(g => g.k === F.g);
   $("catbox").hidden = !!F.q.trim(); $("cattitle").textContent = Gc ? Gc.he : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
-  $("target").innerHTML = t ? `<span>מוסיף ל: <b>${esc(t.name)}</b> · <b>${esc(d?d.name:"")}</b></span>` : `<span>בחרו מתאמן כדי להתחיל להוסיף תרגילים</span>`;
+  $("target").innerHTML = t ? `<span>מוסיף ל: <b>${esc(t.name)}</b> · <b>${esc(d?d.name:"")}</b></span>` : "";
   const list = filtered();
   if (!list.length){ $("lib").innerHTML = `<div class="empty">אין תרגילים שמתאימים לסינון. נסו לנקות סינון או לחפש מילה אחרת.</div>`; return; }
   if (F.q || F.q2.trim() || F.sub !== "all"){
