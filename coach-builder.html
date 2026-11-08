@@ -1320,7 +1320,7 @@ ZP.yraise=e=>{const b={H:[60,152],t:-32,L:[50,200],kb:[1,0],g:1,pr:[box(40,150,1
 ZP.backlow=e=>{const n=e.en;
   if(/bird dog/i.test(n)) return ZP.birddog(e);
   if(/superman/i.test(n)) return [{H:[100,196],t:180,th:0,sh:0,ua:180,fa:180,g:1},{H:[100,194],t:191,th:-9,sh:-9,ua:194,fa:194,g:1,label:"ידיים ורגליים עולות"}];
-  if(/back extension/i.test(n)) return ZP.hipext(e);
+  if(/back extension/i.test(n)) return ZP.hipext(e).map(f=>zHH(f));
   if(/jefferson/i.test(n)){const B=box(60,163.5,44);return [zshift(zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),0,-40),zshift(zA({H:[76,120],t:68,L:[80,200],g:1},[110,196],[0,1],{pr:[ZW()],label:"גלגול איטי למטה"}),0,-40)].map(f=>zp(f,B));}
   return ZP.hinge(e);
 };
@@ -1359,15 +1359,38 @@ ZP.grip=e=>{const n=e.en;
 
 // ---- core ----
 const ZCR=(t,e)=>X({H:[95,192],t,L:[132,198],kb:[0.3,-1],A:add(add([95,192],50,t),18,t+70),eb:[0,-1],g:1},e);
+// lying on the back, trunk curling: the spine axis (pelvis → neck), the face direction (the knees' side) and the back
+function zspine(k){const P=k.pelv,N=k.neck,l=Math.hypot(N[0]-P[0],N[1]-P[1]),u=[(N[0]-P[0])/l,(N[1]-P[1])/l];
+  const d=[k.knL[0]-P[0],k.knL[1]-P[1]];let f=[-u[1],u[0]];if(f[0]*d[0]+f[1]*d[1]<0)f=[-f[0],-f[1]];return {P,u,f};}
+// twist the trunk about the spine by a degrees (shoulders, arms and head turn; pelvis and legs stay)
+function ztwist(k,a){const {P,u}=zspine(k),c=Math.cos(a*Math.PI/180),sn=Math.sin(a*Math.PI/180),U=[u[0],u[1],0];
+  const rot=q=>{const v=[q[0]-P[0],q[1]-P[1],q[2]],dt=v[0]*U[0]+v[1]*U[1],cr=[U[1]*v[2],-U[0]*v[2],U[0]*v[1]-U[1]*v[0]];
+    return [0,1,2].map(i=>P[i]+v[i]*c+cr[i]*sn+U[i]*dt*(1-c));};
+  for(const j of ["shL","shR","elL","elR","wrL","wrR","head"]) k[j]=rot(k[j]);return k;}
+// crunches: fingertips lightly behind the head (wrists by the ears), elbows wide out to the sides at head height,
+// so the hands support the head without pulling on the neck. tw: trunk twist (bicycle: elbow toward the other knee)
+function zHH(fr,tw){const k=zkeys(fr),{u,f}=zspine(k),H=k.head,b=[-f[0],-f[1]];
+  for(const [L,s] of [["L",1],["R",-1]]){const sh=k["sh"+L];
+    k["wr"+L]=[H[0]+b[0]*5+u[0]*2,H[1]+b[1]*5+u[1]*2,s*8];
+    k["el"+L]=[sh[0]+u[0]*15+f[0]*3,sh[1]+u[1]*15+f[1]*3,sh[2]+s*23];}
+  if(tw) ztwist(k,tw);
+  return {kind:"raw",K:k,g:true,props3d:[],az:0.75,el:0.3,flat:fr};}
+const TWB=35;
 ZP.crunch=e=>{const n=e.en;
   if(/reverse crunch/i.test(n)) return ILL["Reverse Crunch"];
-  if(/bicycle/i.test(n)) return [ZCR(200,{L:add([95,192],50,-45),L2:add([95,192],73,-15),kb:[1,-1],kb2:[1,-1]}),ZCR(200,{L:add([95,192],73,-15),L2:add([95,192],50,-45),kb2:[1,-1],label:"מרפק לברך נגדית"})];
-  if(/sit-up/i.test(n)) return [ZCR(180),ZCR(252,{label:"עד ישיבה"})];
+  if(/bicycle/i.test(n)){// hips stay down: one knee pulls in over the hip (shin level), the other leg is long and low;
+    // the trunk turns so the opposite elbow comes toward the bent knee
+    const bike=(tuckL,lab)=>{const r=zHH(ZCR(205,{L:tuckL?add([95,192],50,-45):add([95,192],73,-15),L2:tuckL?add([95,192],73,-15):add([95,192],50,-45),kb:[1,-1],kb2:[1,-1],label:lab}),tuckL?-TWB:TWB),k=r.K,P=k.pelv;
+      for(const [s,z] of [["L",1],["R",-1]]){const t=(s==="L")===tuckL,a=(t?100:22)*Math.PI/180,kn=[P[0]+37*Math.cos(a),P[1]+37*Math.sin(a),z*(t?5:9)];
+        k["kn"+s]=kn;k["ft"+s]=t?[kn[0]+35,kn[1]-5,z*7]:[P[0]+73*Math.cos(a),P[1]+73*Math.sin(a),z*9];}
+      return r;};
+    return [bike(true,"מרפק ימין לברך שמאל"),bike(false,"מרפק שמאל לברך ימין")];}
+  if(/sit-up/i.test(n)) return [zHH(ZCR(180)),zHH(ZCR(252,{label:"עד ישיבה"}))];
   if(/toe touch/i.test(n)) return [{H:[95,192],t:180,th:-88,sh:-88,ua:-90,fa:-90,g:1},{H:[95,192],t:205,th:-88,sh:-88,A:add(add([95,192],73,-88),2,0),g:1,label:"נגיעה באצבעות"}];
   if(/cable crunch/i.test(n)){const p=[ZC([120,0])];return [X(ZKNEEL,{A:[88,104],eb:[0,1],pr:p}),X(ZKNEEL,{t:-20,A:add(add([80,162],50,-20),14,-40),eb:[0,1],pr:p,label:"מעגלים את הגב למטה"})];}
   let fr=[ZCR(180),ZCR(206,{label:"שכמות עולות"})];
   if(/swiss|bosu/i.test(n)) fr=fr.map(f=>zp(zshift(f,0,-12),box(60,190.5,50)));
-  return fr;
+  return fr.map(f=>zHH(f));
 };
 ZP.legraise=e=>{const n=e.en;
   const M={"Hanging Knee Raise":"Hanging Knee Raise","Hanging Leg Raise":"Hanging Leg Raise","Toes to Bar":"Toes-to-Bar","Windshield Wipers":"Hanging Windshield Wipers",
@@ -1399,9 +1422,13 @@ ZP.plank=e=>{const n=e.en;
   if(/long-lever/i.test(n)) return [X(FPL,{A:[FPL.A[0]+14,199],label:"החזקה"})];
   return [X(FPL,{label:"החזקה"})];
 };
-ZP.twist=e=>{const b={H:[84,194],t:-122,th:-32,sh:12,A:[70,140],eb:[0,1],g:1,pr:HELD(e.eq)?[ZW()]:[]};
-  const fr=[X(b,{rotY:-28,pivot:[84],label:"סיבוב לצד אחד"}),X(b,{rotY:28,pivot:[84],label:"לצד השני"})];
-  return /bosu/i.test(e.en)?fr.map(f=>zp(zshift(f,0,-10),box(60,192.5,48))):fr;};
+// Russian twist: sitting on the sit bones, trunk leaning back, hands together in front of the belly (elbows bent);
+// the trunk turns about the spine so the hands go beside the hip — pelvis and legs stay still
+ZP.twist=e=>{let b={H:[84,194],t:-122,th:-32,sh:12,A:add(add([84,194],17,-122),27,-32),eb:[0,1],g:1,pr:HELD(e.eq)?[ZW()]:[]};
+  if(/bosu/i.test(e.en)) b=zp(zshift(b,0,-10),box(60,192.5,48));
+  const f=(a,lab)=>{const k=zkeys(b);for(const [s,z] of [["L",1],["R",-1]]){k["wr"+s][2]=z*5;k["el"+s][2]=z*19;}
+    ztwist(k,a);return {kind:"raw",K:k,g:true,props3d:[],az:1.0,el:0.35,flat:X(b,{label:lab})};};
+  return [f(50,"סיבוב לצד אחד"),f(-50,"לצד השני")];};
 ZP.chop=e=>{const n=e.en,lo=/low-to-high/i.test(n),p=e.eq==="lm"?[ZC([-30,198])]:e.eq==="db"?[ZW()]:[ZC(lo?[170,200]:[170,10])];
   if(/side bend/i.test(n)) return [zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),X(zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),{rotY:0,t:-80,label:"כפיפה לצד"})];
   const hi=add(zS(ZST),53,-40),low=[100,150];
@@ -1560,7 +1587,11 @@ ZP.mob=e=>{const n=e.en;
   if(/adductor rock/i.test(n)) return [ZQUAD,X(ZQUAD,{H:[56,168],t:ang([56,168],[110,150]),label:"אגן אחורה"})];
   if(/cat-cow/i.test(n)) return [X(ZQUAD,{label:"גב מעוגל"}),X(ZQUAD,{H:[70,164],t:ang([70,164],[117,150]),label:"גב מקושת"})];
   if(/thoracic rotation|thread/i.test(n)) return [ZQUAD,X(ZQUAD,{A:[84,192],A2:[118,199],eb2:[0,-1],rotY:15,pivot:[90],label:"יד מתחת לגוף"}),X(ZQUAD,{A:add([117,145],53,-90),A2:[118,199],rotY:-25,pivot:[90],label:"פתיחה לתקרה"})];
-  if(/foam roller/i.test(n)) return [{H:[100,184],t:188,L:[134,199],kb:[0.3,-1],A:[60,150],eb:[0,-1],g:1,pr:[ZW("S",8,10)]},{H:[100,184],t:200,L:[134,199],kb:[0.3,-1],A:[44,160],eb:[0,-1],g:1,pr:[ZW("S",8,10)],label:"קשת לאחור"}];
+  if(/foam roller/i.test(n)){// roller under the shoulder blades, hips down, hands behind the head: the upper back
+    // arches back over the roller (head toward the floor) and comes back up
+    const f=(t,lab,dn)=>{const r=zHH({H:[100,190],t,L:[134,199],kb:[0.3,-1],g:1,pr:[ZW("S",8,10)],label:lab}),k=r.K,{f:fw}=zspine(k);
+      if(dn)for(const j of ["head","wrL","wrR"])k[j]=[k[j][0]-fw[0]*dn,k[j][1]-fw[1]*dn,k[j][2]];return r;};
+    return [f(202,"שכמות על הרולר",0),f(193,"קשת לאחור מעל הרולר",5)];}
   if(/dislocate|shoulder cars/i.test(n)){const s=zS(ZST);return [zA(ZST,add(s,53,50),[0,1],{label:"ידיים קדימה"}),zA(ZST,add(s,53,-90),[0,1],{label:"מעל הראש"}),zA(ZST,add(s,53,-150),[0,1],{label:"מאחור"})];}
   if(/doorway/i.test(n)) return lab(zA(ZST,[54,74],[0,-1],{pr:[{k:"wall",x:52,y1:30}]}));
   if(/lat stretch/i.test(n)) return lab(zA({H:[66,128],t:-14,L:[80,200],kb:[1,0],g:1},[150,104],[0,1],{pr:[{k:"pole",x:154,y1:40,y2:200}]}));
