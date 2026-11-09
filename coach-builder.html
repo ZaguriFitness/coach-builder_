@@ -3225,8 +3225,8 @@ function openModal(html, wide){ try{TD.stop();}catch(e){} const m=$("mbox"); m.c
 function closeModal(){ try{TD.stop();}catch(e){} $("modal").hidden = true; $("mbox").innerHTML = ""; }
 function infoBtn(id){
   const t = cur(), d = curDay(), on = inDay(id);
-  if (!t) return {txt:"+ הוסף לתוכנית", tgt:"עוד אין מתאמן נבחר", on:false};
-  return {txt: on ? "הסר מהתוכנית" : "+ הוסף לתוכנית", tgt:`${t.name} · ${d.name}`, on};
+  if (!t) return {txt:"+ הכנס לתוכנית", tgt:"עוד אין מתאמן נבחר", on:false};
+  return {txt: on ? "הסר מהתוכנית" : "+ הכנס לתוכנית", tgt:`${t.name} · ${d.name}`, on};
 }
 function openInfo(id){
   const e = BYID[id]; if (!e) return;
@@ -3627,7 +3627,11 @@ document.addEventListener("click", ev => {
       if (!b.classList.contains("arm")){ b.classList.add("arm"); b.textContent = "למחוק את התרגיל?"; break; }
       const id = b.dataset.id, e = BYID[id]; CUSTOM = CUSTOM.filter(c => c.id !== id); rebuild(); saveCustom();
       closeModal(); renderAll(); toast(`${e ? e.he : "התרגיל"} נמחק מהספרייה`); break; }
-    case "dadd": { const id = b.dataset.id; if (!cur()){ toggle(id); break; } toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
+    case "dadd": { const id = b.dataset.id; if (!cur()){ toggle(id); break; }
+      // adding from the exercise window: put it in and go straight to the program, inside that body area
+      if (!inDay(id)){ toggle(id); const e = BYID[id]; closeModal(); $("picker").hidden = true; setAdding(false); setView("lib");
+        PCAT = e ? e.g : null; renderPanel(); $("panel").classList.add("open"); break; }
+      toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
     case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
