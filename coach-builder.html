@@ -2983,7 +2983,7 @@ const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה"
 const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק דק פרפר horizontal adduction", "shoulders.rear":"הרחקה אופקית כתף אחורית horizontal abduction",
   "shoulders.side":"הרחקת כתף הרחקה לצדדים כתף צידית lateral raise"};
 // other names for single exercises
-const EXALIAS = {"Bent-Over Cable Row":"standing row standing cable row חתירה בעמידה קרוס קרוסאובר פולי תחתון מוט קצר", "Cable Pullover":"straight arm pulldown פול אובר פולאובר בכבל קרוס קרוסאובר פולי עליון ידיים ישרות", "Band Straight-Arm Pulldown":"פול אובר פולאובר ידיים ישרות", "Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
+const EXALIAS = {"Face Pull":"פייספול face pull", "Seated Face Pull":"פייספול face pull", "Bent-Over Cable Row":"standing row standing cable row חתירה בעמידה קרוס קרוסאובר פולי תחתון מוט קצר", "Cable Pullover":"straight arm pulldown פול אובר פולאובר בכבל קרוס קרוסאובר פולי עליון ידיים ישרות", "Band Straight-Arm Pulldown":"פול אובר פולאובר ידיים ישרות", "Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
 const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"מוט אולימפי", cb:"כבלים קרוסאובר פולי"};
 function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||""].join(" ")); }
 // search words without the joining words people type ("פולי עליון עם מוט")
