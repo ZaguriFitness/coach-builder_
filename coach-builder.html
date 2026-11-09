@@ -522,6 +522,10 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .tcard[aria-pressed="true"]{border-color:transparent;background:var(--grad);color:#fff;box-shadow:0 12px 26px -12px rgba(255,128,20,.8)}
 .tcard[aria-pressed="true"] small,.tcard[aria-pressed="true"] .tcc b{color:#fff}
 .tempty{color:var(--muted);text-align:center;padding:30px 10px}
+
+/* program: one body area at a time */
+.gcur .ghb{cursor:default}
+.gbackb{font-weight:700}
 </style>
 </head>
 <body>
@@ -3052,6 +3056,7 @@ function sortDay(d){ if (!d) return; const a = d.items.map((it,i)=>[rank(it),i,i
 const ADDTXT = {legs:"לרגליים",back:"לגב",chest:"לחזה",shoulders:"לכתפיים",arms:"לידיים",core:"לבטן ולליבה",full:"פונקציונלי",mob:"מוביליטי"};
 const addBtn = g => ADDTXT[g] ? `<li class="gadd"><button type="button" data-act="addgrp" data-g="${g}">+ הוסף תרגיל ${ADDTXT[g]}</button></li>` : "";
 // collapsible body-area groups in the program (remembered per viewer)
+let PCAT = null;          // the body area opened inside the program (null = the list of areas)
 let OPEN = new Set(); try { OPEN = new Set(JSON.parse(localStorage.getItem("coach-open") || "[]")); } catch(e){}
 const saveOpen = () => { try { localStorage.setItem("coach-open", JSON.stringify([...OPEN])); } catch(e){} };
 const setsOf = it => { const n = parseInt(it.s, 10); return isNaN(n) ? 0 : n; };
@@ -3060,22 +3065,25 @@ function itemsHtml(d){
   const groups = GROUPS.map(G => ({g:G.k, rows:[]})), other = {g:"?", rows:[]};
   d.items.forEach((it,i) => { const e = BYID[it.x]; (groups.find(G => e && G.g === e.g) || other).rows.push([it,i]); });
   if (other.rows.length) groups.push(other);
-  const allOpen = groups.every(G => OPEN.has(G.g));
-  let html = `<li class="gall"><button type="button" class="mini" data-act="find">חיפוש תרגיל</button><button type="button" class="mini" data-act="gall">${allOpen ? "סגור הכל" : "פתח הכל"}</button></li>`;
-  for (const G of groups){
-    const meta = GROUPS.find(x => x.k === G.g), open = OPEN.has(G.g);
-    const n = G.rows.length, sets = G.rows.reduce((a,[it]) => a + setsOf(it), 0);
-    html += `<li class="gh${open?" open":""}"><button type="button" class="ghb" data-act="gtoggle" data-g="${G.g}" aria-expanded="${open}">
-      <span class="ghn">${meta ? meta.he : "אחר"}</span><span class="ghm">${n ? `${n} ${n===1?"תרגיל":"תרגילים"}${sets?` · ${sets} סטים`:""}` : "0 תרגילים"}</span><span class="ghc" aria-hidden="true">⌄</span></button></li>`;
-    if (open){ html += G.rows.length ? G.rows.map(([it,i]) => itemRow(it,i,d.items)).join("") : `<li class="gnone">עוד אין תרגילים באזור הזה ביום הזה.</li>`; html += addBtn(G.g); }
+  const label = G => { const meta = GROUPS.find(x => x.k === G.g), n = G.rows.length, sets = G.rows.reduce((a,[it]) => a + setsOf(it), 0);
+    return `<span class="ghn">${meta ? meta.he : "אחר"}</span><span class="ghm">${n ? `${n} ${n===1?"תרגיל":"תרגילים"}${sets?` · ${sets} סטים`:""}` : "0 תרגילים"}</span>`; };
+  // inside one body area: only its exercises, with a way back to the list of areas
+  const G = PCAT && groups.find(x => x.g === PCAT);
+  if (G){
+    return `<li class="gall"><button type="button" class="mini gbackb" data-act="gback">→ חזרה לכל האזורים</button></li>
+      <li class="gh open gcur"><div class="ghb">${label(G)}</div></li>` +
+      (G.rows.length ? G.rows.map(([it,i]) => itemRow(it,i,d.items)).join("") : `<li class="gnone">עוד אין תרגילים באזור הזה ביום הזה.</li>`) + addBtn(G.g);
   }
+  // the list of body areas: tap one to go into it
+  let html = `<li class="gall"><button type="button" class="mini" data-act="find">חיפוש תרגיל</button></li>`;
+  for (const G of groups) html += `<li class="gh"><button type="button" class="ghb" data-act="gopen" data-g="${G.g}">${label(G)}<span class="ghc" aria-hidden="true">⌄</span></button></li>`;
   return html;
 }
 let panelKey = "";
 function renderPanel(){
   const p = $("panel"), t = cur();
   // keep the scroll position when the same trainee/day is re-drawn (swap, edit, remove…)
-  const oldBody = p.querySelector(".pbody"), key = t ? activeId + ":" + activeDay : "";
+  const oldBody = p.querySelector(".pbody"), key = t ? activeId + ":" + activeDay + ":" + (PCAT || "") : "";
   const keepTop = oldBody && key === panelKey ? oldBody.scrollTop : 0, winY = window.scrollY;
   panelKey = key;
   try { renderPanelInner(p, t); } finally {
@@ -3605,7 +3613,7 @@ document.addEventListener("click", ev => {
   const a = b.dataset.act, t = cur();
   if (a !== "delT" && a !== "delDay" && armed){ armed = null; }
   switch(a){
-    case "pick": { setAdding(false); setView("lib"); const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
+    case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
     case "login": cloudLogin(); break;
     case "acct": openAccount(); break;
@@ -3646,6 +3654,8 @@ document.addEventListener("click", ev => {
     case "dup": { const id = uid(), c = JSON.parse(JSON.stringify(t)); c.name = t.name + " (עותק)"; c.created = Date.now(); c.days.forEach(d => d.id = uid()); T[id] = c; activeId = id; activeDay = 0; save(id); renderAll(); openTrainee(true); toast("התוכנית שוכפלה. תנו שם למתאמן החדש"); break; }
     case "delT": { if (armed !== "t"){ armed = "t"; renderPanel(); return; } const name = t.name; delete T[activeId]; save(activeId); activeId = null; armed = null; pickActive(); renderAll(); toast(`${name} נמחק`); break; }
     case "close": $("panel").classList.remove("open"); activeId = null; activeDay = 0; setAdding(false); renderAll(); break;
+    case "gopen": PCAT = b.dataset.g; renderPanel(); break;
+    case "gback": PCAT = null; renderPanel(); break;
     case "gtoggle": { const g = b.dataset.g; OPEN.has(g) ? OPEN.delete(g) : OPEN.add(g); saveOpen(); renderPanel(); break; }
     case "gall": { const d = curDay(), gs = GROUPS.map(G => G.k); if (d && d.items.some(it => { const e = BYID[it.x]; return !e || !gs.includes(e.g); })) gs.push("?"); const all = gs.every(g => OPEN.has(g));
       gs.forEach(g => all ? OPEN.delete(g) : OPEN.add(g)); saveOpen(); renderPanel(); break; }
