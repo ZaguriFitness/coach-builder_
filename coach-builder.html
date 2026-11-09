@@ -526,6 +526,12 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 /* program: one body area at a time */
 .gcur .ghb{cursor:default}
 .gbackb{font-weight:700}
+
+/* round ✕ close buttons (top left) */
+.xbtn{flex:none;width:40px;height:40px;padding:0;border-radius:999px;border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);display:grid;place-items:center;font-size:1.05rem;line-height:1;cursor:pointer;box-shadow:none}
+.xbtn:active{transform:scale(.94)}
+.ptop{align-items:center}
+@media (min-width:980px){.ptop .xbtn{display:none}}
 </style>
 </head>
 <body>
@@ -577,11 +583,11 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 <div class="picker" id="picker" hidden dir="rtl" role="dialog" aria-modal="true" aria-labelledby="pktitle">
   <div class="pkwrap">
     <div class="pkhead">
-      <div class="pktop"><div><h2 id="pktitle"></h2><div class="pmeta" id="pkfor"></div></div></div>
+      <div class="pktop"><div><h2 id="pktitle"></h2><div class="pmeta" id="pkfor"></div></div><button type="button" class="xbtn" data-act="pkclose" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
       <div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div>
     </div>
     <div class="pkbody" id="pklist"></div>
-    <div class="pkfoot"><button type="button" class="ghost pkclose" data-act="pkclose">סגור</button></div>
+
   </div>
 </div>
 <div class="modal" id="modal" hidden><div class="mbox" id="mbox" dir="rtl" role="dialog" aria-modal="true"></div></div>
@@ -3137,13 +3143,12 @@ function renderPanelInner(p, t){
   const total = t.days.reduce((a,x)=>a+x.items.length,0);
   p.innerHTML = `<div class="phead">
       ${PCAT ? "" : `<div class="ptop"><div><div class="pnrow"><h2>${esc(t.name)}</h2><button type="button" class="pdet ptbtn" data-act="editT">פרטים</button></div></div>
-        </div>`}
+        <button type="button" class="xbtn" data-act="close" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>`}
       <div class="ttype">
         ${t.days.length>1?`<div class="days">${t.days.map((x,i)=>`<button type="button" class="day" data-act="day" data-i="${i}" aria-pressed="${i===activeDay}" aria-label="אימון ${LET[i]}">${LET[i]} <small>${x.items.length}</small></button>`).join("")}</div>`:""}</div>
     </div>
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
     ${PCAT ? "" : `<div class="pfoot">
-      <button type="button" class="ghost pclose" data-act="close">סגור</button>
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
       <button type="button" class="ghost" data-act="dup">שכפל למתאמן חדש</button>
       <button type="button" class="danger ${armed==="t"?"arm":""}" data-act="delT">${armed==="t"?`למחוק את ${esc(t.name)}?`:"מחק מתאמן"}</button>
@@ -3278,7 +3283,7 @@ function openInfo(id){
   const G = GROUPS.find(g => g.k === e.g);
   let ill = "";
   if (fr) ill = `<div class="td" id="tdhost"><div class="tdbar"><span class="tdmsg">טוען הדמיה…</span><button type="button" class="tdplay" hidden>⏸ עצירה</button></div></div>`;
-  openModal(`<div class="dhead" data-act="cancel" role="button" tabindex="0" aria-label="סגירה" style="cursor:pointer"><div><h2>${esc(e.he)}</h2>${e.en?`<div class="exe">${esc(e.en)}</div>`:""}</div><button type="button" class="pdet ptbtn dclose" data-act="cancel">סגור</button></div>
+  openModal(`<div class="dhead" data-act="cancel" role="button" tabindex="0" aria-label="סגירה" style="cursor:pointer"><div><h2>${esc(e.he)}</h2>${e.en?`<div class="exe">${esc(e.en)}</div>`:""}</div><button type="button" class="xbtn dclose" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
     <div class="dbody">
       <div class="dtags">${dots(e.lvl)}<span class="tag">${EQ[e.eq]||esc(e.eq)}</span><span class="tag">${TYPES[e.type]||""}</span><span class="tag">${G?G.he:""} · ${G?esc(G.subs[e.sub]||""):""}</span>${e.own?`<span class="tag own">שלי</span>`:""}</div>
       ${ill}
