@@ -1306,7 +1306,17 @@ ZP.rearfly=e=>{const n=e.en;
 };
 ZP.facepull=e=>{const p=e.eq==="bd"?[ZC([200,66])]:[ZC([200,62])];
   if(/apart/i.test(e.en)) return ZRAW_APART();
-  return [zA(ZST,zFwd(ZST,-10),[0,1],{pr:p}),zA(ZST,[92,62],[-1,-1],{pr:p,label:"משיכה לפנים"})];};
+  return ZRAW_FACEPULL(p);};
+// face pull: rope on a pulley at face height. Start: arms long toward the pulley, hands together at face height.
+// Pull: the rope ends come apart, the elbows travel out to the sides and back, high (shoulder level), and the
+// shoulders rotate out so the forearms point up and the hands finish beside the face (ears / temples)
+function ZRAW_FACEPULL(p){const b=X(ZST,{A:null,ua:-90,fa:-90}),f0=zkeys(b),f1=zkeys(b);
+  for(const [s,z] of [["L",1],["R",-1]]){const sh=f0["sh"+s];
+    f0["el"+s]=[sh[0]+26,sh[1]+4,z*10];f0["wr"+s]=[sh[0]+51,sh[1]+8,z*5];
+    const el=[sh[0]-3,sh[1]+2,sh[2]+z*14];f1["el"+s]=el;f1["wr"+s]=[el[0]+13,el[1]+16,el[2]-z*6];}
+  const sh=f0.shL,pr=[{cable:{from:[sh[0]+110,sh[1]+12,0],end:["wrL","wrR"]}}];
+  const f=(K,lab)=>({kind:"raw",K,g:true,props3d:pr,az:0.9,el:0.2,flat:X(zA(ZST,lab?[92,62]:zFwd(ZST,-10),lab?[-1,-1]:[0,1],{pr:p}),{label:lab||"ידיים ישרות מול הכבל"})});
+  return [f(f0),f(f1,"מרפקים לצדדים, ידיים ליד הפנים")];}
 ZP.rot=e=>{const n=e.en;
   if(/halo/i.test(n)) return [zA(ZST,[96,64],[1,1],{pr:[ZW()]}),zA(ZST,[66,60],[-1,1],{pr:[ZW()],label:"סביב הראש"})];
   if(/wall slide/i.test(n)) return [zA(ZST,[84,72],[0,1],{pr:[{k:"wall",x:94,y1:10}]}),zA(ZST,[86,26],[0,1],{pr:[{k:"wall",x:94,y1:10}],label:"החלקה למעלה"})];
@@ -2484,8 +2494,10 @@ function build(host,frames,opt){opt=opt||{};
       scene.add(barM);dyn.push({pdbar:true,top:V(tp),bar:barM,m:new T.Mesh(cyl,mSteel)});}
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
-      staticBox(a[0],a[1]+52,a[2]+(a[2]<0?-7:7),9,124,9,mDark);
-      dyn.push({cable:q.cable.end,from:V(a),m:new T.Mesh(cyl,mEq),cuff:new T.Mesh(tor,mAcc)});}
+      // (a high pulley: the column runs from the floor to just above it)
+      {const G=-(GY+3.5),top=Math.max(a[1]+14,G+124);staticBox(a[0],(G+top)/2,a[2]+(a[2]<0?-7:7),9,top-G,9,mDark);}
+      // a rope: one strand to each hand
+      for(const end of [].concat(q.cable.end)) dyn.push({cable:end,from:V(a),m:new T.Mesh(cyl,mEq),cuff:new T.Mesh(tor,mAcc)});}
   } else if(f0.kind==="front"){const J=f0.J;
     if(J.eq==="bar"){const x1=Math.min(-75,J.hL[0]-15),x2=Math.max(75,J.hR[0]+15);staticCyl([x1,-J.by,0],[x2,-J.by,0],2.6);}
     else for(const s of ["L","R"]) dyn.push({ring:new T.Mesh(tor,mEq),strap:new T.Mesh(cyl,mEq),j:"wr"+s,len:60,axis:"z"});
@@ -2530,7 +2542,7 @@ function build(host,frames,opt){opt=opt||{};
       if(d.cable){// ends at the cuff just above the ankle: on the model's ankle when it is shown
         let e=V(k[d.cable]);const lim=d.cable.slice(0,2)==="ft"?"foot":"hand";
         if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones[lim+Mo.side[d.cable.slice(-1)]].getWorldPosition(w);e=w.add(new T.Vector3(0,lim==="foot"?3:0,0));}
-        place(d.m,d.from,e,0.7);d.cuff.position.copy(e);d.cuff.scale.setScalar(0.75);
+        place(d.m,d.from,e,0.7);d.cuff.position.copy(e);d.cuff.scale.setScalar(0.75);d.cuff.visible=lim==="foot";
         d.cuff.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(0,1,0));continue;}
       if(d.ring){const w=k[d.j];
         if(Mo&&Mo.side&&d.j.startsWith("wr")){
