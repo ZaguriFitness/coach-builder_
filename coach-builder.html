@@ -1339,8 +1339,10 @@ ZP.pull=e=>{const n=e.en;
   return ILL[m[n]]||ILL["Pull-Up"];
 };
 ZP.pulldown=e=>{const n=e.en;
-  if(/straight-arm/i.test(n)){const b={H:[80,127],t:-80,L:[80,200],g:1},s=zS(b),p=[ZC([150,0])];
-    return [zA(b,add(s,53,-50),[0,1],{pr:p}),zA(b,add(s,53,75),[0,1],{pr:p,label:"ידיים לירכיים"})];}
+  if(/straight-arm/i.test(n)){// facing the high pulley a step away, hips back a little, trunk leaning ~25°; arms long
+    // (elbows soft) sweep from up in front of the head down to the thighs
+    const b={H:[70,128],t:-66,L:[88,200],kb:[1,-0.15],g:1},s=zS(b),p=[ZC([185,2])];
+    return [zA(b,add(s,52,-42),[0,1],{pr:p,label:"ידיים למעלה מלפנים"}),zA(b,add(s,52,82),[0,1],{pr:p,label:"ידיים לירכיים"})];}
   if(/pullover/i.test(n)) return [ZBP([2,182],[0,-1],{pr:[ZBENCH,ZW()],label:"ידיים מאחורי הראש"}),ZBP([40,118],[0,1],{pr:[ZBENCH,ZW()],label:"מעל החזה"})];
   if(n==="Lat Pulldown"){const a=ZSEAT({H:[70,165],pr:[box(46,170.5,48)]}),b=X(a,{A:null,ua:-90,fa:-90});
     const k=(top,lab)=>{const K=zkeys(b);for(const sd of [["L",1],["R",-1]]){const sh=K["sh"+sd[0]];
@@ -2975,7 +2977,7 @@ const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה"
 const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק דק פרפר horizontal adduction", "shoulders.rear":"הרחקה אופקית כתף אחורית horizontal abduction",
   "shoulders.side":"הרחקת כתף הרחקה לצדדים כתף צידית lateral raise"};
 // other names for single exercises
-const EXALIAS = {"Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
+const EXALIAS = {"Straight-Arm Pulldown":"פול אובר פולאובר בכבל קרוס קרוסאובר פולי עליון ידיים ישרות", "Band Straight-Arm Pulldown":"פול אובר פולאובר ידיים ישרות", "Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
 const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"מוט אולימפי", cb:"כבלים קרוסאובר פולי"};
 function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||""].join(" ")); }
 // search words without the joining words people type ("פולי עליון עם מוט")
@@ -2995,6 +2997,16 @@ function tokOk(t, hay){
 const skel = x => x.replace(/[אוי]/g, ""), SKEL = new Map();
 function skelHay(h){ let v = SKEL.get(h); if (v == null){ v = skel(h); SKEL.set(h, v); } return v; }
 function matchQ(e, toks){ if (!e._hay){ e._hay = hayOf(e); e._hay0 = e._hay.replace(/ /g,""); } if (toks.every(t => tokOk(t, e._hay))) return true; const j = toks.join(""); return toks.length > 1 && j.length > 3 && e._hay0.includes(j); }
+// how well an exercise fits the words typed: words found in its name count most, then its own search words
+// ("בקרוס" also counts as "קרוס": Hebrew prefix letters)
+function qscore(e, toks){
+  const nm = norm(e.he), al = norm(EXALIAS[e.en] || ""), j = toks.join("");
+  const has1 = (h, t) => h.includes(t) || (t.length > 2 && skel(t).length > 1 && skelHay(h).includes(skel(t)));
+  const has = (h, t) => has1(h, t) || (t.length > 3 && "בלהוכמש".includes(t[0]) && has1(h, t.slice(1)));
+  let sc = nm.replace(/ /g,"").includes(j) ? 10 : 0;
+  for (const t of toks) sc += has(nm, t) ? 3 : has(al, t) ? 2 : 0;
+  return sc;
+}
 function filtered(){
   const gq = qtoks(F.q), cq = qtoks(F.q2);
   const toks = gq.length ? gq : cq, q = toks.length > 0;
@@ -3006,7 +3018,7 @@ function filtered(){
     if (F.eq.size && !F.eq.has(e.eq)) return false;
     return true;
   }).sort((a,b) => {
-    if (q){ const j = toks.join(""), inName = x => toks.every(t => norm(x.he).includes(t)) || norm(x.he).replace(/ /g,"").includes(j), an = inName(a) ? 0 : 1, bn = inName(b) ? 0 : 1; if (an !== bn) return an - bn; }
+    if (q){ const sa = qscore(a, toks), sb = qscore(b, toks); if (sa !== sb) return sb - sa; }
     return a.lvl - b.lvl || a.he.localeCompare(b.he, "he"); });
 }
 
