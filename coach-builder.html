@@ -3136,18 +3136,18 @@ function renderPanelInner(p, t){
   sortDay(d);
   const total = t.days.reduce((a,x)=>a+x.items.length,0);
   p.innerHTML = `<div class="phead">
-      <div class="ptop"><div><div class="pnrow"><h2>${esc(t.name)}</h2><button type="button" class="pdet ptbtn" data-act="editT">פרטים</button></div></div>
-        </div>
+      ${PCAT ? "" : `<div class="ptop"><div><div class="pnrow"><h2>${esc(t.name)}</h2><button type="button" class="pdet ptbtn" data-act="editT">פרטים</button></div></div>
+        </div>`}
       <div class="ttype">
         ${t.days.length>1?`<div class="days">${t.days.map((x,i)=>`<button type="button" class="day" data-act="day" data-i="${i}" aria-pressed="${i===activeDay}" aria-label="אימון ${LET[i]}">${LET[i]} <small>${x.items.length}</small></button>`).join("")}</div>`:""}</div>
     </div>
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
-    <div class="pfoot">
+    ${PCAT ? "" : `<div class="pfoot">
       <button type="button" class="ghost pclose" data-act="close">סגור</button>
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
       <button type="button" class="ghost" data-act="dup">שכפל למתאמן חדש</button>
       <button type="button" class="danger ${armed==="t"?"arm":""}" data-act="delT">${armed==="t"?`למחוק את ${esc(t.name)}?`:"מחק מתאמן"}</button>
-    </div>`;
+    </div>`}`;
 }
 function itemRow(it,i,list){
   const n = list.length, r = rank(it), upOk = i>0 && rank(list[i-1])===r, downOk = i<n-1 && rank(list[i+1])===r;
