@@ -1022,6 +1022,8 @@ const RAW3D={
 // ================= gym patterns (coach builder) =================
 const ZW=(at,dx,dy)=>({k:"wt",at:at||"W",dx:dx||0,dy:dy||0});
 const ZC=(from,to)=>({k:"band",from,to:to||"W"});
+// landmine pivot on the floor: about a bar's length (~2 m) in front of the trainee, or behind them for rows
+const LMF=[240,198],LMB=[-120,198];
 const zsh=(p,dx,dy)=>Array.isArray(p)?[p[0]+dx,p[1]+dy]:p;
 function zshift(fr,dx,dy){
   const o=Object.assign({},fr);
@@ -1076,7 +1078,7 @@ ZP.squat=e=>{const eq=e.eq,n=e.en;
     const a=fr?zShd:zBack, ebb=fr?[1,1]:[-1,1], at=fr?["S",8,2]:["S",-5,-3];
     return [zA(ZST,a(ZST),ebb,{pr:[ZW(...at)]}),zA(ZSQ,a(ZSQ),ebb,{pr:[ZW(...at)]})];}
   if(eq==="db") return [zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),zA(ZSQ,zHang(ZSQ),[0,1],{pr:[ZW()]})];
-  if(eq==="kb"||eq==="sd"||eq==="mb"||eq==="lm") {const pr=eq==="lm"?[ZC([-30,198])]:[ZW()];
+  if(eq==="kb"||eq==="sd"||eq==="mb"||eq==="lm") {const pr=eq==="lm"?[ZC(LMF)]:[ZW()];
     return [zA(ZST,zChest(ZST),[0,1],{pr}),zA(ZSQ,zChest(ZSQ),[0,1],{pr})];}
   if(eq==="bd") return [zA(ZST,zShd(ZST),[1,1],{pr:[ZC([80,200])]}),zA(ZSQ,zShd(ZSQ),[1,1],{pr:[ZC([80,200])]})];
   if(eq==="tx"||eq==="rg") return [zA(ZST,zFwd(ZST,-6),[0,1],{pr:[ZC([170,20])]}),zA(ZSQ,zFwd(ZSQ,-20),[0,1],{pr:[ZC([170,20])]})];
@@ -1224,9 +1226,9 @@ ZP.ohp=e=>{const n=e.en,eq=e.eq;
   if(/wall walk/i.test(n)) return [ILL["Pike Hold"][0],X(ILL["Wall Handstand Push-Up"][0],{label:"עד הקיר"})];
   if(/elevated pike/i.test(n)) return ILL["Elevated Pike Push-Up"];
   if(/pike/i.test(n)) return ILL["Pike Push-Up"];
-  const p=eq==="bd"?[ZC([80,200])]:eq==="lm"?[ZC([-40,198])]:eq==="mc"?[]:[ZW()];
+  const p=eq==="bd"?[ZC([80,200])]:eq==="lm"?[ZC(LMF)]:eq==="mc"?[]:[ZW()];
   if(/landmine/i.test(n)){const base=/kneeling/i.test(n)?LUNGE_B:ZST;
-    return [zA(base,zShd(base),[0.3,1],{pr:p}),zA(base,add(zS(base),53,-55),[0,1],{pr:p,label:"לחיצה קדימה ולמעלה"})];}
+    return [zA(base,zShd(base),[0.3,1],{pr:p}),zA(base,add(zS(base),53,-38),[0,1],{pr:p,label:"לחיצה קדימה ולמעלה"})];}
   if(/z press/i.test(n)){const s=SIT({});return [zA(s,zShd(s),[0.3,1],{pr:p}),zA(s,zOver(s),[0,1],{pr:p})];}
   if(/seated|machine/i.test(n)){const a=ZSEAT({}),b=ZSEAT({});return [zA(a,zShd(a),[0.3,1],{pr:p}),zA(b,zOver(b),[0,1],{pr:p})];}
   if(/push press/i.test(n)){const d={H:[70,140],t:-84,L:[84,200],kb:[1,-0.3],g:1};
@@ -1349,7 +1351,7 @@ ZP.row=e=>{const n=e.en,eq=e.eq;
     if(/seal/i.test(n)){b.L=null;b.th=180;b.sh=180;}
     return [zA(b,[s[0]+2,s[1]+52],[0,1],{pr:[ZW()]}),zA(b,[s[0]-20,s[1]+16],[-1,-1],{pr:[ZW()],label:"משיכה"})];}
   if(/front lever/i.test(n)) return ILL["Tuck Front Lever"];
-  const b=X(ZHIP,{t:-28}),s=zS(b),p=eq==="lm"?[ZC([-10,198])]:[ZW()];
+  const b=X(ZHIP,{t:-28}),s=zS(b),p=eq==="lm"?[ZC(LMB)]:[ZW()];
   return [zA(b,[s[0]+2,s[1]+52],[0,1],{pr:p}),zA(b,[s[0]-20,s[1]+18],[-1,-1],{pr:p,label:"משיכה לבטן"})];
 };
 ZP.shrug=e=>[zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),zA(ZST,zHang(ZST),[0,1],{pr:[ZW(),{k:"mark",at:"S",dir:-90}],label:"כתפיים לאוזניים"})];
@@ -1467,9 +1469,14 @@ ZP.twist=e=>{let b={H:[84,194],t:-122,th:-32,sh:12,A:add(add([84,194],17,-122),2
   const f=(a,lab)=>{const k=zkeys(b);for(const [s,z] of [["L",1],["R",-1]]){k["wr"+s][2]=z*5;k["el"+s][2]=z*19;}
     ztwist(k,a);return {kind:"raw",K:k,g:true,props3d:[],az:1.0,el:0.35,flat:X(b,{label:lab})};};
   return [f(50,"סיבוב לצד אחד"),f(-50,"לצד השני")];};
-ZP.chop=e=>{const n=e.en,lo=/low-to-high/i.test(n),p=e.eq==="lm"?[ZC([-30,198])]:e.eq==="db"?[ZW()]:[ZC(lo?[170,200]:[170,10])];
+ZP.chop=e=>{const n=e.en,lo=/low-to-high/i.test(n),p=e.eq==="lm"?[ZC(LMF)]:e.eq==="db"?[ZW()]:[ZC(lo?[170,200]:[170,10])];
   if(/side bend/i.test(n)) return [zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),X(zA(ZST,zHang(ZST),[0,1],{pr:[ZW()]}),{rotY:0,t:-80,label:"כפיפה לצד"})];
   const hi=add(zS(ZST),53,-40),low=[100,150];
+  // landmine rotation: facing the pivot, arms long, the bar end swings in an arc from in front of the face down to
+  // beside one hip and over to the other; the trunk turns, the hips follow a little
+  if(e.eq==="lm"){const top=add(zS(ZST),53,-28),hip=[104,138];
+    return [zA(ZST,top,[0,1],{pr:p,label:"ידיים ארוכות מול הפנים"}),X(zA(ZST,hip,[0,1],{pr:p}),{rotY:45,pivot:[80],label:"קשת לירך אחת"}),
+      zA(ZST,top,[0,1],{pr:p,label:"חזרה למרכז"}),X(zA(ZST,hip,[0,1],{pr:p}),{rotY:-45,pivot:[80],label:"לירך השנייה"})];}
   return [X(zA(ZST,lo?low:hi,[0,1],{pr:p}),{rotY:lo?25:-25,pivot:[80]}),X(zA(ZST,lo?hi:low,[0,1],{pr:p}),{rotY:lo?-35:35,pivot:[80],label:"סיבוב באלכסון"})];
 };
 ZP.pallof=e=>{const p=[ZC([-30,92])],b=/kneeling/i.test(e.en)?LUNGE_B:ZST;
@@ -1518,9 +1525,10 @@ ZP.throw=e=>{const n=e.en,p=[ZW()];
   if(/overhead throw/i.test(n)) return [zA(ZSQ,zChest(ZSQ),[0,1],{pr:p}),zA(ZST,zOver(ZST),[0,1],{pr:p,label:"זריקה"})];
   return [zA(ZSQ,zChest(ZSQ),[0,1],{pr:p,label:"סקוואט"}),zA(ZST,zOver(ZST),[0,1],{pr:p,label:"זריקה למעלה"})];
 };
-ZP.thruster=e=>{const n=e.en,p=e.eq==="lm"?[ZC([-40,198])]:HELD(e.eq)?[ZW()]:[];
+ZP.thruster=e=>{const n=e.en,p=e.eq==="lm"?[ZC(LMF)]:HELD(e.eq)?[ZW()]:[];
   if(/lunge/i.test(n)) return [X(zA(LUNGE_B,zShd(LUNGE_B),[1,1],{pr:p}),/twist/i.test(n)?{rotY:-30,pivot:[62]}:{}),/twist/i.test(n)?X(zA(LUNGE_B,zFwd(LUNGE_B,10),[0,1],{pr:p}),{rotY:35,pivot:[62],label:"סיבוב"}):zA(ZST,zOver(ZST),[0,1],{pr:p,label:"לחיצה"})];
   if(/trx/i.test(n)) return [zA(ZSQ,zFwd(ZSQ,-20),[0,1],{pr:[ZC([170,20])]}),zA(ZST,[94,96],[-1,0],{pr:[ZC([170,20])],label:"עלייה עם חתירה"})];
+  if(e.eq==="lm") return [zA(ZSQ,zShd(ZSQ),[1,1],{pr:p,label:"סקוואט, קצה המוט מול החזה"}),zA(ZST,add(zS(ZST),53,-38),[0,1],{pr:p,label:"עלייה ולחיצה קדימה ולמעלה"})];
   return [zA(ZSQ,zShd(ZSQ),[1,1],{pr:p}),zA(ZST,zOver(ZST),[0,1],{pr:p,label:"לחיצה מעל הראש"})];
 };
 ZP.burpee=e=>{const n=e.en,hand=X(ZSQ,{A:[104,199],eb:[0,-1]});
@@ -1818,7 +1826,8 @@ function to3dPts(fr){
       neck:P(J.S),pelv:P(J.H),head:P(J.C)});
     // moving equipment points (bands / weights) are carried as extra keys so they animate with the body
     (fr.pr||[]).forEach((q,i)=>{
-      if(q.k==="band"){k["b"+i+"a"]=P(q.from);k["b"+i+"b"]=P(q.to);k["b"+i+"v"]=q.via?P(q.via):null;}
+      if(q.k==="band"){// an anchor in the room (pulley, landmine pivot) stays put when the body turns
+        k["b"+i+"a"]=q.fromRef?P(q.from):P0(q.from);k["b"+i+"b"]=P(q.to);k["b"+i+"v"]=q.via?P(q.via):null;}
       if(q.k==="wt"){k["w"+i]=P([q.at[0]+(q.dx||0),q.at[1]+(q.dy||0)]);if(q.atRef==="W") k["_wh"+i]=true;if(q.atRef) k["_wa"+i]=q.atRef;}
     });
   }
@@ -2532,7 +2541,7 @@ function build(host,frames,opt){opt=opt||{};
         if(!a){d.m.visible=false;continue;}
         if(d.lm){// landmine: the bar's end in a pivot on the floor, the other end in the hands with a plate on it
           const pv=V(a),h=Mo&&Mo.side?gripPoint(Mo,"L").p.add(gripPoint(Mo,"R").p).multiplyScalar(0.5):V(b),u=h.clone().sub(pv).normalize();
-          place(d.m,pv,h.clone().addScaledVector(u,32),1.25);d.pl.position.copy(h).addScaledVector(u,18);aim(d.pl,u);d.base.position.copy(pv);continue;}
+          place(d.m,pv,h.clone().addScaledVector(u,5),1.25);d.pl.position.copy(h).addScaledVector(u,-13);aim(d.pl,u);d.base.position.copy(pv);continue;}
         if(d.kind==="knees"){
           // a band tied across between the two bars (or the two ring straps); the knees rest on it and it sags below them
           const bp=bodyPt(k,"knees"),y=a[1],zz=d.bars?21:Math.max(12,Math.abs(k.wrL[2]-k.wrR[2])/2);
