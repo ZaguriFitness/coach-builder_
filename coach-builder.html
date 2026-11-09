@@ -532,6 +532,15 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .xbtn:active{transform:scale(.94)}
 .ptop{align-items:center}
 @media (min-width:980px){.ptop .xbtn{display:none}}
+
+/* library home: big category tiles */
+.groups{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 18px}
+@media (min-width:760px){.groups{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.grp,.grp[aria-pressed="true"]{min-height:96px;padding:18px 10px;font-size:1.45rem;font-weight:800;border-radius:var(--r-lg,20px);display:flex;align-items:center;justify-content:center;text-align:center;
+  background:linear-gradient(135deg,rgba(255,138,31,.22),rgba(255,179,71,.06)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);color:var(--ink);box-shadow:var(--shadow)}
+.grp:active{transform:scale(.97)}
+@media (max-width:420px){.grp,.grp[aria-pressed="true"]{font-size:1.3rem;padding:16px 6px}}
+.cathead .gbackb{order:-1;flex-basis:100%;justify-content:flex-start;width:max-content}
 </style>
 </head>
 <body>
@@ -566,7 +575,7 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
         </div>
       </div>
       <div class="target" id="target"></div>
-      <div class="cathead" id="catbox"><h2 id="cattitle"></h2><div class="catsearch" hidden><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div></div>
+      <div class="cathead" id="catbox" hidden><button type="button" class="mini gbackb" data-act="home">→ כל הקטגוריות</button><h2 id="cattitle"></h2><div class="catsearch" hidden><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div></div>
       <div id="lib"></div>
     </main>
 
@@ -2798,7 +2807,7 @@ function rx(e){
 // ===================== state =====================
 const T = {};            // trainees by id
 let activeId = null, activeDay = 0, ready = false;
-const F = {g:"legs", sub:"all", lvl:new Set(), type:new Set(), eq:new Set(), q:"", q2:""};
+const F = {g:null, sub:"all", lvl:new Set(), type:new Set(), eq:new Set(), q:"", q2:""};
 let pendingAdd = null;
 const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2965,10 +2974,9 @@ function renderCloud(){
 }
 
 function renderGroups(){
-  $("groups").innerHTML = GROUPS.map(g => {
-    const n = EX.filter(e => e.g === g.k).length;
-    return `<button type="button" class="grp" data-act="grp" data-g="${g.k}" aria-pressed="${!F.q && F.g===g.k}">${g.he}<small>${n} תרגילים</small></button>`;
-  }).join("");
+  // the home screen: big category tiles only; inside a category (or while searching) they step aside
+  $("groups").hidden = !!(F.g || F.q.trim());
+  $("groups").innerHTML = GROUPS.map(g => `<button type="button" class="grp" data-act="grp" data-g="${g.k}">${g.he}</button>`).join("");
 }
 
 function renderFilters(){
@@ -3053,8 +3061,9 @@ function card(e){
 function renderLibrary(){
   renderGroups(); renderFilters();
   const t = cur(), d = curDay(), Gc = GROUPS.find(g => g.k === F.g);
-  $("catbox").hidden = !!F.q.trim(); $("cattitle").textContent = Gc ? Gc.he : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
+  $("catbox").hidden = !!F.q.trim() || !Gc; $("cattitle").textContent = Gc ? Gc.he : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
   $("target").innerHTML = t ? `<span>מוסיף ל: <b>${esc(t.name)}</b> · <b>${esc(d?d.name:"")}</b></span>` : "";
+  if (!F.q.trim() && !Gc){ $("lib").innerHTML = ""; return; }
   const list = filtered();
   if (!list.length){ $("lib").innerHTML = `<div class="empty">אין תרגילים שמתאימים לסינון. נסו לנקות סינון או לחפש מילה אחרת.</div>`; return; }
   if (F.q || F.q2.trim() || F.sub !== "all"){
@@ -3192,7 +3201,9 @@ $("tabs").addEventListener("click", ev => {
     else { setView("tr"); window.scrollTo(0, 0); toast("בחרו מתאמן או צרו חדש"); }
     return;
   }
+  const again = v === "lib" && VIEW === "lib" && !$("panel").classList.contains("open");
   $("panel").classList.remove("open");
+  if (again && (F.g || F.q)){ F.g = null; F.q = ""; $("q").value = ""; renderLibrary(); }
   if (v === "tr") setAdding(false);
   setView(v); window.scrollTo(0, 0);
 });
@@ -3698,7 +3709,8 @@ document.addEventListener("click", ev => {
       if (!inDay(id)){ toggle(id); const e = BYID[id]; closeModal(); $("picker").hidden = true; setAdding(false); setView("lib");
         PCAT = e ? e.g : null; renderPanel(); $("panel").classList.add("open"); break; }
       toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
-    case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); break;
+    case "home": F.g = null; F.sub = "all"; F.q2 = ""; $("q2").value = ""; renderLibrary(); window.scrollTo(0, 0); break;
+    case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); window.scrollTo(0, 0); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
     case "clearF": F.lvl.clear(); F.type.clear(); F.eq.clear(); renderLibrary(); break;
