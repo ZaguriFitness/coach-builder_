@@ -549,6 +549,9 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .gtopl .ghm{color:var(--muted);font-size:.9rem}
 .gaddtop{list-style:none;margin:0 0 12px}
 .gaddtop button{width:100%;padding:12px 16px;font-size:1rem}
+
+.tcard{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.thint{color:var(--muted);font-size:.85rem;text-align:center;margin:16px 0 0}
 </style>
 </head>
 <body>
@@ -565,6 +568,7 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
   <section class="vtr" id="vtr" hidden aria-label="מתאמנים">
     <div class="vthead"><h2>מתאמנים</h2><button type="button" class="primary" data-act="newT">+ מתאמן חדש</button></div>
     <div class="tlist" id="trainees"><span class="loading">טוען מתאמנים…</span></div>
+    <p class="thint">למחיקת מתאמן: לחיצה ארוכה על הכרטיס</p>
   </section>
 
   <div class="layout solo" id="layout">
@@ -3168,8 +3172,6 @@ function renderPanelInner(p, t){
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
     ${PCAT ? "" : `<div class="pfoot">
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
-      <button type="button" class="ghost" data-act="dup">שכפל למתאמן חדש</button>
-      <button type="button" class="danger ${armed==="t"?"arm":""}" data-act="delT">${armed==="t"?`למחוק את ${esc(t.name)}?`:"מחק מתאמן"}</button>
     </div>`}`;
 }
 function itemRow(it,i,list){
@@ -3192,6 +3194,20 @@ function itemRow(it,i,list){
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
       <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
     </div></li>`;
+}
+// long press on a trainee card (or right-click) → ask whether to delete that trainee
+function askDelT(id){ const x = T[id]; if (!x) return;
+  openModal(`<h2>למחוק את ${esc(x.name)}?</h2><p class="hint">כל התוכנית תימחק, מכל המכשירים. אי אפשר לבטל.</p>
+    <div class="macts"><button type="button" class="danger" data-act="delTid" data-id="${esc(id)}">מחק את ${esc(x.name)}</button><button type="button" class="ghost" data-act="cancel">ביטול</button></div>`); }
+{ let lpT = null, lpId = null, lpFired = false, lpX = 0, lpY = 0;
+  const tl = $("trainees"), stop = () => { clearTimeout(lpT); lpT = null; };
+  tl.addEventListener("pointerdown", ev => { const c = ev.target.closest(".tcard"); if (!c) return; lpFired = false; lpId = c.dataset.id; lpX = ev.clientX; lpY = ev.clientY;
+    stop(); lpT = setTimeout(() => { lpFired = true; lpT = null; try { navigator.vibrate && navigator.vibrate(15); } catch(e){} askDelT(lpId); }, 600); });
+  tl.addEventListener("pointermove", ev => { if (lpT && Math.hypot(ev.clientX - lpX, ev.clientY - lpY) > 10) stop(); });
+  for (const t of ["pointerup","pointercancel","pointerleave"]) tl.addEventListener(t, stop);
+  // the tap that ends a long press must not also open the trainee
+  tl.addEventListener("click", ev => { if (lpFired){ ev.stopPropagation(); ev.preventDefault(); lpFired = false; } }, true);
+  tl.addEventListener("contextmenu", ev => { const c = ev.target.closest(".tcard"); if (!c) return; ev.preventDefault(); stop(); if (!lpFired) askDelT(c.dataset.id); });
 }
 let VIEW = "lib";
 function setView(v){ VIEW = v; document.body.dataset.v = v; $("vtr").hidden = v !== "tr"; renderTabs(); }
@@ -3743,6 +3759,9 @@ document.addEventListener("click", ev => {
     case "dlpng": downloadDoc("png"); break;
     case "dlpdf": downloadDoc("pdf"); break;
     case "dup": { const id = uid(), c = JSON.parse(JSON.stringify(t)); c.name = t.name + " (עותק)"; c.created = Date.now(); c.days.forEach(d => d.id = uid()); T[id] = c; activeId = id; activeDay = 0; save(id); renderAll(); openTrainee(true); toast("התוכנית שוכפלה. תנו שם למתאמן החדש"); break; }
+    case "delTid": { const id = b.dataset.id, x = T[id]; if (!x) { closeModal(); break; } const name = x.name;
+      delete T[id]; save(id); if (activeId === id){ activeId = null; activeDay = 0; PCAT = null; $("panel").classList.remove("open"); }
+      closeModal(); pickActive(); renderAll(); toast(`${name} נמחק`); break; }
     case "delT": { if (armed !== "t"){ armed = "t"; renderPanel(); return; } const name = t.name; delete T[activeId]; save(activeId); activeId = null; armed = null; pickActive(); renderAll(); toast(`${name} נמחק`); break; }
     case "close": $("panel").classList.remove("open"); activeId = null; activeDay = 0; setAdding(false); renderAll(); break;
     case "gopen": PCAT = b.dataset.g; renderPanel(); break;
