@@ -552,6 +552,13 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 
 .tcard{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .thint{color:var(--muted);font-size:.85rem;text-align:center;margin:16px 0 0}
+
+/* names on one line */
+.fit1{display:block;white-space:nowrap;overflow:hidden;max-width:100%;min-width:0;contain:inline-size}
+.fit1.fitwrap{white-space:normal}
+.exl .exe{display:block;margin-top:2px}
+.itlink{display:block;width:100%;max-width:100%;min-width:0;text-align:start}
+.itt{min-width:0;flex:1}
 </style>
 </head>
 <body>
@@ -2669,7 +2676,7 @@ async function mount(host,fr,ring,info){
   if(!host.isConnected) return;
   const en=info.en||"";
   try{cur=build(host,ILLV.frames3d(fr,ring),{model:M,act:M?muscleAct(info.mus,M.meta.groups):null,neg:/Negative/i.test(en),eq:info.eq,en});
-    host.querySelector(".tdmsg").innerHTML=M?'גוררים כדי לסובב · <b class="redm">מודגש</b> = השרירים שעובדים':"גוררים כדי לסובב";}
+    host.querySelector(".tdmsg").innerHTML="";}
   catch(e){fallback(host,fr,ring,"התלת-ממד לא נתמך במכשיר הזה");}
 }
 return {mount, stop, dbg:{load,loadModel,makeModel,poseModel,to3d,modelCfg,lerpKeys,build,muscleAct}};
@@ -3064,9 +3071,9 @@ function inDay(id){ const d = curDay(); return d ? d.items.some(it => it.x === i
 function card(e){
   const on = inDay(e.id);
   return `<li><div class="ex${on?" on":""}"><button type="button" class="exb" data-act="info" data-id="${esc(e.id)}">
-    <span class="exl"><span class="exn">${esc(e.he)}</span>${e.en?`<span class="exsep" aria-hidden="true"> | </span><bdi class="exe exi" dir="ltr">${esc(e.en)}</bdi>`:""}</span>
+    <span class="exl"><span class="exn fit1">${esc(e.he)}</span>${e.en?`<bdi class="exe exi" dir="ltr">${esc(e.en)}</bdi>`:""}</span>
     ${e.cue?`<span class="exc">${esc(e.cue)}</span>`:""}
-    <span class="exm">${dots(e.lvl)}${F.q.trim()?`<span class="tag">${(GROUPS.find(g=>g.k===e.g)||{}).he||""}</span>`:""}<span class="tag">${EQ[e.eq]||esc(e.eq)}</span><span class="tag">${TYPES[e.type]||""}</span>${e.own?`<span class="tag own">שלי</span>`:""}<span class="more">הסבר והדמיה ›</span></span></button>
+    <span class="exm">${e.own?`<span class="tag own">שלי</span>`:""}<span class="more">הסבר והדמיה ›</span></span></button>
     <button type="button" class="plus" data-act="toggle" data-id="${esc(e.id)}" aria-pressed="${on}" aria-label="${on?"הסר מהתוכנית":"הוסף לתוכנית"}: ${esc(e.he)}">${on?"✓":"+"}</button></div></li>`;
 }
 
@@ -3178,7 +3185,7 @@ function itemRow(it,i,list){
   const n = list.length, r = rank(it), upOk = i>0 && rank(list[i-1])===r, downOk = i<n-1 && rank(list[i+1])===r;
   const e = BYID[it.x] || {he:it.he||"תרגיל שנמחק", en:"", lvl:1};
   return `<li class="it" data-i="${i}">
-    <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}">${esc(e.he)}</button><span class="exm">${dots(e.lvl)}</span></span><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
+    <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}"><span class="fit1">${esc(e.he)}</span></button></span><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
     <div class="fields">
       <label>סטים<input data-f="s" data-i="${i}" value="${esc(it.s)}" inputmode="numeric" id="f-s-${i}"></label>
       <label>חזרות<input data-f="r" data-i="${i}" value="${esc(it.r)}" id="f-r-${i}"></label>
@@ -3209,6 +3216,17 @@ function askDelT(id){ const x = T[id]; if (!x) return;
   tl.addEventListener("click", ev => { if (lpFired){ ev.stopPropagation(); ev.preventDefault(); lpFired = false; } }, true);
   tl.addEventListener("contextmenu", ev => { const c = ev.target.closest(".tcard"); if (!c) return; ev.preventDefault(); stop(); if (!lpFired) askDelT(c.dataset.id); });
 }
+function fitAll(){
+  const els = [...document.querySelectorAll(".fit1")].filter(el => el.offsetParent !== null && !el.dataset.fit);
+  const m = els.map(el => { el.style.fontSize = ""; el.classList.remove("fitwrap"); const cs = parseFloat(getComputedStyle(el).fontSize);
+    return [el, cs, el.clientWidth, el.scrollWidth]; });
+  for (const [el, fs, cw, sw] of m){ el.dataset.fit = "1"; if (!cw || sw <= cw + 1) continue;
+    const r = cw / sw; if (r >= 0.72) el.style.fontSize = Math.floor(fs * r * 10) / 10 + "px"; else { el.style.fontSize = fs * 0.72 + "px"; el.classList.add("fitwrap"); } }
+}
+{ let fitQ = 0; const q = () => { if (!fitQ) fitQ = requestAnimationFrame(() => { fitQ = 0; fitAll(); }); };
+  new MutationObserver(q).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:["hidden","class"]});
+  addEventListener("resize", () => { document.querySelectorAll(".fit1").forEach(el => delete el.dataset.fit); q(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { document.querySelectorAll(".fit1").forEach(el => delete el.dataset.fit); q(); }); }
 let VIEW = "lib";
 function setView(v){ VIEW = v; document.body.dataset.v = v; $("vtr").hidden = v !== "tr"; renderTabs(); }
 function renderTabs(){
@@ -3319,9 +3337,9 @@ function openInfo(id){
   const G = GROUPS.find(g => g.k === e.g);
   let ill = "";
   if (fr) ill = `<div class="td" id="tdhost"><div class="tdbar"><span class="tdmsg">טוען הדמיה…</span><button type="button" class="tdplay" hidden>⏸ עצירה</button></div></div>`;
-  openModal(`<div class="dhead" data-act="cancel" role="button" tabindex="0" aria-label="סגירה" style="cursor:pointer"><div><h2>${esc(e.he)}</h2>${e.en?`<div class="exe">${esc(e.en)}</div>`:""}</div><button type="button" class="xbtn dclose" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
+  openModal(`<div class="dhead" data-act="cancel" role="button" tabindex="0" aria-label="סגירה" style="cursor:pointer"><div style="min-width:0;flex:1"><h2 class="fit1">${esc(e.he)}</h2>${e.en?`<div class="exe">${esc(e.en)}</div>`:""}</div><button type="button" class="xbtn dclose" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
     <div class="dbody">
-      <div class="dtags">${dots(e.lvl)}<span class="tag">${EQ[e.eq]||esc(e.eq)}</span><span class="tag">${TYPES[e.type]||""}</span><span class="tag">${G?G.he:""} · ${G?esc(G.subs[e.sub]||""):""}</span>${e.own?`<span class="tag own">שלי</span>`:""}</div>
+      ${e.own?`<div class="dtags"><span class="tag own">שלי</span></div>`:""}
       ${ill}
       <div class="vidrow"><span>${fr?"":"אין הדמיה לתרגיל הזה"}</span><a href="https://www.youtube.com/results?search_query=${q}" target="_blank" rel="noopener">סרטוני ביצוע ביוטיוב ↗</a></div>
       <div class="dsec"><h3>על מה זה עובד</h3><div class="mus">${mus[0].map(m=>`<span class="p">${m}</span>`).join("")}${mus[1].map(m=>`<span>${m}</span>`).join("")}</div></div>
