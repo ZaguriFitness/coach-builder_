@@ -3015,15 +3015,32 @@ function renderFilters(){
 
 // search: every word must match; final Hebrew letters and common prefixes (ב, ה, ו, ל, כ, ש) are ignored
 const FIN = {"ך":"כ","ם":"מ","ן":"נ","ף":"פ","ץ":"צ"};
-const norm = s => String(s||"").toLowerCase().replace(/[ךםןףץ]/g, c => FIN[c]).replace(/[׳״'"`\-–.,()]/g," ").replace(/\s+/g," ").trim();
+const norm = s => String(s||"").toLowerCase().replace(/[ךםןףץ]/g, c => FIN[c]).replace(/צ['׳]/g,"ש").replace(/([גז])['׳]/g,"$1").replace(/[׳״'"`\-–.,()]/g," ").replace(/\s+/g," ").trim();
 const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה","הילו":"הילה","מכשיר":"מכונ","מכשירימ":"מכונ","מכונה":"מכונ","משקולת":"משקול","דמבל":"משקול","דמבלס":"משקול","בר":"מוט","גומיה":"גומי","גומיות":"גומי","קטלבלס":"קטלבל","טבעת":"טבעות","כבל":"כבל","פולי":"פולי"};
 // other names people search by (per body area · sub-category)
 const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק דק פרפר horizontal adduction", "shoulders.rear":"הרחקה אופקית כתף אחורית horizontal abduction",
   "shoulders.side":"הרחקת כתף הרחקה לצדדים כתף צידית lateral raise"};
 // other names for single exercises
 const EXALIAS = {"Cable Wood Chopper (High to Low)":"cable woodchop wood chop chopper ווד צופר וודצופר חוטב עצים חיתוך עצים מלמעלה למטה סיבוב גו", "Cable Wood Chopper (Low to High)":"cable woodchop wood chop chopper ווד צופר וודצופר חוטב עצים חיתוך עצים מלמטה למעלה סיבוב גו", "Seated Overhead Dumbbell Extension":"פשיטת מרפקים מעל הראש בישיבה ספסל זקוף", "Face Pull":"פייספול face pull", "Seated Face Pull":"פייספול face pull", "Bent-Over Cable Row":"standing row standing cable row חתירה בעמידה קרוס קרוסאובר פולי תחתון מוט קצר", "Cable Pullover":"straight arm pulldown פול אובר פולאובר בכבל קרוס קרוסאובר פולי עליון ידיים ישרות", "Band Straight-Arm Pulldown":"פול אובר פולאובר ידיים ישרות", "Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
-const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל", bb:"מוט אולימפי", cb:"כבלים קרוסאובר פולי"};
-function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||""].join(" ")); }
+const EQALIAS = {db:"משקולות חופשיות משקולות יד משקולת דמבל דאמבל dumbbell", bb:"מוט אולימפי ברבל בארבל barbell", cb:"כבלים קרוסאובר פולי קייבל קייבלים קבל cable", kb:"קטלבל kettlebell", bd:"בנד באנד גומיה band", mc:"מכונה משין machine", tx:"טי אר אקס trx", lm:"לנדמין landmine"};
+// the English name in Hebrew letters (consonants only), so "דאמבל", "פולאובר", "סקוואט", "קייבל" find it too
+function heTr(en){
+  const w = String(en||"").toLowerCase().replace(/[^a-z ]/g," ");
+  const M = {b:"ב",d:"ד",f:"פ",g:"ג",h:"ה",j:"ג",k:"ק",l:"ל",m:"מ",n:"נ",p:"פ",q:"ק",r:"ר",s:"ס",t:"ט",v:"ב",x:"קס",z:"ז"};
+  return w.split(/\s+/).filter(Boolean).map(x => {
+    let o = "", i = 0;
+    while (i < x.length){ const c = x[i], n = x[i+1];
+      if (c === "c" && n === "h"){ o += "ש"; i += 2; continue; }
+      if (c === "s" && n === "h"){ o += "ש"; i += 2; continue; }
+      if (c === "t" && n === "h"){ o += "ת"; i += 2; continue; }
+      if (c === "p" && n === "h"){ o += "פ"; i += 2; continue; }
+      if (c === "c"){ o += "eiy".includes(n) ? "ס" : "ק"; i++; continue; }
+      if (c === n && "bdfgklmnprstz".includes(c)){ i++; continue; }
+      o += M[c] || ""; i++; }
+    return o.replace(/(.)\1+/g,"$1");
+  }).filter(x => x.length > 1).join(" ");
+}
+function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||"", heTr(e.en)].join(" ")); }
 // search words without the joining words people type ("פולי עליון עם מוט")
 const STOP = new Set(["עם","של","את","גם"].map(w => norm(w)));
 const qtoks = q => norm(q).split(" ").filter(t => t && !STOP.has(t));
