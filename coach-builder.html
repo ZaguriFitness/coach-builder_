@@ -3019,6 +3019,11 @@ const norm = s => String(s||"").toLowerCase().replace(/[ךםןףץ]/g, c => FIN[
 const SYN = {"הלו":"הילה","הלואו":"הילה","היילו":"הילה","הילו":"הילה","מכשיר":"מכונ","מכשירימ":"מכונ","מכונה":"מכונ","משקולת":"משקול","דמבל":"משקול","דמבלס":"משקול","בר":"מוט","גומיה":"גומי","גומיות":"גומי","קטלבלס":"קטלבל","טבעת":"טבעות","כבל":"כבל","פולי":"פולי"};
 // other names people search by (per body area · sub-category)
 const ALIAS = {"chest.fly":"קירוב אופקי קירוב כתפיים פק דק פרפר horizontal adduction", "shoulders.rear":"הרחקה אופקית כתף אחורית horizontal abduction",
+  // movement words (what the joint does), so a search by movement lands in the right area
+  "legs.q":"פשיטת ברך פשיטת ברכיים ארבע ראשי", "legs.h":"פשיטת ירך כפיפת ברך כפיפת ברכיים ירך אחורית המסטרינג", "legs.g":"פשיטת ירך ישבן עכוז", "legs.c":"כפיפה פלנטרית שוקיים תאומים",
+  "back.lat":"קירוב כתף פשיטת כתף גב רחב", "back.mid":"פשיטת כתף חתירה", "back.low":"פשיטת גב פשיטת עמוד שדרה זוקפי גב", "back.trap":"הרמת שכמות טרפזים",
+  "chest.press":"לחיצה קירוב אופקי", "shoulders.side":"הרחקת כתף כתף צידית", "shoulders.press":"כפיפת כתף כתף קדמית לחיצת כתפיים",
+  "arms.bi":"כפיפת מרפק כפיפת מרפקים יד קדמית", "arms.tri":"פשיטת מרפק פשיטת מרפקים יד אחורית", "core.abs":"כפיפת גו כפיפת עמוד שדרה", "core.obl":"סיבוב גו כפיפה צידית אלכסונים",
   "shoulders.side":"הרחקת כתף הרחקה לצדדים כתף צידית lateral raise"};
 // other names for single exercises
 const EXALIAS = {"Cable Wood Chopper (High to Low)":"cable woodchop wood chop chopper ווד צופר וודצופר חוטב עצים חיתוך עצים מלמעלה למטה סיבוב גו", "Cable Wood Chopper (Low to High)":"cable woodchop wood chop chopper ווד צופר וודצופר חוטב עצים חיתוך עצים מלמטה למעלה סיבוב גו", "Seated Overhead Dumbbell Extension":"פשיטת מרפקים מעל הראש בישיבה ספסל זקוף", "Face Pull":"פייספול face pull", "Seated Face Pull":"פייספול face pull", "Bent-Over Cable Row":"standing row standing cable row חתירה בעמידה קרוס קרוסאובר פולי תחתון מוט קצר", "Cable Pullover":"straight arm pulldown פול אובר פולאובר בכבל קרוס קרוסאובר פולי עליון ידיים ישרות", "Band Straight-Arm Pulldown":"פול אובר פולאובר ידיים ישרות", "Adductor Machine":"מכונת מקרבים קירוב ירכיים", "Abductor Machine":"מכונת מרחיקים הרחקת ירכיים", "Clamshell":"הרחקת ירכיים", "Banded Lateral Walk":"פתיחת ירכיים"};
@@ -3052,7 +3057,8 @@ function tokOk(t, hay){
   if (s && hay.includes(s)) return true;
   // Hebrew spelled with or without the vowel letters (פלנק / פלאנק, קרוסאובר / קרוסובר): compare without א ו י
   if (t.length >= 3){ const k = skel(t), k2 = t2 && skel(t2), h = skelHay(hay);
-    if ((k.length >= 2 && h.includes(k)) || (k2 && k2.length >= 2 && h.includes(k2))) return true; }
+    const sk = x => x && (x.length >= 3 ? h.includes(x) : x.length === 2 && (" " + h + " ").includes(" " + x + " "));
+    if (sk(k) || sk(k2)) return true; }
   return false;
 }
 const skel = x => x.replace(/[אוי]/g, ""), SKEL = new Map();
@@ -3061,11 +3067,15 @@ function matchQ(e, toks){ if (!e._hay){ e._hay = hayOf(e); e._hay0 = e._hay.repl
 // how well an exercise fits the words typed: words found in its name count most, then its own search words
 // ("בקרוס" also counts as "קרוס": Hebrew prefix letters)
 function qscore(e, toks){
-  const nm = norm(e.he), al = norm(EXALIAS[e.en] || ""), j = toks.join("");
-  const has1 = (h, t) => h.includes(t) || (t.length > 2 && skel(t).length > 1 && skelHay(h).includes(skel(t)));
+  const nm = norm(e.he), al = norm((EXALIAS[e.en] || "") + " " + (ALIAS[(e.g0||e.g)+"."+(e.sub0||e.sub)] || "")), j = toks.join("");
+  const has1 = (h, t) => { if (h.includes(t)) return true; if (t.length < 3) return false; const k = skel(t), sh = skelHay(h);
+    return k.length >= 3 ? sh.includes(k) : k.length === 2 && (" " + sh + " ").includes(" " + k + " "); };
   const has = (h, t) => has1(h, t) || (t.length > 3 && "בלהוכמש".includes(t[0]) && has1(h, t.slice(1)));
-  let sc = nm.replace(/ /g,"").includes(j) ? 10 : 0;
+  let sc = nm.replace(/ /g,"").includes(j) ? 10 : toks.length > 1 && al.includes(toks.join(" ")) ? 8 : 0;
   for (const t of toks) sc += has(nm, t) ? 3 : has(al, t) ? 2 : 0;
+  // a name that says a different joint movement than the one searched (הרחקת ירך vs פשיטת ירך) ranks lower
+  const MV = ["פשיטת","כפיפת","הרחקת","הרחקה","קירוב","סיבוב"], asked = MV.filter(w => toks.includes(norm(w)));
+  if (asked.length && MV.some(w => !asked.includes(w) && nm.includes(norm(w)))) sc -= 4;
   return sc;
 }
 function filtered(){
@@ -3120,14 +3130,20 @@ function bySub(G, list){
 const PK = {g:"legs", sub:"all", q:""};
 function openPicker(g){
   PK.g = g; PK.sub = "all"; PK.q = ""; $("pkq").value = "";
-  const G = GROUPS.find(x => x.k === g); $("pkq").placeholder = `חיפוש ב${G ? G.he : ""}`;
+  const G = GROUPS.find(x => x.k === g); $("pkq").placeholder = G ? `חיפוש ב${G.he}` : "חיפוש תרגיל (שם, ציוד, תנועה)";
   $("panel").classList.remove("open"); $("picker").hidden = false; renderPicker(); $("pklist").scrollTop = 0;
+  if (!G) setTimeout(() => { const q = $("pkq"); q.readOnly = false; q.focus(); }, 60);
 }
 function closePicker(){ $("picker").hidden = true; if (cur()) $("panel").classList.add("open"); renderPanel(); }
 function renderPicker(){
-  const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay(); if (!G) return;
-  $("pktitle").textContent = `תרגילי ${G.he}`;
+  const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay();
+  $("pktitle").textContent = G ? `תרגילי ${G.he}` : "הוספת תרגיל";
   $("pkfor").textContent = t ? `מוסיף ל${t.name}${t.days.length > 1 ? " · " + d.name : ""}` : "";
+  // any exercise: search everything; each one goes into its own body area in the program by itself
+  if (!G){ const toks = qtoks(PK.q);
+    if (!toks.length){ $("pklist").innerHTML = `<div class="empty">כתבו שם של תרגיל. הוא ייכנס לבד לאזור המתאים בתוכנית (רגליים, גב, כתפיים…).</div>`; return; }
+    const list = EX.filter(e => matchQ(e, toks)).sort((a,b) => qscore(b, toks) - qscore(a, toks) || a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
+    $("pklist").innerHTML = list.length ? `<ul class="list">${list.slice(0, 60).map(card).join("")}</ul>` : `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
   const base = EX.filter(e => e.g === PK.g), toks = qtoks(PK.q);
   const list = base.filter(e => toks.length ? matchQ(e, toks) : true).sort((a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
   if (!list.length){ $("pklist").innerHTML = `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
@@ -3162,7 +3178,7 @@ function itemsHtml(d){
       (G.rows.length ? G.rows.map(([it,i]) => itemRow(it,i,d.items)).join("") : `<li class="gnone">עוד אין תרגילים באזור הזה ביום הזה.</li>`);
   }
   // the list of body areas: tap one to go into it
-  let html = `<li class="gall"><button type="button" class="mini" data-act="find">חיפוש תרגיל</button></li>`;
+  let html = `<li class="gaddtop"><button type="button" class="primary" data-act="addany">+ הוספת תרגיל</button></li>`;
   for (const G of groups) html += `<li class="gh"><button type="button" class="ghb" data-act="gopen" data-g="${G.g}">${label(G)}<span class="ghc" aria-hidden="true">⌄</span></button></li>`;
   return html;
 }
@@ -3282,7 +3298,7 @@ function toast(msg){ const el = $("toast"); el.textContent = msg; el.hidden = fa
 function makeItem(e){ const r = rx(e); return {x:e.id, he:e.he, s:r.s, r:r.r, w:"", i:"", rest:r.rest, n:""}; }
 function toggle(id){
   const t = cur();
-  if (!t){ if (sortedIds().length){ toast("בחרו קודם מתאמן למעלה"); window.scrollTo(0,0); return; } pendingAdd = id; openTrainee(); return; }
+  if (!t){ if (sortedIds().length){ toast("בחרו קודם מתאמן בלשונית מתאמנים"); return; } pendingAdd = id; openTrainee(); return; }
   const d = curDay(), e = BYID[id]; if (!e) return;
   const i = d.items.findIndex(it => it.x === id);
   if (i >= 0){ d.items.splice(i,1); toast(`${e.he} הוסר מ${d.name}`); }
@@ -3805,6 +3821,7 @@ document.addEventListener("click", ev => {
     case "gall": { const d = curDay(), gs = GROUPS.map(G => G.k); if (d && d.items.some(it => { const e = BYID[it.x]; return !e || !gs.includes(e.g); })) gs.push("?"); const all = gs.every(g => OPEN.has(g));
       gs.forEach(g => all ? OPEN.delete(g) : OPEN.add(g)); saveOpen(); renderPanel(); break; }
     case "addgrp": openPicker(b.dataset.g); break;
+    case "addany": openPicker(null); break;
     case "pkclose": closePicker(); break;
     case "addgrp_old": { F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear();
       $("panel").classList.remove("open"); renderLibrary(); const el = $("groups"); window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 80));
