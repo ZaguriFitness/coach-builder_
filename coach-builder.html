@@ -3259,7 +3259,7 @@ function renderPanelInner(p, t){
     </div>`}`;
 }
 function itemRow(it,i,list){
-  const n = list.length, r = rank(it), upOk = i>0 && rank(list[i-1])===r, downOk = i<n-1 && rank(list[i+1])===r;
+  const n = list.length, r = rank(it);
   const e = BYID[it.x] || {he:it.he||"תרגיל שנמחק", en:"", lvl:1};
   return `<li class="it" data-i="${i}">
     <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}"><span class="fit1">${esc(e.he)}</span></button></span><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
@@ -3278,8 +3278,6 @@ function itemRow(it,i,list){
     <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערה למתאמן (טמפו, דגשים, התקדמות)" id="f-n-${i}">
     <div class="itacts">
       <button type="button" class="mini rtbtn" data-act="rest" data-i="${i}" aria-label="טיימר מנוחה">⏱ מנוחה</button>
-      <button type="button" class="mini" data-act="up" data-i="${i}" ${upOk?"":"disabled"} aria-label="הזז למעלה" title="הזז למעלה בסדר">↑ למעלה</button>
-      <button type="button" class="mini" data-act="down" data-i="${i}" ${downOk?"":"disabled"} aria-label="הזז למטה" title="הזז למטה בסדר">↓ למטה</button>
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
       <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
     </div></li>`;
