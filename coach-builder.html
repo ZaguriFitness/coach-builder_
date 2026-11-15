@@ -566,6 +566,19 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .chbtn small{color:var(--muted);font-size:.8rem}
 .chbtn:hover{border-color:var(--accent)}
 .chbtn.own{border-color:var(--accent);background:var(--accent-soft)}
+
+/* sets: one row per set with its own reps and weight */
+.sets{display:grid;gap:6px;margin:10px 0 8px}
+.shead,.srow{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1fr) 36px;gap:8px;align-items:center}
+.shead span{font-size:.78rem;color:var(--muted);text-align:center;font-weight:600}
+.snum{width:30px;height:30px;border-radius:999px;border:1.5px solid var(--accent);color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:.9rem;justify-self:center}
+.srow input{width:100%;min-width:0;text-align:center;font-size:1.05rem;padding:9px 6px;border-radius:12px}
+.sdel{width:32px;height:32px;padding:0;border-radius:999px;border:0;background:rgba(232,72,58,.18);color:#FF6B5B;font-size:1.3rem;line-height:1;display:grid;place-items:center;justify-self:center}
+.sdel:disabled{opacity:.3}
+.sadd{justify-self:start;border:1px dashed color-mix(in srgb,var(--v2) 60%,transparent);background:transparent;color:var(--accent);border-radius:999px;padding:7px 14px;font-weight:700;margin-top:2px}
+.fields2{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.srow input{border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);font-variant-numeric:tabular-nums}
+.srow input:focus{outline:none;border-color:var(--v2);box-shadow:0 0 0 3px rgba(255,138,31,.18)}
 </style>
 </head>
 <body>
@@ -3179,7 +3192,17 @@ const addBtn = g => ADDTXT[g] ? `<li class="gadd"><button type="button" data-act
 let PCAT = null;          // the body area opened inside the program (null = the list of areas)
 let OPEN = new Set(); try { OPEN = new Set(JSON.parse(localStorage.getItem("coach-open") || "[]")); } catch(e){}
 const saveOpen = () => { try { localStorage.setItem("coach-open", JSON.stringify([...OPEN])); } catch(e){} };
-const setsOf = it => { const n = parseInt(it.s, 10); return isNaN(n) ? 0 : n; };
+// each set has its own reps and weight. Older items only have one sets / reps / weight: they become that many
+// equal rows the first time they are shown. it.s / it.r / it.w are kept as a summary (10/12/8) for the document
+function setsArr(it){
+  if (!Array.isArray(it.sets) || !it.sets.length){ const n = Math.max(1, Math.min(12, parseInt(it.s, 10) || 3));
+    it.sets = Array.from({length:n}, () => ({r:String(it.r ?? ""), w:String(it.w ?? "")})); }
+  return it.sets;
+}
+function syncSets(it){ const S = setsArr(it), same = k => S.every(x => String(x[k]||"") === String(S[0][k]||""));
+  it.s = String(S.length); it.r = same("r") ? String(S[0].r||"") : S.map(x => x.r || "—").join("/");
+  it.w = same("w") ? String(S[0].w||"") : S.map(x => x.w || "—").join("/"); }
+const setsOf = it => Array.isArray(it.sets) && it.sets.length ? it.sets.length : (n => isNaN(n) ? 0 : n)(parseInt(it.s, 10));
 function itemsHtml(d){
   // every body area is always listed (in order), even with no exercises yet
   const groups = GROUPS.map(G => ({g:G.k, rows:[]})), other = {g:"?", rows:[]};
@@ -3237,10 +3260,15 @@ function itemRow(it,i,list){
   const e = BYID[it.x] || {he:it.he||"תרגיל שנמחק", en:"", lvl:1};
   return `<li class="it" data-i="${i}">
     <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}"><span class="fit1">${esc(e.he)}</span></button></span><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
-    <div class="fields">
-      <label>סטים<input data-f="s" data-i="${i}" value="${esc(it.s)}" inputmode="numeric" id="f-s-${i}"></label>
-      <label>חזרות<input data-f="r" data-i="${i}" value="${esc(it.r)}" id="f-r-${i}"></label>
-      <label>משקל<input data-f="w" data-i="${i}" value="${esc(it.w)}" placeholder="ק&quot;ג" id="f-w-${i}"></label>
+    <div class="sets">
+      <div class="shead"><span>סט</span><span>חזרות</span><span>משקל (ק"ג)</span><span></span></div>
+      ${setsArr(it).map((x,si) => `<div class="srow"><span class="snum">${si+1}</span>
+        <input data-sf="r" data-i="${i}" data-si="${si}" value="${esc(x.r)}" aria-label="חזרות בסט ${si+1}">
+        <input data-sf="w" data-i="${i}" data-si="${si}" value="${esc(x.w)}" inputmode="decimal" placeholder="—" aria-label="משקל בסט ${si+1}">
+        <button type="button" class="sdel" data-act="sdel" data-i="${i}" data-si="${si}" ${it.sets.length>1?"":"disabled"} aria-label="מחק סט ${si+1}">−</button></div>`).join("")}
+      <button type="button" class="sadd" data-act="sadd" data-i="${i}">+ הוסף סט</button>
+    </div>
+    <div class="fields fields2">
       <label>עצימות (RPE)<input data-f="i" data-i="${i}" value="${esc(it.i||"")}" placeholder="1–10" id="f-i-${i}"></label>
       <label>מנוחה (שנ')<input data-f="rest" data-i="${i}" value="${esc(it.rest)}" inputmode="numeric" id="f-rest-${i}"></label>
     </div>
@@ -3313,7 +3341,7 @@ function renderAll(){ const t = cur(); $("panel").hidden = !t; $("layout").class
 let toastT;
 function toast(msg){ const el = $("toast"); el.textContent = msg; el.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=>{el.hidden = true;}, 2200); }
 
-function makeItem(e){ const r = rx(e); return {x:e.id, he:e.he, s:r.s, r:r.r, w:"", i:"", rest:r.rest, n:""}; }
+function makeItem(e){ const r = rx(e), it = {x:e.id, he:e.he, s:r.s, r:r.r, w:"", i:"", rest:r.rest, n:""}; setsArr(it); return it; }
 function toggle(id){
   const t = cur();
   if (!t){ if (sortedIds().length){ openChooser(id); return; } pendingAdd = id; openTrainee(); return; }
@@ -3851,6 +3879,10 @@ document.addEventListener("click", ev => {
     case "rm": { const d = curDay(); d.items.splice(+b.dataset.i,1); save(activeId); renderTrainees(); renderLibrary(); renderPanel(); renderBar(); break; }
     case "up": case "down": { const d = curDay(), i = +b.dataset.i, j = a==="up"?i-1:i+1; [d.items[i], d.items[j]] = [d.items[j], d.items[i]]; save(activeId); renderPanel(); break; }
     case "rest": { const v = $("f-rest-"+b.dataset.i), it = curDay().items[+b.dataset.i]; startRest(v ? v.value : "", it ? (BYID[it.x]||{he:it.he||""}).he : ""); break; }
+    case "sadd": { const it = curDay().items[+b.dataset.i]; if (!it) break; const S = setsArr(it), last = S[S.length-1] || {r:"", w:""};
+      if (S.length < 20) S.push({r:last.r, w:last.w}); syncSets(it); save(activeId); renderPanel(); break; }
+    case "sdel": { const it = curDay().items[+b.dataset.i]; if (!it) break; const S = setsArr(it);
+      if (S.length > 1) S.splice(+b.dataset.si, 1); syncSets(it); save(activeId); renderPanel(); break; }
     case "easier": swap(+b.dataset.i, -1); break;
     case "harder": swap(+b.dataset.i, 1); break;
     case "send": openSend(); break;
@@ -3904,6 +3936,8 @@ $("panel").addEventListener("input", ev => {
   const el = ev.target, t = cur(); if (!t) return;
   if (el.id === "dayName"){ curDay().name = el.value; save(activeId); renderBar(); $("target").querySelectorAll("b")[1] && ($("target").querySelectorAll("b")[1].textContent = el.value); return; }
   if (el.dataset.f){ const it = curDay().items[+el.dataset.i]; if (it){ it[el.dataset.f] = el.value; save(activeId); } }
+  if (el.dataset.sf){ const it = curDay().items[+el.dataset.i], x = it && setsArr(it)[+el.dataset.si];
+    if (x){ x[el.dataset.sf] = el.value; syncSets(it); save(activeId); } }
 });
 $("panel").addEventListener("change", ev => { if (ev.target.id === "dayName") renderPanel(); });
 // Apple Pencil guard: every text field is locked until it is deliberately tapped, so a pen dragged across the
