@@ -503,11 +503,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tab[aria-pressed="true"]{background:var(--grad);color:#fff;box-shadow:0 8px 22px -8px rgba(255,128,20,.8)}
 @media (prefers-reduced-motion:no-preference){.tab{transition:transform .15s ease,background-color .2s ease}.tab:active{transform:scale(.97)}}
-@media (min-width:980px){.tabs{grid-template-columns:repeat(2,1fr);max-width:380px}.tab[data-v="prog"]{display:none}}
+.tabs{grid-template-columns:repeat(4,1fr)}
+@media (min-width:980px){.tabs{grid-template-columns:repeat(3,1fr);max-width:480px}.tab[data-v="prog"]{display:none}}
 @media (max-width:979px){.panel{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 .toast{bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .rtimer{bottom:calc(90px + env(safe-area-inset-bottom,0px))}
-body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
+body[data-v="tr"] #layout,body[data-v="tr"] #addbar,body[data-v="home"] #layout,body[data-v="home"] #addbar,body[data-v="home"] #bar{display:none!important}
+.vhome{display:grid;gap:14px;padding-top:10px}
+.vhome[hidden]{display:none}
+.hhello{margin:6px 2px 4px;font-size:1.5rem;font-weight:800;color:var(--ink)}
+.hcard{font:inherit;color:var(--ink);text-align:start;display:flex;align-items:center;gap:16px;width:100%;min-height:118px;padding:20px;border-radius:var(--r-lg,20px);cursor:pointer;
+  background:linear-gradient(135deg,rgba(255,138,31,.24),rgba(255,179,71,.05)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);box-shadow:var(--shadow)}
+.hcard:active{transform:scale(.98)}
+.hic{flex:none;width:58px;height:58px;border-radius:18px;background:var(--grad);display:grid;place-items:center;box-shadow:0 10px 22px -10px rgba(255,128,20,.9)}
+.hic svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.htx{flex:1;min-width:0;display:grid;gap:4px}.htx b{font-size:1.45rem;font-weight:800}.htx small{color:var(--muted);font-size:.9rem}
+.hcard i{font-style:normal;font-size:1.8rem;color:var(--accent);flex:none}
+@media (min-width:760px){.vhome{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px;margin:0 auto}.hhello{grid-column:1/-1}.hcard{min-height:160px}}
 .vtr{padding-top:6px}
 .vthead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 14px}
 .vthead h2{margin:0;font-size:1.6rem;font-family:var(--display);color:var(--accent)}
@@ -598,6 +610,12 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
   </header>
   <div class="addbar" id="addbar" hidden><div><small>מוסיף תרגילים ל</small><b id="addname"></b></div><button type="button" class="primary" data-act="backprog">חזרה לתוכנית</button></div>
 
+  <section class="vhome" id="vhome" aria-label="בית">
+    <p class="hhello">מה עושים היום?</p>
+    <button type="button" class="hcard" data-act="go" data-v="lib"><span class="hic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="htx"><b>תרגילים</b><small>כל התרגילים, עם הסבר והדמיה</small></span><i aria-hidden="true">‹</i></button>
+    <button type="button" class="hcard" data-act="go" data-v="tr"><span class="hic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2c2.3.2 4 2 4 4.3"/></svg></span><span class="htx"><b>מתאמנים</b><small>המתאמנים ותוכניות האימון שלהם</small></span><i aria-hidden="true">‹</i></button>
+  </section>
+
   <section class="vtr" id="vtr" hidden aria-label="מתאמנים">
     <div class="vthead"><h2>מתאמנים</h2><button type="button" class="primary" data-act="newT">+ מתאמן חדש</button></div>
     <div class="tlist" id="trainees"><span class="loading">טוען מתאמנים…</span></div>
@@ -629,7 +647,8 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 </div>
 
 <nav class="tabs" id="tabs" aria-label="מסכים">
-  <button type="button" class="tab" data-v="lib" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg><span>תרגילים</span></button>
+  <button type="button" class="tab" data-v="home" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5.5h4V20"/></svg><span>בית</span></button>
+  <button type="button" class="tab" data-v="lib" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg><span>תרגילים</span></button>
   <button type="button" class="tab" data-v="tr" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2c2.3.2 4 2 4 4.3"/></svg><span>מתאמנים</span></button>
   <button type="button" class="tab" data-v="prog" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 2.8h6v3H9zM8.5 11h7M8.5 15h5"/></svg><span id="tabProg">התוכנית</span></button>
 </nav>
@@ -3312,14 +3331,15 @@ function fitAll(){
   new MutationObserver(q).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:["hidden","class"]});
   addEventListener("resize", () => { document.querySelectorAll(".fit1").forEach(el => delete el.dataset.fit); q(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { document.querySelectorAll(".fit1").forEach(el => delete el.dataset.fit); q(); }); }
-let VIEW = "lib";
-function setView(v){ VIEW = v; document.body.dataset.v = v; $("vtr").hidden = v !== "tr"; renderTabs(); }
+let VIEW = "home";
+function setView(v){ VIEW = v; document.body.dataset.v = v; $("vtr").hidden = v !== "tr"; $("vhome").hidden = v !== "home"; renderTabs(); }
 function renderTabs(){
   const open = $("panel").classList.contains("open"), v = open ? "prog" : VIEW, t = cur();
   document.querySelectorAll("#tabs .tab").forEach(b => b.setAttribute("aria-pressed", b.dataset.v === v));
   const tp = $("tabProg"); if (tp) tp.textContent = t ? t.name : "התוכנית";
 }
 new MutationObserver(() => renderTabs()).observe($("panel"), {attributes:true, attributeFilter:["class"]});
+setView(VIEW);
 $("tabs").addEventListener("click", ev => {
   const b = ev.target.closest(".tab"); if (!b) return;
   const v = b.dataset.v;
@@ -3856,6 +3876,7 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
+    case "go": { const v = b.dataset.v; $("panel").classList.remove("open"); if (v === "lib" && (F.g || F.q)){ F.g = null; F.q = ""; $("q").value = ""; renderLibrary(); } if (v === "tr") setAdding(false); setView(v); window.scrollTo(0, 0); break; }
     case "login": cloudLogin(); break;
     case "acct": openAccount(); break;
     case "logout": CLOUD.auth.signOut().then(() => location.reload()); break;
