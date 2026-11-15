@@ -579,6 +579,12 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .fields2{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 .srow input{border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);font-variant-numeric:tabular-nums}
 .srow input:focus{outline:none;border-color:var(--v2);box-shadow:0 0 0 3px rgba(255,138,31,.18)}
+.restbtn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:4px;border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);border-radius:10px;padding:9px 8px;font:inherit;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer}
+.rshead{display:flex;align-items:center;justify-content:space-between;gap:10px}.rshead h2{margin:0}
+.rsstep{display:flex;align-items:center;justify-content:center;gap:18px;margin:18px 0}
+.rsstep b{font-size:2.2rem;min-width:4.5ch;text-align:center;font-variant-numeric:tabular-nums}
+.rsstep button{width:58px;height:58px;border-radius:999px;border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);font-weight:700;font-size:1rem}
+.rsgo{width:100%;font-size:1.1rem}
 </style>
 </head>
 <body>
@@ -3273,11 +3279,10 @@ function itemRow(it,i,list){
     </div>
     <div class="fields fields2">
       <label>עצימות (RPE)<input data-f="i" data-i="${i}" value="${esc(it.i||"")}" placeholder="1–10" id="f-i-${i}"></label>
-      <label>מנוחה (שנ')<input data-f="rest" data-i="${i}" value="${esc(it.rest)}" inputmode="numeric" id="f-rest-${i}"></label>
+      <label>מנוחה<button type="button" class="restbtn" data-act="restset" data-i="${i}" aria-label="מנוחה, פתיחת הטיימר"><span aria-hidden="true">⏱</span> ${esc(restLbl(it.rest))}</button></label>
     </div>
     <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערה למתאמן (טמפו, דגשים, התקדמות)" id="f-n-${i}">
     <div class="itacts">
-      <button type="button" class="mini rtbtn" data-act="rest" data-i="${i}" aria-label="טיימר מנוחה">⏱ מנוחה</button>
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
       <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
     </div></li>`;
@@ -3796,6 +3801,15 @@ function restEl(){
     RT.total = Math.max(RT.total + d, 1); paintRest(); });
   return el;
 }
+// tapping the rest value opens a small window: set the time (−15 / +15) and start the timer.
+// The running timer itself has pause / continue and ✕ to stop.
+const RS = {it:null};
+function restLbl(v){ const n = parseRest(v); return n ? n + " שנ'" : "—"; }
+function openRestSet(i){ const it = curDay().items[i]; if (!it) return; RS.it = it; const e = BYID[it.x] || {he:it.he||""};
+  openModal(`<div class="rshead"><h2>מנוחה</h2><button type="button" class="xbtn" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
+    <p class="hint fit1">${esc(e.he)}</p>
+    <div class="rsstep"><button type="button" data-act="rsd" data-d="-15" dir="ltr" aria-label="פחות 15 שניות">−15</button><b id="rsnum">${esc(restLbl(it.rest))}</b><button type="button" data-act="rsd" data-d="15" dir="ltr" aria-label="עוד 15 שניות">+15</button></div>
+    <button type="button" class="primary rsgo" data-act="rstart">▶ התחל</button>`); }
 function startRest(v, name){
   const sec = parseRest(v);
   if (!sec){ toast("רשמו קודם זמן מנוחה בשניות"); return; }
@@ -3879,6 +3893,9 @@ document.addEventListener("click", ev => {
     case "delDay": if (armed !== "day"){ armed = "day"; renderPanel(); return; } t.days.splice(activeDay,1); activeDay = Math.max(0,activeDay-1); armed = null; save(activeId); renderAll(); break;
     case "rm": { const d = curDay(); d.items.splice(+b.dataset.i,1); save(activeId); renderTrainees(); renderLibrary(); renderPanel(); renderBar(); break; }
     case "up": case "down": { const d = curDay(), i = +b.dataset.i, j = a==="up"?i-1:i+1; [d.items[i], d.items[j]] = [d.items[j], d.items[i]]; save(activeId); renderPanel(); break; }
+    case "restset": openRestSet(+b.dataset.i); break;
+    case "rsd": { const it = RS.it; if (!it) break; it.rest = String(Math.max(0, Math.min(900, (parseRest(it.rest)||0) + +b.dataset.d))); save(activeId); $("rsnum").textContent = restLbl(it.rest); renderPanel(); break; }
+    case "rstart": { const it = RS.it; closeModal(); if (it) startRest(it.rest, (BYID[it.x]||{he:it.he||""}).he); break; }
     case "rest": { const v = $("f-rest-"+b.dataset.i), it = curDay().items[+b.dataset.i]; startRest(v ? v.value : "", it ? (BYID[it.x]||{he:it.he||""}).he : ""); break; }
     case "sadd": { const it = curDay().items[+b.dataset.i]; if (!it) break; const S = setsArr(it), last = S[S.length-1] || {r:"", w:""};
       if (S.length < 20) S.push({r:last.r, w:last.w}); syncSets(it); save(activeId); renderPanel(); break; }
