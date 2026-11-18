@@ -540,7 +540,7 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
   background:linear-gradient(135deg,rgba(255,138,31,.22),rgba(255,179,71,.06)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);color:var(--ink);box-shadow:var(--shadow)}
 .grp:active{transform:scale(.97)}
 @media (max-width:420px){.grp,.grp[aria-pressed="true"]{font-size:1.3rem;padding:16px 6px}}
-.cathead .gbackb{order:-1;flex-basis:100%;justify-content:flex-start;width:max-content}
+.cathead{flex-wrap:nowrap}.cathead h2{min-width:0;margin:0}.cathead .gbackb{order:0;margin-inline-start:auto}
 
 /* program, inside one area: name + ✕ on top, the add button right below */
 .gtop{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 10px}
@@ -617,6 +617,7 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 
   <div class="layout solo" id="layout">
     <main>
+      <div class="cathead" id="catbox" hidden><h2 id="cattitle"></h2><button type="button" class="xbtn gbackb" data-act="home" aria-label="חזרה לכל הקטגוריות"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><div class="catsearch" hidden><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div></div>
       <div class="searchbar"><div class="search">
           <input id="q" type="search" placeholder="חיפוש תרגיל כללי" autocomplete="off" enterkeyhint="search" aria-label="חיפוש תרגיל">
           <button class="ghost accent" id="newEx" type="button">+ תרגיל משלי</button>
@@ -631,7 +632,6 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
         </div>
       </div>
       <div class="target" id="target"></div>
-      <div class="cathead" id="catbox" hidden><button type="button" class="mini gbackb" data-act="home">→ כל הקטגוריות</button><h2 id="cattitle"></h2><div class="catsearch" hidden><input id="q2" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div></div>
       <div id="lib"></div>
     </main>
 
