@@ -596,6 +596,18 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .grp.wb,.grp.wb[aria-pressed="true"]{position:absolute;width:23.5%;aspect-ratio:1;min-height:0;padding:4px;transform:translate(-50%,-50%);border-radius:50%;font-size:clamp(.82rem,3.6vw,1.05rem);font-weight:800;line-height:1.15;display:grid;place-items:center;text-align:center}
 .grp.wb:active{transform:translate(-50%,-50%) scale(.94)}
 .grp.wb span{max-width:100%}
+.grp.wb{overflow:hidden;isolation:isolate}
+.grp.wb .wimg{position:absolute;inset:0;z-index:-1;background-size:cover;background-position:center;opacity:.42;-webkit-mask-image:radial-gradient(circle at 50% 50%,#000 45%,transparent 72%);mask-image:radial-gradient(circle at 50% 50%,#000 45%,transparent 72%);transition:opacity .2s}
+.grp.wb:hover .wimg,.grp.wb:active .wimg{opacity:.7}
+.grp.wb span{text-shadow:0 1px 6px var(--bg),0 0 2px var(--bg)}
+.atlasbtn{display:flex;align-items:center;gap:14px;width:min(100%,400px);margin:0 auto 22px;padding:14px 16px;border-radius:18px;text-decoration:none;color:var(--ink);
+  background:linear-gradient(135deg,rgba(255,138,31,.22),rgba(255,179,71,.05)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);box-shadow:var(--shadow)}
+.atlasbtn:active{transform:scale(.98)}
+.atlasbtn .aic{flex:none;width:48px;height:48px;border-radius:14px;background:var(--grad);display:grid;place-items:center;box-shadow:0 10px 22px -10px rgba(255,128,20,.9)}
+.atlasbtn .aic svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.atlasbtn .aic circle{fill:#fff;stroke:none}
+.atlasbtn .atx{flex:1;min-width:0;display:grid;gap:2px}.atlasbtn b{font-size:1.15rem;font-weight:800}.atlasbtn small{color:var(--muted);font-size:.82rem}
+.atlasbtn>i{font-style:normal;font-size:1.6rem;color:var(--accent);flex:none}
 </style>
 </head>
 <body>
@@ -3048,7 +3060,8 @@ function renderGroups(){
   $("groups").innerHTML = `<div class="wheel"><div class="wring" aria-hidden="true"></div>
     <div class="wcore" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.6" r="2.3"/><path d="M5 9.2c2.3.9 4.6 1.3 7 1.3s4.7-.4 7-1.3M12 10.5v5.2M12 15.7 9 21.5M12 15.7l3 5.8"/></svg><span>בחרו אזור</span></div>
     ${GROUPS.map((g, i) => { const a = i / GROUPS.length * 2 * Math.PI, R = 38;
-      return `<button type="button" class="grp wb" data-act="grp" data-g="${g.k}" style="left:${(50 + R*Math.sin(a)).toFixed(2)}%;top:${(50 - R*Math.cos(a)).toFixed(2)}%"><span>${g.he}</span></button>`; }).join("")}</div>`;
+      return `<button type="button" class="grp wb" data-act="grp" data-g="${g.k}" style="left:${(50 + R*Math.sin(a)).toFixed(2)}%;top:${(50 - R*Math.cos(a)).toFixed(2)}%"><i class="wimg" aria-hidden="true" style="background-image:url(anatomy/wheel/${g.k}.webp)"></i><span>${g.he}</span></button>`; }).join("")}</div>
+    <a class="atlasbtn" href="anatomy/index.html"><span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 7.5v7M7 9.5l5 1.5 5-1.5M12 14.5l-3 6.5M12 14.5l3 6.5"/><path d="M3.5 12a8.5 3 0 0 0 17 0" opacity=".55"/></svg></span><span class="atx"><b>אטלס שרירים 3D</b><small>מודל אנטומי, שכבות ומעבדת אי-ספיקה</small></span><i aria-hidden="true">‹</i></a>`;
 }
 
 function renderFilters(){

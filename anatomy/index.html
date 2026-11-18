@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#0f0f10">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" href="../icons/icon-192.png">
+<title>אטלס שרירים 3D למאמני כושר</title>
+<style>
+:root{--bg:#0f0f10;--card:#1c1c1f;--card2:#26262a;--ink:#f2efec;--muted:#a19a94;--line:#333338;--acc:#f0a35e;--sel:#ffc53d}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;line-height:1.55}
+body{overflow:hidden}
+#app3d{position:fixed;inset:0}
+canvas{display:block;touch-action:none}
+.top{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;z-index:5;pointer-events:none}
+.top h1{margin:0;font-size:20px;font-weight:600;pointer-events:auto}
+.top .sub{font-size:12px;color:var(--muted)}
+.rbtn{width:44px;height:44px;border-radius:50%;background:rgba(48,48,52,.85);border:0;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;pointer-events:auto;backdrop-filter:blur(6px);font-size:18px}
+.rbtn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.rbtn.on{background:var(--acc)}.rbtn.on svg{stroke:#1a1a1a}
+.col{position:fixed;display:flex;flex-direction:column;gap:8px;z-index:5}
+.col.right{right:12px;top:72px}
+.col.left{left:12px;top:72px}
+.layerbox{display:flex;flex-direction:column;align-items:center;background:rgba(48,48,52,.85);border-radius:28px;padding:6px;gap:4px;transition:bottom .25s}
+.layerbox .rbtn{background:transparent}.layerbox .rbtn:disabled{opacity:.3}
+.layerbox .lv{font-size:11px;color:#ddd;text-align:center;line-height:1.2;padding:2px 0}
+.nav{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:4px;background:rgba(36,36,40,.92);border:1px solid #3a3a40;border-radius:999px;padding:5px;z-index:6;backdrop-filter:blur(8px)}
+.nav button{border:0;background:transparent;color:#ddd;border-radius:999px;padding:8px 16px;font-size:14px;cursor:pointer}
+.nav button.on{background:#000;color:var(--acc)}
+#loading{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:20;background:var(--bg)}
+#loading .bar{width:220px;height:6px;background:#333;border-radius:3px;overflow:hidden}
+#loading .bar i{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+#err{color:#ff8a80;max-width:300px;text-align:center;font-size:14px}
+/* sheet */
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:7;background:var(--card);border-top-left-radius:20px;border-top-right-radius:20px;box-shadow:0 -10px 30px rgba(0,0,0,.5);max-height:52vh;display:flex;flex-direction:column;transform:translateY(105%);transition:transform .25s}
+#sheet.open{transform:none}
+#sheet.mini{transform:translateY(calc(100% - 92px))}
+.handle{padding:8px 16px 4px;cursor:pointer}
+.handle i{display:block;width:40px;height:5px;border-radius:3px;background:#555;margin:0 auto 6px}
+.shead{display:flex;align-items:flex-start;gap:8px}
+.shead .t{flex:1;min-width:0}
+.nm{font-size:19px;font-weight:700;line-height:1.3}
+.en{color:var(--muted);direction:ltr;text-align:right;font-size:13px}
+.x{background:var(--card2);border:0;color:#fff;border-radius:50%;width:32px;height:32px;cursor:pointer;flex:none}
+.sbody{overflow:auto;padding:0 16px 90px}
+@media(min-width:900px){
+ #sheet{left:auto;right:76px;top:72px;bottom:auto;width:400px;max-height:calc(100vh - 160px);border-radius:18px;transform:translateX(120%)}
+ #sheet.open,#sheet.mini{transform:none}
+ .sbody{padding-bottom:20px}
+ 
+}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tag{font-size:12px;background:var(--card2);border-radius:999px;padding:2px 9px}
+.tag.two{background:#4a3a12;color:#ffd77a}
+h3{font-size:14px;margin:14px 0 4px;color:var(--acc)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:14px}
+.kv b{color:var(--muted);font-weight:600}
+ul,ol{margin:4px 0;padding-inline-start:20px;font-size:14px}
+li{margin:3px 0}
+.tip{background:#2e2716;border:1px solid #5a4a20;border-radius:10px;padding:10px;font-size:14px;margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button,.btn{border:1px solid var(--line);background:var(--card2);border-radius:999px;padding:5px 11px;font-size:13px;cursor:pointer;color:var(--ink)}
+.btn.pri{background:var(--acc);color:#1a1a1a;border-color:var(--acc);font-weight:600}
+/* search */
+#search{position:fixed;inset:0;z-index:15;background:rgba(10,10,12,.96);display:none;flex-direction:column;padding:14px}
+#search.open{display:flex}
+#search input{font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);width:100%}
+#results{overflow:auto;margin-top:10px}
+#results .g{color:var(--acc);font-size:13px;margin:12px 4px 4px}
+#results button{display:block;width:100%;text-align:right;background:transparent;border:0;border-bottom:1px solid #222;color:var(--ink);padding:10px 4px;font-size:15px;cursor:pointer}
+#results button small{color:var(--muted);direction:ltr;display:block;text-align:right;font-size:12px}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:rgba(40,40,44,.95);padding:6px 14px;border-radius:999px;font-size:13px;z-index:9;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.on{opacity:1}
+.credit{position:fixed;bottom:1px;left:0;right:0;text-align:center;font-size:10px;color:#666;z-index:4;direction:ltr}
+.credit a{color:#777}
+/* lab page */
+#p-lab{position:fixed;inset:0;overflow:auto;background:var(--bg);z-index:8;display:none;padding:64px 0 90px}
+#p-lab.on{display:block}
+.labgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 14px 24px}
+@media(max-width:820px){.labgrid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+select{font-size:14px;padding:7px;border-radius:10px;border:1px solid var(--line);background:var(--card2);max-width:100%;color:var(--ink)}
+.slider{margin:10px 0}
+.slider label{display:flex;justify-content:space-between;font-size:14px}
+input[type=range]{width:100%;direction:ltr;accent-color:var(--acc)}
+.zone{border-radius:10px;padding:10px;margin-top:8px;font-size:14px;color:#1d1d1d}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:6px 9px;font-size:13px;cursor:pointer;text-align:right;color:var(--ink)}
+.presets button.on{border-color:var(--acc);background:#3a2a1a}
+.note{font-size:13px;color:var(--muted)}
+.explain p{font-size:14px;margin:6px 0}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:right;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.col.right,.col.left{top:calc(72px + env(safe-area-inset-top,0px))}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="app3d"></div>
+<div id="loading"><div>טוען מודל אנטומי תלת-ממדי…</div><div class="bar"><i id="pbar"></i></div><div id="err"></div></div>
+
+<div class="top"><div><h1>אטלס שרירים 3D</h1><div class="sub">גררו לסיבוב · צבטו לזום · הקישו על שריר</div></div><a class="rbtn" id="bBack" href="../coach-builder.html" aria-label="חזרה ל-CoachBuilder"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+
+<div class="col right">
+  <button class="rbtn" id="bSearch" title="חיפוש"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
+  <button class="rbtn" id="bView" title="חזית / גב / צד"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+  <button class="rbtn" id="bReset" title="איפוס"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/></svg></button>
+</div>
+<div class="col left">
+  <button class="rbtn on" id="bBones" title="שלד"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M12 7c-3 0-6-1-7 1M12 7c3 0 6-1 7 1M12 11c-3 0-6-1-7 1.5M12 11c3 0 6-1 7 1.5M12 15c-3 0-5-.5-6 1.5M12 15c3 0 5-.5 6 1.5"/></svg></button>
+  <button class="rbtn" id="bIso" title="בודד שריר נבחר"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg></button>
+  <button class="rbtn on" id="bMirror" title="שני הצדדים"><svg viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7l-4 5 4 5M16 7l4 5-4 5"/></svg></button>
+<div class="layerbox">
+  <button class="rbtn" id="bAdd" title="הוסף שכבה"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></button>
+  <div class="lv"><svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#ddd;fill:none;stroke-width:1.6"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12l9 5 9-5"/><path d="M3 16l9 5 9-5"/></svg><br>שכבה<br><b id="lvTxt" style="font-size:15px">8</b></div>
+  <button class="rbtn" id="bPeel" title="הורד שכבה"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+<div class="credit">3D data: <a href="https://lifesciencedb.jp/bp3d/" target="_blank">BodyParts3D</a> © DBCLS, CC BY-SA 2.1 JP</div>
+
+<div id="sheet"><div class="handle" id="handle"><i></i><div class="shead"><div class="t"><div class="nm" id="sNm"></div><div class="en" id="sEn"></div></div><button class="x" id="sClose">✕</button></div></div><div class="sbody" id="sBody"></div></div>
+
+<div id="search"><div style="display:flex;gap:8px"><input id="q" placeholder="חפשו שריר… (עברית או English)" autocomplete="off"><button class="x" id="qClose" style="width:46px;height:46px">✕</button></div><div id="results"></div></div>
+
+<div class="nav"><button class="on" data-p="3d">🧍 3D</button><button data-p="lab">🧪 מעבדה</button></div>
+
+<div class="page" id="p-lab">
+ <div class="labgrid">
+  <div class="card">
+    <div class="row"><select id="labPick"></select><button class="btn pri" id="play">▶ הפעל תנועה</button></div>
+    <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:44vh;display:block"></svg>
+    <div id="sliders"></div>
+    <h3>תרגילים (לחצו כדי לראות את מצב השריר)</h3>
+    <div class="presets" id="presets"></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0">עקומת אורך–מתח</h3>
+    <svg id="lt" viewBox="0 0 320 160" style="width:100%;display:block"></svg>
+    <div id="zone" class="zone"></div>
+    <div id="presetNote" class="note" style="margin-top:8px"></div>
+    <div class="explain" id="labText"></div>
+    <div class="explain">
+      <h3>אז מה זה בעצם אי-ספיקה?</h3>
+      <p><b>אי-ספיקה אקטיבית:</b> שריר <u>דו-מפרקי</u> שמתקצר <u>בשני המפרקים בבת אחת</u> מגיע למצב שבו הסיבים חופפים מדי, והוא כמעט לא מסוגל לייצר כוח. מרגישים ״כיווץ״ או ״תקיעה״, ולפעמים עווית.</p>
+      <p><b>אי-ספיקה פסיבית:</b> שריר דו-מפרקי <u>שמוארך על שני המפרקים</u> מגביל את טווח התנועה, כי הוא פשוט לא מתארך יותר. כאן מדובר בשריר הנגדי (האנטגוניסט) לתנועה.</p>
+      <p>🧠 <b>טריק לזכור:</b> <b>אקטיבית</b> = השריר שעובד קצר מדי ולא מצליח ״לדחוף״. <b>פסיבית</b> = השריר שבצד השני ארוך מדי ו״בולם״. שתיהן קורות רק בשרירים שחוצים 2 מפרקים או יותר.</p>
+      <p><b>דוגמאות מהחיים:</b></p>
+      <ul>
+        <li>נסו לקפוץ אגרוף חזק כשכף היד כפופה למקסימום: הוא חלש (כופפי האצבעות באי-ספיקה אקטיבית) וגם קשה לסגור אותו (פושטי האצבעות באי-ספיקה פסיבית).</li>
+        <li>Leg curl בשכיבה: בסוף התנועה ההמסטרינג ״נתקע״ ולפעמים מתכווץ בעווית, כי הוא מקוצר גם בירך וגם בברך.</li>
+        <li>לגעת בבהונות עם ברכיים ישרות: ההמסטרינג (פסיבית) מגביל אתכם, לא מפרק הירך.</li>
+        <li>הרמת עקבים בישיבה: התאומים רפויים, ולכן הסוליאוס עושה את רוב העבודה.</li>
+      </ul>
+      <h3>ומה זה אומר על בחירת תרגילים?</h3>
+      <table>
+        <tr><th>שריר</th><th>במצב מוארך (גירוי חזק לגדילה)</th><th>במצב מקוצר (מרגישים ״כיווץ״)</th></tr>
+        <tr><td>בייספס ראש ארוך</td><td>Incline curl, Bayesian curl</td><td>Spider, כבל מעל הראש</td></tr>
+        <tr><td>טרייספס ראש ארוך</td><td>Overhead extension</td><td>Kickback, Pushdown</td></tr>
+        <tr><td>המסטרינג</td><td>Seated leg curl, RDL</td><td>Lying leg curl</td></tr>
+        <tr><td>רקטוס פמוריס</td><td>Reverse nordic, leg extension עם גב שעון לאחור</td><td>Leg extension בישיבה זקופה</td></tr>
+        <tr><td>תאומים</td><td>הרמת עקבים בעמידה, עם עצירה בתחתית</td><td>הרמת עקבים בישיבה</td></tr>
+      </table>
+      <p class="note">מחקרים עדכניים (למשל Maeo 2021 על המסטרינג, Maeo 2023 על טרייספס, Pedrosa 2022 על כופפי המרפק) מצאו בדרך כלל יותר היפרטרופיה כשמאמנים את השריר במצב מוארך. תחושת ״כיווץ״ חזקה לא אומרת שהגירוי טוב יותר. המודל במעבדה הוא המחשה לימודית, לא מדידה מדויקת.</p>
+    </div>
+  </div>
+ </div>
+</div>
+
+
+
+<script>
+const G={chest:"חזה",sh:"כתפיים ושרוול מסובב",arm:"זרוע",fa:"אמה",back:"גב",core:"בטן וליבה",neck:"צוואר",hip:"ישבן וירך",quad:"ירך קדמית",ham:"ירך אחורית",add:"מקרבים",calf:"שוק"};
+const M={
+pec_clav:{he:"חזה גדול: ראש עליון (קלביקולרי)",en:"Pectoralis Major – Clavicular head",g:"chest",l:1,j:1,o:"החצי הפנימי של עצם הבריח",i:"השפה החיצונית של החריץ הבין-פקעתי בעצם הזרוע",n:"עצבי החזה (Lateral & Medial pectoral)",a:["כפיפת כתף (הרמת הזרוע קדימה), בעיקר עד 90°","הקרבה אופקית (הבאת הזרוע פנימה מול החזה)","סיבוב פנימי של הכתף"],ex:[["לחיצת חזה בשיפוע חיובי (15°–30°)","הזווית מיישרת את כיוון הדחיפה עם כיוון הסיבים העליונים"],["פרפר בכבל מלמטה למעלה (Low-to-high fly)","הקרבה אופקית יחד עם כפיפת כתף, בדיוק הפעולה של הראש הזה"],["לחיצה צרה בשיפוע / לחיצת סוויד","עבודה חזקה בכפיפת כתף"]],tip:"שיפוע מתון (כ-30°) מספיק. מעל 45° הדלתא הקדמית לוקחת יותר ויותר מהעבודה. למתאמן אפשר להסביר: ״הסיבים יורדים מהבריח לזרוע, אז דוחפים קצת כלפי מעלה.״",syn:["delt_ant","pec_stern","coracobrach"]},
+pec_stern:{he:"חזה גדול: ראש אמצעי-תחתון (סטרנוקוסטלי)",en:"Pectoralis Major – Sternocostal head",g:"chest",l:1,j:1,o:"עצם החזה, סחוסי צלעות 1–6 ואפונורוזיס של האלכסוני החיצוני",i:"השפה החיצונית של החריץ הבין-פקעתי בעצם הזרוע",n:"עצבי החזה",a:["הקרבה אופקית","פשיטת כתף מעמדה כפופה (הורדת זרוע מלמעלה למטה)","הקרבת כתף","סיבוב פנימי"],ex:[["לחיצת חזה שטוחה (מוט או דמבלים)","התרגיל הבסיסי, עם עומס גבוה"],["מקבילים (דיפס) עם הטיה קדימה","פשיטת כתף מעמדה כפופה, והראש הזה מוביל"],["פרפר בכבל מלמעלה למטה / לחיצה בשיפוע שלילי","מיישר את כיוון הכוח עם הסיבים התחתונים"],["פרפר בדמבלים או מכונה בטווח עמוק","עומס במצב מוארך בתחתית"]],tip:"זה החלק הגדול של החזה. הוא חזק במיוחד בהבאת הזרוע מלמעלה, למטה ופנימה. טווח עמוק בתחתית (מתיחה תחת עומס) תורם לגדילה, כל עוד הכתף מרגישה טוב.",syn:["pec_clav","delt_ant","triceps_lat","lats"]},
+pec_minor:{he:"חזה קטן",en:"Pectoralis Minor",g:"chest",l:2,j:1,o:"צלעות 3–5",i:"זיז הקורקואיד של השכמה",n:"עצב החזה המדיאלי",a:["הטיה קדמית של השכמה (Anterior tilt)","הורדת שכמה (Depression)","פרוטרקציה (משיכת השכמה קדימה)","שריר עזר בנשימה"],ex:[["תחתית המקבילים","מוריד את השכמה ומטה אותה קדימה"],["מתיחה בפינת קיר / מתיחה בשכיבה על גליל","בדרך כלל צריך להאריך אותו, לא לחזק"]],tip:"חזה קטן קצר ״מושך״ את הכתפיים קדימה ומצמצם את המרווח מתחת לאקרומיון (impingement). השילוב הנכון: להאריך אותו ולחזק את הסראטוס ואת הטרפז התחתון.",syn:["serratus","pec_stern"]},
+delt_ant:{he:"דלתא קדמית",en:"Anterior Deltoid",g:"sh",l:1,j:1,o:"השליש החיצוני של עצם הבריח",i:"הפקעת הדלתאית בעצם הזרוע",n:"העצב האקסילרי (Axillary)",a:["כפיפת כתף","סיבוב פנימי","הקרבה אופקית"],ex:[["לחיצת כתפיים (מוט או דמבלים)","העבודה העיקרית שלה"],["הרמה קדמית בכבל או דמבל","בידוד"],["לחיצת חזה בשיפוע","עובדת חזק גם שם"]],tip:"מקבלת הרבה עבודה מכל תרגילי הדחיפה. רוב המתאמנים לא צריכים בשבילה הרבה עבודה ישירה. עדיף להשקיע בדלתא האמצעית והאחורית.",syn:["pec_clav","delt_lat","triceps_lat"]},
+delt_lat:{he:"דלתא אמצעית (צידית)",en:"Lateral (Middle) Deltoid",g:"sh",l:1,j:1,o:"האקרומיון",i:"הפקעת הדלתאית בעצם הזרוע",n:"העצב האקסילרי",a:["הרחקת כתף (הרמת הזרוע לצד), בעיקר מ-15° ומעלה"],ex:[["הרחקה לצדדים בכבל, כשהכבל עובר מאחורי הגוף","ההתנגדות מתחילה כבר בתחתית, במצב המוארך"],["הרחקה לצדדים בדמבלים","קלאסי. העומס מקסימלי בסביבת 90°"],["הרחקה במכונה / לחיצת כתפיים","עומס נוסף"]],tip:"שריר רב-נוצתי (Multipennate) שסובל נפח עבודה גבוה. עם דמבל כמעט אין עומס בתחילת התנועה, ובכבל יש. הטיה קלה של הגו קדימה ואגודל ניטרלי בדרך כלל נוחים לכתף.",syn:["supraspinatus","trap_upper","delt_ant","delt_post"]},
+delt_post:{he:"דלתא אחורית",en:"Posterior Deltoid",g:"sh",l:1,j:1,o:"עמוד השכמה (Spine of scapula)",i:"הפקעת הדלתאית בעצם הזרוע",n:"העצב האקסילרי",a:["פשיטה אופקית (פתיחת הזרוע לאחור, במישור הכתפיים)","פשיטת כתף","סיבוב חיצוני"],ex:[["פרפר הפוך במכונה (Reverse pec deck)","בידוד מצוין"],["Face pull","יחד עם סיבוב חיצוני"],["פתיחה אופקית בכבלים מוצלבים","עומס לאורך כל הטווח"]],tip:"בחתירות היא עובדת חזק רק כשהמרפקים יוצאים לצדדים (60°–90° מהגוף). בחתירה עם מרפקים צמודים, הלאט עושה את רוב העבודה.",syn:["infraspinatus","teres_minor","trap_mid","rhomboids"]},
+biceps_long:{he:"דו-ראשי: ראש ארוך",en:"Biceps Brachii – Long head",g:"arm",l:1,j:2,o:"הפקעת הסופרה-גלנואידית (מעל מפרק הכתף). הגיד עובר בחריץ הבין-פקעתי",i:"הפקעת של עצם החישור (Radial tuberosity) ואפונורוזיס הבייספס",n:"Musculocutaneous",a:["כפיפת מרפק","סופינציה של האמה (סיבוב כף היד כלפי מעלה). זה סופינטור חזק מאוד","כפיפת כתף (חלשה)","ייצוב ראש עצם הזרוע"],ex:[["Incline dumbbell curl (שכיבה על ספסל משופע)","הכתף בפשיטה, אז הראש הארוך מוארך מאוד ועובד בטווח ארוך"],["Bayesian curl (כבל מאחורי הגוף)","אותו עיקרון, עם עומס גם בתחתית"],["כפיפת מרפק עם מוט, באחיזה צרה","מעט יותר דגש על הראש הארוך"]],tip:"שריר דו-מפרקי שחוצה את הכתף ואת המרפק. כשהזרוע מאחורי הגוף הוא מוארך, וזה גירוי מצוין לגדילה. כשהזרוע למעלה וקדימה (ספיידר, כבל מעל הראש), הוא מקוצר כבר בכתף, ובסוף כפיפת המרפק מתקרב לאי-ספיקה אקטיבית: מרגישים כיווץ חזק, אבל הכוח יורד. כדאי לנסות במעבדה.",syn:["biceps_short","brachialis","brachiorad"],lab:"biceps"},
+biceps_short:{he:"דו-ראשי: ראש קצר",en:"Biceps Brachii – Short head",g:"arm",l:1,j:2,o:"זיז הקורקואיד של השכמה",i:"הפקעת של עצם החישור",n:"Musculocutaneous",a:["כפיפת מרפק","סופינציה","כפיפת כתף","הקרבה אופקית קלה"],ex:[["Preacher curl","העומס הגבוה בתחתית, כשהמרפק פשוט"],["Spider curl","הזרוע לפנים"],["כפיפה באחיזה רחבה","מעט יותר דגש על הראש הקצר"]],tip:"גם הוא חוצה את הכתף, אבל אורכו מושפע פחות מתנוחת הכתף. אחיזה רחבה וזרועות מעט לפנים מגדילות את חלקו בעבודה.",syn:["biceps_long","brachialis","coracobrach"]},
+brachialis:{he:"זרועי (בראכיאליס)",en:"Brachialis",g:"arm",l:2,j:1,o:"החצי התחתון של עצם הזרוע מלפנים",i:"הפקעת של עצם המרפק (Ulnar tuberosity) וזיז הקורונואיד",n:"Musculocutaneous (וחלק רדיאלי)",a:["כפיפת מרפק, בכל מצב של האמה"],ex:[["Hammer curl (אחיזה ניטרלית)","הבייספס פחות דומיננטי"],["כפיפה באחיזה הפוכה (פרונציה)","הבייספס בעמדה חלשה, אז הבראכיאליס עושה יותר"],["Preacher curl","הכתף כפופה והבייספס מקוצר בכתף"]],tip:"חד-מפרקי ומתחבר לעצם המרפק (לא לחישור), ולכן סיבוב האמה לא משנה לו. כשהבייספס ״מושבת״ (אמה בפרונציה, או כתף כפופה מאוד שמביאה לאי-ספיקה), החלק היחסי של הבראכיאליס גדל. הוא יושב מתחת לבייספס, ״דוחף״ אותו החוצה ומעבה את הזרוע מהצד.",syn:["biceps_long","biceps_short","brachiorad"]},
+coracobrach:{he:"קורקוברכיאליס",en:"Coracobrachialis",g:"arm",l:2,j:1,o:"זיז הקורקואיד",i:"אמצע עצם הזרוע, בצד הפנימי",n:"Musculocutaneous",a:["כפיפת כתף","הקרבת כתף","ייצוב הכתף"],ex:[["פרפר ולחיצות חזה","עובד כסינרגיסט"]],tip:"שריר קטן שבדרך כלל לא מאמנים ישירות. הוא חשוב בעיקר להבנת האנטומיה של בית השחי.",syn:["pec_clav","biceps_short"]},
+brachiorad:{he:"זרועי-חישורי (ברכיורדיאליס)",en:"Brachioradialis",g:"fa",l:1,j:1,o:"הרכס העל-עיבתי החיצוני של עצם הזרוע",i:"זיז הסטילואיד של עצם החישור",n:"העצב הרדיאלי",a:["כפיפת מרפק, החזקה ביותר באמה ניטרלית","מחזיר את האמה למצב ניטרלי, מפרונציה או מסופינציה"],ex:[["Hammer curl","אחיזה ניטרלית, הכי פעיל"],["Reverse curl","אחיזה הפוכה"],["Zottman curl","משלב את שתי האחיזות"]],tip:"עובדה מעניינת: הוא מעוצבב על ידי העצב הרדיאלי, כמו הטרייספס, אבל הוא כופף. הוא נותן לאמה את ״הנפח״ בצד העליון.",syn:["brachialis","biceps_long"]},
+forearm_flex:{he:"כופפי שורש כף היד והאצבעות",en:"Wrist & Finger Flexors (group)",g:"fa",l:1,j:2,o:"האפיקונדיל הפנימי של עצם הזרוע (Common flexor origin)",i:"עצמות שורש כף היד, המסרק והאצבעות",n:"Median / Ulnar",a:["כפיפת שורש כף היד","אחיזה (כפיפת אצבעות)","סטייה רדיאלית ואולנרית"],ex:[["Wrist curl","בידוד"],["Farmer walk / תלייה ממוט","אחיזה איזומטרית כבדה"],["משיכות כבדות (דדליפט, חתירה)","אחיזה"]],tip:"כופפי האצבעות חוצים כמה מפרקים, וזו הדוגמה הקלאסית לאי-ספיקה: אגרוף חזק כשהשורש כפוף מקסימלית כמעט לא אפשרי. עומס יתר במקום הזה גורם ל-Golfer's elbow בצד הפנימי של המרפק.",syn:["forearm_ext"]},
+forearm_ext:{he:"פושטי שורש כף היד והאצבעות",en:"Wrist & Finger Extensors (group)",g:"fa",l:1,j:2,o:"האפיקונדיל החיצוני של עצם הזרוע (Common extensor origin)",i:"עצמות המסרק והאצבעות (צד הגב)",n:"העצב הרדיאלי",a:["פשיטת שורש כף היד","ייצוב השורש בזמן אחיזה","פשיטת אצבעות"],ex:[["Reverse wrist curl","בידוד"],["Reverse curl / Hammer curl","עבודה משנית"],["גומייה סביב האצבעות (פתיחה)","איזון מול כל האחיזה"]],tip:"עומס יתר כאן גורם ל-Tennis elbow (בצד החיצוני). הם עובדים בכל אחיזה כדי להחזיק את השורש ישר.",syn:["forearm_flex","brachiorad"]},
+triceps_long:{he:"תלת-ראשי: ראש ארוך",en:"Triceps Brachii – Long head",g:"arm",l:1,j:2,o:"הפקעת האינפרה-גלנואידית של השכמה (מתחת למפרק הכתף)",i:"זיז האולקרנון (קצה המרפק)",n:"העצב הרדיאלי",a:["פשיטת מרפק","פשיטת כתף","הקרבת כתף"],ex:[["Overhead extension (כבל או דמבל מעל הראש)","הכתף כפופה, אז הראש הארוך מוארך מאוד"],["Skull crusher עם הזרוע מוטה מעט לאחור","טווח ארוך"],["לחיצת חזה צרה / מקבילים","עומס כבד על כל הטרייספס"]],tip:"הראש הארוך הוא כ-50% מנפח הטרייספס, ורק הוא חוצה את הכתף. במחקר (Maeo 2023), פשיטה מעל הראש הניבה גדילה גדולה משמעותית מ-pushdown. ב-kickback הכתף בפשיטה והמרפק ננעל, כלומר הראש הארוך מקוצר בשני המפרקים: אי-ספיקה אקטיבית.",syn:["triceps_lat","triceps_med","lats"],lab:"triceps"},
+triceps_lat:{he:"תלת-ראשי: ראש לטרלי (חיצוני)",en:"Triceps Brachii – Lateral head",g:"arm",l:1,j:1,o:"החלק האחורי של עצם הזרוע, מעל חריץ העצב הרדיאלי",i:"האולקרנון",n:"העצב הרדיאלי",a:["פשיטת מרפק, בעיקר תחת עומס גבוה"],ex:[["Pushdown","בידוד טוב לראש הזה"],["לחיצה צרה","עומס כבד"],["מקבילים","עומס כבד"]],tip:"חד-מפרקי, כך שתנוחת הכתף לא משנה את אורכו. זה ״הפרסה״ שרואים מהצד.",syn:["triceps_long","triceps_med"]},
+triceps_med:{he:"תלת-ראשי: ראש מדיאלי",en:"Triceps Brachii – Medial head",g:"arm",l:2,j:1,o:"החלק האחורי של עצם הזרוע, מתחת לחריץ הרדיאלי",i:"האולקרנון",n:"העצב הרדיאלי",a:["פשיטת מרפק. פעיל בכל פשיטה, גם בעומס קל ובנעילה"],ex:[["Pushdown באחיזה הפוכה","דגש יחסי על הראש המדיאלי"],["כל תרגיל פשיטת מרפק","הוא תמיד עובד"]],tip:"״סוס העבודה״ של הטרייספס. רובו מכוסה על ידי שני הראשים האחרים.",syn:["triceps_long","triceps_lat"]},
+trap_upper:{he:"טרפז עליון",en:"Upper Trapezius",g:"back",l:1,j:1,o:"עצם העורף, רצועת העורף (Ligamentum nuchae), חוליה C7",i:"השליש החיצוני של עצם הבריח",n:"העצב הנלווה (Accessory, CN XI)",a:["הרמת השכמה (Elevation)","סיבוב השכמה כלפי מעלה (Upward rotation)","הטיית הראש לאותו צד וסיבובו לצד הנגדי"],ex:[["Shrugs (משיכת כתפיים) עם דמבלים","משיכה ישרה למעלה, בלי לגלגל"],["Farmer walk","עבודה איזומטרית כבדה"],["הרחקה לצדדים מעל 90° / לחיצת כתפיים","סיבוב השכמה כלפי מעלה"]],tip:"הסיבים העליונים מושכים את הבריח למעלה ופנימה. גלגול הכתפיים בשראגים מיותר. הוא עובד עם הסראטוס ועם הטרפז התחתון כדי לסובב את השכמה בכל הרמת זרוע.",syn:["levator","trap_mid","serratus"]},
+trap_mid:{he:"טרפז אמצעי",en:"Middle Trapezius",g:"back",l:1,j:1,o:"זיזי חוליות T1–T5",i:"האקרומיון ועמוד השכמה",n:"העצב הנלווה",a:["הצמדת השכמות (Retraction)"],ex:[["חתירה עם מרפקים רחבים (בשכיבה על ספסל משופע)","הצמדת שכמות בלי עזרה מהגב התחתון"],["Face pull","הצמדה וסיבוב חיצוני"],["פרפר הפוך עם דגש על הצמדת השכמות","בידוד"]],tip:"להגיד למתאמן ״שכמות לכיס האחורי ולמרכז״ זה לרוב cue טוב. הוא מתחת לשכבה השטחית רק במרכז, אבל ברובו שטחי.",syn:["rhomboids","trap_low","delt_post"]},
+trap_low:{he:"טרפז תחתון",en:"Lower Trapezius",g:"back",l:1,j:1,o:"זיזי חוליות T6–T12",i:"בסיס עמוד השכמה",n:"העצב הנלווה",a:["הורדת שכמה (Depression)","סיבוב כלפי מעלה","הצמדה"],ex:[["Y-raise בשכיבה על ספסל משופע","בידוד מצוין"],["מתח / פולי עליון, בשלב ״הורדת השכמות״","הפעלה בתחילת המשיכה"],["Wall slides / Y על כדור","שיקום ובריאות כתף"]],tip:"חשוב מאוד לבריאות הכתף: יחד עם הסראטוס הוא מסובב את השכמה כלפי מעלה כשמרימים זרוע. חולשה שלו קשורה לכאבי כתף (impingement).",syn:["serratus","trap_mid","trap_upper"]},
+rhomboids:{he:"רומבואידים",en:"Rhomboid Major & Minor",g:"back",l:2,j:1,o:"זיזי חוליות C7–T5",i:"הגבול הפנימי של השכמה",n:"Dorsal scapular",a:["הצמדת שכמות (Retraction)","הרמת השכמה","סיבוב השכמה כלפי מטה (Downward rotation)"],ex:[["חתירות מכל סוג, עם הצמדה מלאה","עובדים בכל חתירה"],["Chest-supported row","בלי ״רמאות״ מהגב התחתון"],["Face pull","הצמדה"]],tip:"עובדים יחד עם הטרפז האמצעי בהצמדה, אבל מסובבים את השכמה בכיוון ההפוך לטרפז (כלפי מטה). הם נמצאים מתחת לטרפז.",syn:["trap_mid","levator","lats"]},
+levator:{he:"מרים השכמה",en:"Levator Scapulae",g:"neck",l:2,j:1,o:"זיזים רוחביים של C1–C4",i:"הזווית העליונה של השכמה",n:"Dorsal scapular + C3–C4",a:["הרמת השכמה","סיבוב כלפי מטה","הטיית הצוואר לאותו צד"],ex:[["Shrugs","עובד עם הטרפז העליון"],["מתיחה: אף לכיוון בית השחי","לרוב מתוח אצל עובדי משרד"]],tip:"מקור נפוץ ל״קשר״ בין הצוואר לשכמה.",syn:["trap_upper","rhomboids"]},
+lats:{he:"רחב גבי (לאט)",en:"Latissimus Dorsi",g:"back",l:1,j:2,o:"זיזי חוליות T7–L5, הפאשיה התורקולומברית, ציצת הכסל, צלעות 9–12",i:"רצפת החריץ הבין-פקעתי בעצם הזרוע",n:"Thoracodorsal",a:["פשיטת כתף","הקרבת כתף","סיבוב פנימי","עזרה בהורדת השכמה, פשיטה וכפיפה צידית של הגו"],ex:[["מתח / פולי עליון","הקרבת כתף, טווח מלא מתלייה מלאה"],["חתירה בזרוע אחת עם מרפק צמוד לגוף, לכיוון הירך","פשיטת כתף, דגש על הלאט"],["Pullover בכבל או דמבל","בידוד עם עומס במצב מוארך"]],tip:"הלאט מתחבר עד לאגן, ולכן הוא מוארך מאוד כשהזרוע מעל הראש. מרפקים צמודים ותנועה לכיוון הירך מדגישים את הלאט. מרפקים רחבים ותנועה לכיוון החזה מדגישים את הטרפז, הרומבואידים והדלתא האחורית.",syn:["teres_major","triceps_long","delt_post","rhomboids"]},
+teres_major:{he:"עגול גדול (טרס מייג'ור)",en:"Teres Major",g:"back",l:1,j:1,o:"הזווית התחתונה של השכמה",i:"השפה הפנימית של החריץ הבין-פקעתי",n:"Lower subscapular",a:["פשיטת כתף","הקרבה","סיבוב פנימי"],ex:[["כל תרגיל לאט: מתח, חתירה, pullover","״העוזר הקטן של הלאט״"]],tip:"נקרא לפעמים ״העוזר הקטן של הלאט״, כי הפעולות שלהם זהות.",syn:["lats","subscap"]},
+supraspinatus:{he:"על-שוכתי (סופרהספינטוס)",en:"Supraspinatus (Rotator cuff)",g:"sh",l:2,j:1,o:"הגומה העל-שוכתית של השכמה",i:"הפקעת הגדולה של עצם הזרוע (החלק העליון)",n:"Suprascapular",a:["תחילת הרחקת הכתף (0°–15°) ועזרה לדלתא","ייצוב ראש עצם הזרוע בתוך הגלנואיד"],ex:[["הרחקה ״Full can״ (אגודל למעלה) במישור השכמה, כ-30° קדימה","בטוח ויעיל"],["הרחקה קלה בכבל","שיקום ואיזון"]],tip:"השריר הנפגע ביותר ברוטטור קאף, כי הגיד שלו עובר מתחת לאקרומיון. כדאי לחזק בעומסים נמוכים-בינוניים, בטווח נטול כאב.",syn:["delt_lat","infraspinatus"]},
+infraspinatus:{he:"תת-שוכתי (אינפרהספינטוס)",en:"Infraspinatus (Rotator cuff)",g:"sh",l:2,j:1,o:"הגומה התת-שוכתית של השכמה",i:"הפקעת הגדולה (החלק האמצעי)",n:"Suprascapular",a:["סיבוב חיצוני של הכתף","ייצוב אחורי של ראש עצם הזרוע"],ex:[["סיבוב חיצוני בכבל או גומייה (מרפק צמוד, או בזווית 90°)","בידוד"],["Face pull עם סיבוב חיצוני בסוף","משלב עם הדלתא האחורית"]],tip:"הסיבוב החיצוני המרכזי. חשוב כדי לאזן את כל הסיבוב הפנימי שמגיע מהחזה, מהלאט ומהדלתא הקדמית.",syn:["teres_minor","delt_post"]},
+teres_minor:{he:"עגול קטן (טרס מיינור)",en:"Teres Minor (Rotator cuff)",g:"sh",l:2,j:1,o:"הגבול החיצוני של השכמה",i:"הפקעת הגדולה (החלק התחתון)",n:"העצב האקסילרי",a:["סיבוב חיצוני","הקרבה קלה","ייצוב"],ex:[["סיבוב חיצוני בכבל או גומייה","כמו האינפרהספינטוס"]],tip:"לא לבלבל עם הטרס מייג'ור: מיינור שייך לשרוול המסובב ומסובב החוצה, מייג'ור עוזר ללאט ומסובב פנימה.",syn:["infraspinatus","delt_post"]},
+subscap:{he:"תת-שכמי (סובסקפולריס)",en:"Subscapularis (Rotator cuff)",g:"sh",l:3,j:1,o:"הגומה התת-שכמית, בצד הקדמי של השכמה (בין השכמה לצלעות)",i:"הפקעת הקטנה של עצם הזרוע",n:"Upper & Lower subscapular",a:["סיבוב פנימי","ייצוב קדמי של הכתף"],ex:[["סיבוב פנימי בכבל","בידוד"],["כל תרגילי הלחיצה והמשיכה","מייצב"]],tip:"השריר הגדול והחזק ברוטטור קאף. הוא בצד הקדמי של השכמה, ולכן כדי לראות אותו צריך להוריד את כל השכבות ולהסתיר את השלד.",syn:["teres_major","lats","pec_stern"]},
+erector:{he:"זוקפי הגו (אירקטור ספיני)",en:"Erector Spinae",g:"back",l:2,j:2,o:"עצם העצה, ציצת הכסל וזיזי החוליות",i:"צלעות, זיזי החוליות ובסיס הגולגולת",n:"ענפים אחוריים של עצבי השדרה",a:["פשיטת עמוד השדרה","כפיפה צידית","בעיקר: שמירה איזומטרית על גב ניטרלי"],ex:[["דדליפט / RDL","עבודה איזומטרית כבדה"],["Back extension (היפר-אקסטנשן) עם גלגול הגב","עבודה דינמית ישירה"],["Good morning","עומס איזומטרי במצב מוארך"]],tip:"ברוב תרגילי הכוח הם עובדים איזומטרית, כלומר מונעים כפיפה. כדי לחזק אותם בצורה דינמית: back extension שבו הגב מתעגל ומתיישר בשליטה.",syn:["multifidus","ql","glute_max"]},
+multifidus:{he:"מולטיפידוס",en:"Multifidus",g:"core",l:3,j:2,o:"עצם העצה וזיזים רוחביים של החוליות",i:"זיזי חוליות, 2–4 חוליות מעל",n:"ענפים אחוריים",a:["ייצוב סגמנטלי (חוליה-חוליה)","פשיטה וסיבוב קלים"],ex:[["Bird-dog","ייצוב"],["Back extension","פשיטה"],["פלאנק","ייצוב"]],tip:"אצל אנשים עם כאבי גב תחתון רואים לעתים קרובות ניוון של המולטיפידוס. הוא חשוב לייצוב, פחות לכוח.",syn:["erector","transverse"]},
+ql:{he:"מרובע המותני (QL)",en:"Quadratus Lumborum",g:"core",l:3,j:1,o:"ציצת הכסל",i:"צלע 12 וזיזים רוחביים של L1–L4",n:"T12–L4",a:["כפיפה צידית של הגו","הרמת האגן לאותו צד (Hip hike)","ייצוב בעמידה על רגל אחת ובנשיאה"],ex:[["Suitcase carry (נשיאה ביד אחת)","אנטי-כפיפה צידית"],["Side plank","ייצוב"]],tip:"עובד חזק כשנושאים משקל בצד אחד. הוא מקור נפוץ לכאב גב תחתון חד-צדדי.",syn:["ext_oblique","int_oblique","glute_med"]},
+rectus_abd:{he:"ישר הבטן (קוביות)",en:"Rectus Abdominis",g:"core",l:1,j:1,o:"הסימפיזה והציצה הציבית",i:"סחוסי צלעות 5–7 וזיז החרב (Xiphoid)",n:"עצבים בין-צלעיים T7–T12",a:["כפיפת עמוד השדרה (קירוב הצלעות לאגן)","הטיה אחורית של האגן","ייצוב הגו"],ex:[["Crunch בכבל","עומס הדרגתי"],["הרמת רגליים בתלייה, עם גלגול האגן למעלה","בלי גלגול אגן עובדים בעיקר מכופפי הירך"],["Ab wheel","אנטי-פשיטה, עומס במצב מוארך"],["Crunch על כדור פיזיו","טווח מוארך"]],tip:"בהרמת רגליים בלי גלגול אגן, רוב העבודה היא של האיליופסואס. ה״סיקס-פק״ הוא הישר הבטני עם הגידים החוצים אותו (Tendinous intersections). הנראות שלו תלויה בעיקר באחוז השומן.",syn:["ext_oblique","int_oblique","transverse"]},
+ext_oblique:{he:"אלכסוני חיצוני",en:"External Oblique",g:"core",l:1,j:1,o:"צלעות 5–12, מבחוץ",i:"ציצת הכסל וה-Linea alba",n:"T7–T12",a:["כפיפה צידית לאותו צד","סיבוב הגו לצד הנגדי","כפיפת הגו","הגברת לחץ תוך-בטני"],ex:[["Pallof press","אנטי-רוטציה"],["Woodchop בכבל","סיבוב"],["Side plank","אנטי-כפיפה צידית"]],tip:"האלכסוני החיצוני הימני והפנימי השמאלי עובדים יחד כדי לסובב את הגו שמאלה. כדאי להסביר למתאמן שהם ״אותו קו אלכסוני״.",syn:["int_oblique","rectus_abd","serratus"]},
+int_oblique:{he:"אלכסוני פנימי",en:"Internal Oblique",g:"core",l:2,j:1,o:"הפאשיה התורקולומברית, ציצת הכסל, הרצועה המפשעתית",i:"צלעות 10–12 וה-Linea alba",n:"T7–L1",a:["כפיפה צידית לאותו צד","סיבוב הגו לאותו צד","ייצוב"],ex:[["Pallof press / Woodchop","כמו האלכסוני החיצוני"],["Side plank","ייצוב"]],tip:"הסיבים שלו מאונכים לסיבי האלכסוני החיצוני, ונמצאים מתחתיו.",syn:["ext_oblique","transverse"]},
+transverse:{he:"רוחבי הבטן",en:"Transversus Abdominis",g:"core",l:3,j:1,o:"סחוסי צלעות 7–12, הפאשיה התורקולומברית, ציצת הכסל",i:"ה-Linea alba",n:"T7–L1",a:["דחיסת הבטן","יצירת לחץ תוך-בטני וייצוב. זו ״החגורה הטבעית״"],ex:[["Stomach vacuum","הפעלה ישירה"],["Dead bug","ייצוב עם נשימה"],["Bracing בנשימה סרעפתית","בכל תרגיל כבד"]],tip:"השריר העמוק ביותר בבטן. הסיבים רוחביים כמו חגורה.",syn:["int_oblique","multifidus"]},
+serratus:{he:"משורי קדמי (סראטוס)",en:"Serratus Anterior",g:"chest",l:1,j:1,o:"צלעות 1–8/9, בצד החיצוני",i:"הגבול הפנימי של השכמה (מלפנים)",n:"Long thoracic",a:["פרוטרקציה (דחיפת השכמה קדימה)","סיבוב השכמה כלפי מעלה","הצמדת השכמה לבית החזה"],ex:[["Push-up plus (דחיפה נוספת בסוף שכיבת סמיכה)","פרוטרקציה מלאה"],["לחיצה מעל הראש / Landmine press","סיבוב כלפי מעלה"],["Wall slides עם גליל","שיקום"]],tip:"חולשה או פגיעה בעצב גורמות ל״שכמה מכונפת״ (Scapular winging). אצל מתאגרפים הוא מפותח מאוד.",syn:["trap_low","trap_upper","pec_minor"]},
+scm:{he:"סטרנוקליידומסטואיד",en:"Sternocleidomastoid",g:"neck",l:1,j:1,o:"המנובריום של עצם החזה והחלק הפנימי של עצם הבריח",i:"זיז המסטואיד (מאחורי האוזן)",n:"העצב הנלווה (CN XI)",a:["בצד אחד: הטיית הראש לאותו צד וסיבובו לצד הנגדי","בשני הצדדים: כפיפת צוואר"],ex:[["כפיפות צוואר בשכיבה","חיזוק"],["איזומטריות צוואר עם יד","לספורטאי מגע"]],tip:"נראה בבירור כשמסובבים את הראש. הוא חשוב לספורטאי מגע ולמניעת זעזועים.",syn:["trap_upper"]},
+iliopsoas:{he:"איליופסואס",en:"Iliopsoas (Psoas + Iliacus)",g:"hip",l:2,j:2,o:"פסואס: חוליות T12–L5. איליאקוס: גומת הכסל",i:"הטרוכנטר הקטן של עצם הירך",n:"מקלעת מותנית / Femoral",a:["כפיפת ירך. זה מכופף הירך העיקרי","ייצוב עמוד השדרה המותני"],ex:[["הרמת רגליים בתלייה / Captain's chair","כפיפת ירך"],["Hip flexor march עם גומייה","כפיפה מעל 90°"],["L-sit","איזומטרי"]],tip:"בכפיפת ירך מעל 90° (ברך לחזה) הוא כמעט היחיד שעוד מייצר כוח, כי מכופפי ירך אחרים (כמו הרקטוס פמוריס) מתקרבים לאי-ספיקה. חשוב לרצים ולספרינטרים.",syn:["rectus_fem","tfl","sartorius"]},
+tfl:{he:"מותח הפאשיה (TFL)",en:"Tensor Fasciae Latae",g:"hip",l:1,j:2,o:"הקוץ הכסלי העליון-קדמי (ASIS)",i:"רצועת ה-IT (Iliotibial band)",n:"Superior gluteal",a:["כפיפת ירך","הרחקה","סיבוב פנימי של הירך"],ex:[["הרחקת ירך במכונה","עובד עם הגלוטאוס מדיוס"]],tip:"לעתים קרובות ״משתלט״ כשהגלוטאוס מדיוס חלש.",syn:["glute_med","iliopsoas"]},
+sartorius:{he:"החייט (סרטוריוס)",en:"Sartorius",g:"quad",l:1,j:2,o:"הקוץ הכסלי העליון-קדמי (ASIS)",i:"החלק הפנימי של השוקה (Pes anserinus)",n:"Femoral",a:["כפיפת ירך","הרחקה","סיבוב חיצוני של הירך","כפיפת ברך (תנוחת ״ישיבה מזרחית״)"],ex:[["עובד כסינרגיסט בכפיפות ירך","לרוב לא מאמנים אותו ישירות"]],tip:"השריר הארוך ביותר בגוף. הוא דו-מפרקי, וקרוי על שם תנוחת הישיבה של החייטים.",syn:["iliopsoas","rectus_fem"]},
+rectus_fem:{he:"ישר הירך (רקטוס פמוריס)",en:"Rectus Femoris",g:"quad",l:1,j:2,o:"הקוץ הכסלי התחתון-קדמי (AIIS) ושפת האצטבולום",i:"דרך גיד הארבע-ראשי, הפיקה ורצועת הפיקה, לפקעת השוקה",n:"Femoral",a:["פשיטת ברך","כפיפת ירך"],ex:[["Leg extension עם הגב שעון לאחור","הירך בפשיטה, אז השריר מוארך"],["Reverse nordic / Sissy squat","מתיחה חזקה תחת עומס"],["Leg extension רגיל","עבודה טובה, אבל במצב מקוצר יותר"]],tip:"בסקוואט הרקטוס פמוריס כמעט לא משנה אורך, כי כשהברך מתכופפת הירך מתכופפת גם היא, וכך הוא מתארך בצד אחד ומתקצר בצד השני. לכן הוא מתפתח פחות מסקוואט ויותר מפשיטת ברך כשהירך פשוטה. כדאי לנסות במעבדה.",syn:["vastus_lat","vastus_med","vastus_int","iliopsoas"],lab:"rf"},
+vastus_lat:{he:"ויסטוס לטרליס (חיצוני)",en:"Vastus Lateralis",g:"quad",l:1,j:1,o:"הטרוכנטר הגדול וה-Linea aspera",i:"הפיקה ורצועתה, לפקעת השוקה",n:"Femoral",a:["פשיטת ברך"],ex:[["סקוואט / האק סקוואט","עומס כבד בטווח עמוק"],["לחיצת רגליים","עומס כבד ויציב"],["Leg extension","בידוד"]],tip:"הראש הגדול ביותר בארבע-ראשי. הוא חד-מפרקי, אז כל תרגיל פשיטת ברך עובד עליו, ובמיוחד בטווח עמוק.",syn:["vastus_med","vastus_int","rectus_fem","glute_max"]},
+vastus_med:{he:"ויסטוס מדיאליס (״טיפה״, VMO)",en:"Vastus Medialis",g:"quad",l:1,j:1,o:"ה-Linea aspera (החלק הפנימי)",i:"הפיקה ורצועתה",n:"Femoral",a:["פשיטת ברך","ייצוב הפיקה מהצד הפנימי"],ex:[["סקוואט עמוק (ברכיים מעבר לאצבעות)","מגייס את כל הוויסטים"],["Spanish squat / Step-down","שיקום ברך"],["Leg extension","בידוד"]],tip:"המיתוס שה-VMO עובד ״רק ב-30° האחרונים״ לא נתמך במחקר: הוא פעיל לאורך כל הטווח. אי אפשר באמת לבודד אותו מהוויסטים האחרים.",syn:["vastus_lat","vastus_int","rectus_fem"]},
+vastus_int:{he:"ויסטוס אינטרמדיוס (אמצעי)",en:"Vastus Intermedius",g:"quad",l:2,j:1,o:"החלק הקדמי של גוף עצם הירך",i:"הפיקה ורצועתה",n:"Femoral",a:["פשיטת ברך"],ex:[["סקוואט / לחיצת רגליים / Leg extension","כמו שאר הוויסטים"]],tip:"נמצא מתחת לרקטוס פמוריס.",syn:["vastus_lat","vastus_med","rectus_fem"]},
+adductors:{he:"מקרבי הירך (קבוצה)",en:"Adductors (Longus, Brevis, Magnus, Gracilis, Pectineus)",g:"add",l:1,j:1,o:"עצם הערווה. המגנוס גם מפקעת השת",i:"ה-Linea aspera לאורך עצם הירך (הגרסיליס עד השוקה)",n:"Obturator (המגנוס גם Sciatic)",a:["הקרבת ירך","אדוקטור מגנוס (החלק האחורי): פושט ירך חזק!","עזרה בכפיפה או בפשיטה, לפי זווית הירך"],ex:[["סקוואט עמוק ורחב","המגנוס עובד כפושט ירך בתחתית"],["Copenhagen plank","מניעת פציעות מפשעה"],["מכונת הקרבה","בידוד"],["לאנג' עמוק","מוארך תחת עומס"]],tip:"אדוקטור מגנוס הוא אחד מפושטי הירך החזקים בתחתית הסקוואט. במחקר (Kubo 2019), סקוואט עמוק פיתח את המקרבים יותר מחצי-סקוואט.",syn:["glute_max","semimem"]},
+glute_max:{he:"ישבן גדול (גלוטאוס מקסימוס)",en:"Gluteus Maximus",g:"hip",l:1,j:1,o:"הכסל האחורי, עצם העצה ועצם הזנב",i:"רצועת ה-IT והפקעת הגלוטאלית של עצם הירך",n:"Inferior gluteal",a:["פשיטת ירך","סיבוב חיצוני של הירך","הרחקה (סיבים עליונים)","הקרבה (סיבים תחתונים)"],ex:[["היפ טראסט","עומס מקסימלי כשהירך פשוטה"],["סקוואט עמוק / בולגרי","עומס במצב מוארך"],["RDL","פשיטת ירך עם המסטרינג"],["Back extension 45° עם גב עגול","דגש על ישבן"]],tip:"בהיפ טראסט הברך כפופה, ולכן ההמסטרינג מקוצר בברך ומתקרב לאי-ספיקה אקטיבית, והישבן עושה יותר מהעבודה. כך משתמשים באי-ספיקה כדי ״לבודד״ שריר.",syn:["bf_long","semiten","adductors","glute_med"]},
+glute_med:{he:"ישבן בינוני (גלוטאוס מדיוס)",en:"Gluteus Medius",g:"hip",l:2,j:1,o:"החלק החיצוני של עצם הכסל",i:"הטרוכנטר הגדול",n:"Superior gluteal",a:["הרחקת ירך","ייצוב האגן בעמידה על רגל אחת","סיבוב פנימי (סיבים קדמיים) וחיצוני (אחוריים)"],ex:[["הרחקה בשכיבה על הצד","בידוד"],["הליכה צידית עם גומייה","הפעלה"],["בולגרי / סטפ-אפ / RDL על רגל אחת","ייצוב תחת עומס"]],tip:"אם האגן ״נופל״ לצד הנגדי בעמידה על רגל אחת (Trendelenburg), או שהברך קורסת פנימה (Valgus), כדאי לבדוק אותו.",syn:["glute_min","tfl","glute_max"]},
+glute_min:{he:"ישבן קטן (גלוטאוס מינימוס)",en:"Gluteus Minimus",g:"hip",l:3,j:1,o:"החלק החיצוני של עצם הכסל (מתחת למדיוס)",i:"הטרוכנטר הגדול (מלפנים)",n:"Superior gluteal",a:["הרחקה","סיבוב פנימי","ייצוב ראש עצם הירך"],ex:[["כמו הגלוטאוס מדיוס","עובדים יחד"]],tip:"השכבה העמוקה ביותר של שרירי הישבן.",syn:["glute_med","tfl"]},
+piriformis:{he:"אגסי (פיריפורמיס)",en:"Piriformis",g:"hip",l:3,j:1,o:"הצד הקדמי של עצם העצה",i:"הטרוכנטר הגדול",n:"S1–S2",a:["סיבוב חיצוני של הירך (כשהירך פשוטה)","הרחקה (כשהירך כפופה מעל 60°)"],ex:[["מתיחת Figure-4","הארכה"],["Clamshell","חיזוק סיבוב חיצוני"]],tip:"דוגמה להיפוך פעולה: מעל כ-60° כפיפת ירך, הוא כבר מסובב פנימה. העצב הסיאטי עובר מתחתיו (ולפעמים דרכו), ומכאן ״תסמונת הפיריפורמיס״.",syn:["glute_max","glute_med"]},
+bf_long:{he:"דו-ראשי הירך: ראש ארוך",en:"Biceps Femoris – Long head",g:"ham",l:1,j:2,o:"פקעת השת (Ischial tuberosity)",i:"ראש עצם השוקית (Fibula)",n:"Tibial (מהסיאטי)",a:["כפיפת ברך","פשיטת ירך","סיבוב חיצוני של השוק (כשהברך כפופה)"],ex:[["Seated leg curl","הירך כפופה, אז השריר מוארך. Maeo 2021: יותר גדילה מאשר leg curl בשכיבה"],["RDL / Good morning","פשיטת ירך במצב מוארך"],["Nordic curl","אקסצנטרי, למניעת קרעים"]],tip:"שריר דו-מפרקי: מתקצר בפשיטת ירך ובכפיפת ברך. ב-leg curl בשכיבה הוא מקוצר בשני המפרקים, ולכן בסוף התנועה הוא ״נתקע״ (אי-ספיקה אקטיבית) ולפעמים מתכווץ בעווית. בישיבה, הירך הכפופה מאריכה אותו. זה גם השריר שנקרע הכי הרבה בספרינט.",syn:["semiten","semimem","glute_max","bf_short"],lab:"hams"},
+bf_short:{he:"דו-ראשי הירך: ראש קצר",en:"Biceps Femoris – Short head",g:"ham",l:2,j:1,o:"ה-Linea aspera של עצם הירך",i:"ראש עצם השוקית",n:"Common fibular",a:["כפיפת ברך בלבד"],ex:[["כל סוגי ה-leg curl","הוא עובד רק בכפיפת ברך"]],tip:"היחיד בהמסטרינג שלא חוצה את הירך, ולכן הוא כמעט לא עובד ב-RDL ובהיפ טראסט. בשבילו חייבים כפיפת ברך.",syn:["bf_long","semiten"]},
+semiten:{he:"חצי-גידי (סמיטנדינוסוס)",en:"Semitendinosus",g:"ham",l:1,j:2,o:"פקעת השת",i:"החלק הפנימי של השוקה (Pes anserinus)",n:"Tibial",a:["כפיפת ברך","פשיטת ירך","סיבוב פנימי של השוק"],ex:[["Nordic curl","מגיב חזק במיוחד"],["Seated leg curl","מוארך"],["RDL","פשיטת ירך"]],tip:"מגיב חזק לכפיפות ברך, ובמיוחד לנורדיק. הגיד שלו משמש לעתים קרובות לשחזור ACL.",syn:["semimem","bf_long"]},
+semimem:{he:"חצי-קרומי (סמימברנוסוס)",en:"Semimembranosus",g:"ham",l:2,j:2,o:"פקעת השת",i:"הקונדיל הפנימי של השוקה (מאחור)",n:"Tibial",a:["כפיפת ברך","פשיטת ירך","סיבוב פנימי של השוק"],ex:[["RDL / Seated leg curl","כמו שאר ההמסטרינג"]],tip:"נמצא מתחת לסמיטנדינוסוס. הוא רחב ושטוח.",syn:["semiten","bf_long","adductors"]},
+gastroc_med:{he:"תאומים: ראש פנימי",en:"Gastrocnemius – Medial head",g:"calf",l:1,j:2,o:"הקונדיל הפנימי של עצם הירך (מאחור)",i:"עצם העקב, דרך גיד אכילס",n:"Tibial",a:["כפיפה פלנטרית (עמידה על קצות האצבעות)","כפיפת ברך (חלשה)"],ex:[["הרמת עקבים בעמידה, עם ברך ישרה","השריר מוארך ועובד במלואו"],["Donkey calf raise / הרמת עקבים בלחיצת רגליים","ברך ישרה ומתיחה עמוקה"],["עצירה של 1–2 שניות בתחתית","מנטרלת את ״הקפיץ״ של גיד אכילס"]],tip:"דו-מפרקי. בעמידה עם ברך ישרה הוא מוארך. בישיבה, כשהברך כפופה, הוא רפוי וקרוב לאי-ספיקה אקטיבית, ולכן הסוליאוס עושה את רוב העבודה. כדאי לנסות במעבדה.",syn:["gastroc_lat","soleus"],lab:"gastroc"},
+gastroc_lat:{he:"תאומים: ראש חיצוני",en:"Gastrocnemius – Lateral head",g:"calf",l:1,j:2,o:"הקונדיל החיצוני של עצם הירך (מאחור)",i:"עצם העקב, דרך גיד אכילס",n:"Tibial",a:["כפיפה פלנטרית","כפיפת ברך (חלשה)"],ex:[["הרמת עקבים בעמידה","ברך ישרה"],["Donkey calf raise","מתיחה עמוקה"]],tip:"קטן מהראש הפנימי. אצל רוב האנשים הראש הפנימי הוא שנותן ״צורה״ לשוק.",syn:["gastroc_med","soleus"],lab:"gastroc"},
+soleus:{he:"סוליאוס (הסנדלי)",en:"Soleus",g:"calf",l:2,j:1,o:"ראש עצם השוקית והחלק האחורי של השוקה",i:"עצם העקב, דרך גיד אכילס",n:"Tibial",a:["כפיפה פלנטרית, בכל זווית ברך","יציבות בעמידה ובהליכה"],ex:[["הרמת עקבים בישיבה","התאומים רפויים, אז הסוליאוס מוביל"],["הליכה / ריצה","עבודת סיבולת"]],tip:"עשיר מאוד בסיבים איטיים. הוא סובל נפח גבוה ומגיב גם לחזרות רבות. הוא חד-מפרקי, ולכן זווית הברך לא משנה לו.",syn:["gastroc_med","gastroc_lat"]},
+tib_ant:{he:"שוקי קדמי (טיביאליס אנטריור)",en:"Tibialis Anterior",g:"calf",l:1,j:1,o:"החלק העליון והחיצוני של השוקה",i:"העצם היתדית הראשונה ובסיס המסרק הראשון",n:"Deep fibular",a:["כפיפה דורסלית (הרמת קצות האצבעות)","היפוך כף הרגל (Inversion)"],ex:[["Tibialis raise (גב לקיר, הרמת האצבעות)","בידוד"],["הליכה על העקבים","חיזוק"]],tip:"חיזוק שלו עוזר במניעת Shin splints, ומאזן את כל עבודת השוק האחורית.",syn:[]}
+};
+
+
+// ---------- LAB ----------
+const LAB={
+biceps:{name:"בייספס: ראש ארוך",geo:"arm",side:-1,oA:10,oN:6,ia:16,inn:-7,w:[.45,.55],
+ j:[{n:"כפיפת כתף",min:-60,max:180,s:1,v:0,h:"ערך שלילי = פשיטה (הזרוע מאחורי הגוף)"},{n:"כפיפת מרפק",min:0,max:150,s:1,v:90}],
+ pr:[["Incline curl: תחתית",-45,5,"הכתף בפשיטה והמרפק ישר: הראש הארוך מוארך מאוד. גירוי מתיחה חזק."],["Incline curl: למעלה",-45,150,"גם בסוף התנועה השריר לא מקוצר מדי, כך שהכוח נשמר."],["כפיפה בעמידה: למעלה",0,150,"מצב ביניים."],["Preacher: תחתית",45,5,"הכתף כפופה, אבל המרפק ישר. כאן העומס במכונה או בספסל הכי גבוה, ובטווח ארוך."],["Spider curl: למעלה",70,150,"מקוצר בכתף וגם במרפק, כלומר מתקרב לאי-ספיקה אקטיבית."],["כבל מעל הראש: למעלה",120,150,"אי-ספיקה אקטיבית: מרגישים ״כיווץ״ חזק, אבל השריר כמעט לא מייצר כוח."]],
+ txt:`<h3>התשובה לשאלה שלך</h3><p><b>כתף בפשיטה ואז כפיפת מרפק</b> (Incline, Bayesian): הבייספס מתחיל מוארך מאוד ועובד חזק בטווח הארוך. לפי המחקר העדכני, זה גירוי טוב יותר לגדילה. גם בסוף התנועה הוא לא נכנס לאי-ספיקה, אז הכוח טוב לאורך כל הטווח.</p><p><b>כתף בכפיפה ואז כפיפת מרפק</b> (Spider, Preacher, כבל מעל הראש): הבייספס כבר מקוצר בכתף. בסוף כפיפת המרפק הוא מקוצר בשני המפרקים, וזו <b>אי-ספיקה אקטיבית</b>: תחושת כיווץ חזקה, אבל הכוח יורד. הבראכיאליס (חד-מפרקי) לוקח חלק גדול יותר.</p><p><b>שורה תחתונה למתאמן:</b> לשלב תרגיל במצב מוארך (Incline/Bayesian) עם תרגיל שהעומס בו בתחתית (Preacher).</p>`},
+triceps:{name:"טרייספס: ראש ארוך",geo:"arm",side:1,oA:-6,oN:-6,ia:-4,inn:9,w:[.45,.55],
+ j:[{n:"כפיפת כתף",min:-60,max:180,s:-1,v:0,h:"180 = זרוע מעל הראש · שלילי = זרוע מאחור"},{n:"כפיפת מרפק",min:0,max:150,s:-1,v:90}],
+ pr:[["Overhead extension: תחתית",150,140,"הכתף כפופה והמרפק כפוף: מוארך מאוד. זה מה שהניב יותר גדילה במחקר."],["Overhead: נעילה",150,5,"גם בנעילה השריר לא מקוצר יותר מדי."],["Pushdown: התחלה",0,100,"טווח בינוני."],["Pushdown: נעילה",0,5,"מקוצר. הראש הארוך עובד פחות ביעילות."],["Kickback: נעילה",-40,5,"מקוצר בכתף ובמרפק: אי-ספיקה אקטיבית. ״שורף״ אבל חלש."]],
+ txt:`<h3>מה רואים כאן</h3><p>הראש הארוך הוא היחיד בטרייספס שחוצה את הכתף. כשהזרוע מעל הראש הוא מוארך, וכשהזרוע מאחורי הגוף (Kickback) הוא מקוצר. לכן פשיטה מעל הראש היא התרגיל ״החסר״ אצל רוב המתאמנים, שעושים רק pushdown.</p>`},
+hams:{name:"המסטרינג (ראש ארוך / סמיטנדינוסוס)",geo:"leg",side:1,oA:-8,oN:-14,ia:18,inn:7,w:[.5,.5],
+ j:[{n:"כפיפת ירך",min:-20,max:130,s:-1,v:0,h:"0 = עמידה · 90 = ישיבה"},{n:"כפיפת ברך",min:0,max:140,s:1,v:0}],
+ pr:[["Seated leg curl: התחלה",90,0,"הירך כפופה והברך ישרה: מוארך. Maeo 2021 מצא יותר גדילה מאשר leg curl בשכיבה."],["Seated leg curl: סוף",90,120,"עדיין בטווח טוב לייצור כוח."],["Lying leg curl: סוף",0,130,"מקוצר בירך ובברך: אי-ספיקה אקטיבית, ולכן ״תקיעה״ ועוויתות."],["RDL: תחתית",100,10,"מוארך מאוד בירך. עבודה חזקה במצב מתוח."],["היפ טראסט: למעלה",0,90,"ההמסטרינג מקוצר יחסית והישבן עושה את רוב העבודה."],["הרמת רגל ישרה",120,0,"אי-ספיקה פסיבית: ההמסטרינג מגביל את הטווח, לא מפרק הירך."]],
+ txt:`<h3>מה רואים כאן</h3><p>ההמסטרינג חוצה את הירך (פשיטה) ואת הברך (כפיפה). כשמכופפים ברך עם ירך פשוטה (שכיבה), הוא מקוצר בשני המפרקים. כשמכופפים ברך בישיבה, הירך הכפופה ״מותחת״ אותו מלמעלה, והוא עובד בטווח ארוך יותר.</p><p>בהיפ טראסט עם ברך כפופה משתמשים באי-ספיקה ״לטובתנו״: מנטרלים חלק מההמסטרינג, והישבן לוקח את העבודה.</p>`},
+rf:{name:"רקטוס פמוריס",geo:"leg",side:-1,oA:12,oN:8,ia:14,inn:-8,w:[.45,.55],
+ j:[{n:"כפיפת ירך",min:-20,max:130,s:1,v:90,h:"90 = ישיבה זקופה · 30 = גב שעון לאחור"},{n:"כפיפת ברך",min:0,max:140,s:-1,v:90}],
+ pr:[["Leg extension (ישיבה זקופה): נעילה",90,0,"מקוצר בירך ובברך: קרוב לאי-ספיקה אקטיבית."],["Leg extension גב שעון: נעילה",30,0,"הירך פחות כפופה, ולכן השריר ארוך יותר ועובד טוב יותר."],["Reverse nordic / Sissy: תחתית",-10,120,"מוארך מאוד. גירוי חזק לרקטוס."],["סקוואט: תחתית",110,120,"שימו לב: האורך כמעט זהה לעמידה."],["סקוואט: עמידה",0,0,"השריר כמעט לא שינה אורך לאורך כל הסקוואט."]],
+ txt:`<h3>מה רואים כאן</h3><p>בסקוואט, הירך והברך מתכופפות יחד. הרקטוס מתארך בברך ומתקצר בירך, ובסך הכול כמעט לא משנה אורך. לכן הוא מתפתח פחות בסקוואט, ומחקרים מראים שהוויסטים והישבן גדלים הרבה יותר ממנו. בשביל הרקטוס: פשיטת ברך כשהירך פשוטה.</p>`},
+gastroc:{name:"תאומים (גסטרוקנמיוס)",geo:"calf",side:1,oA:14,oN:-8,ia:-14,inn:4,w:[.5,.5],
+ j:[{n:"כפיפת ברך",min:0,max:120,s:1,v:0,h:"0 = עמידה · 90 = ישיבה"},{n:"כפיפה פלנטרית",min:-25,max:45,s:1,v:0,h:"שלילי = עקב למטה (מתיחה)"}],
+ pr:[["הרמת עקבים בעמידה: תחתית",0,-20,"ברך ישרה ועקב למטה: מוארך עד הקצה. השריר מגביל את הטווח (אי-ספיקה פסיבית)."],["בעמידה: למעלה",0,40,"טווח עבודה טוב."],["בישיבה: תחתית",90,-20,"הברך הכפופה ״משחררת״ את התאומים."],["בישיבה: למעלה",90,40,"מקוצר בשני המפרקים: אי-ספיקה אקטיבית. הסוליאוס עושה את העבודה."]],
+ txt:`<h3>מה רואים כאן</h3><p>התאומים חוצים את הברך ואת הקרסול. בעמידה עם ברך ישרה הם מוארכים ועובדים במלואם. בישיבה הם רפויים, ולכן הרמת עקבים בישיבה היא בעצם תרגיל לסוליאוס. כדאי לעשות את שניהם.</p>`}
+};
+const lab={k:"biceps",v:[0,90],anim:null,preset:-1};
+const u=a=>[Math.cos(a*Math.PI/180),Math.sin(a*Math.PI/180)];
+const r90=v=>[-v[1],v[0]];
+const add=(p,v,k)=>[p[0]+v[0]*k,p[1]+v[1]*k];
+function geo(c,t1,t2){
+ if(c.geo==="arm"){return{P1:[170,170],a0:-90,L0:30,a1:90-t1,L1:80,a2:90-t1-t2,L2:72,dec:"arm"};}
+ if(c.geo==="leg"){const a1=90-t1;return{P1:[160,140],a0:-90,L0:95,a1,L1:90,a2:a1+t2,L2:82,dec:"leg"};}
+ const a1=90+t1;return{P1:[170,110],a0:-90,L0:90,a1,L1:100,a2:a1-90+t2,L2:50,dec:"calf"};}
+function lenOf(c,vals){let s=0;c.j.forEach((j,i)=>{const n=j.s>0?(vals[i]-j.min)/(j.max-j.min):(j.max-vals[i])/(j.max-j.min);s+=c.w[i]*n;});return 1-s;}
+function zoneOf(L){
+ if(L<.12)return["אי-ספיקה אקטיבית","#fde2df","השריר מקוצר בשני המפרקים שהוא חוצה. הסיבים חופפים יותר מדי, והוא כמעט לא מסוגל לייצר כוח. מרגישים ״כיווץ״ או ״תקיעה״, ולפעמים עווית.","#d64545"];
+ if(L<.35)return["מקוצר: מתקרב לאי-ספיקה אקטיבית","#fff0dd","הכוח יורד. תחושת הכיווץ חזקה, אבל זה לא בהכרח הגירוי הכי טוב לגדילה.","#e8902e"];
+ if(L<.8)return["טווח אורך אופטימלי","#e3f5e6","חפיפה טובה בין האקטין למיוזין. כאן השריר הכי חזק.","#3a9b55"];
+ if(L<.93)return["מוארך (טווח ארוך)","#dff3f3","השריר עובד במצב מתוח. לפי מחקרים עדכניים, עומס בטווח הזה מעודד גדילה חזקה במיוחד.","#2a9d9a"];
+ return["אי-ספיקה פסיבית","#e3e9fb","השריר מוארך עד הקצה על שני המפרקים, והוא (ולא המפרק) מגביל את טווח התנועה. בתנועה הזו הוא האנטגוניסט.","#3b5bdb"];}
+function drawLab(){
+ const c=LAB[lab.k],[t1,t2]=lab.v,g=geo(c,t1,t2),L=lenOf(c,lab.v),z=zoneOf(L);
+ const P1=g.P1,P0=add(P1,u(g.a0),g.L0),P2=add(P1,u(g.a1),g.L1),P3=add(P2,u(g.a2),g.L2);
+ let s="";const seg=(a,b,w,col)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col||"#cdbfb4"}" stroke-width="${w}" stroke-linecap="round"/>`;
+ if(g.dec==="arm"){s+=seg(P1,[170,320],34,"#e9ddd3")+`<circle cx="166" cy="122" r="22" fill="#e9ddd3"/>`+seg([166,140],P1,14,"#e9ddd3");}
+ if(g.dec==="leg"){s+=seg(P1,P0,34,"#e9ddd3")+`<circle cx="160" cy="26" r="18" fill="#e9ddd3"/>`;const F=add(P3,u(g.a2-90),26);s+=seg(P3,F,10);}
+ s+=seg(P1,P0,12)+seg(P1,P2,16)+seg(P2,P3,13);
+ const n1=r90(u(g.a1)).map(x=>x*c.side),n0=r90(u(g.a0)),n2=r90(u(g.a2));
+ const ori=add(add(P1,u(g.a0),c.oA),n0,c.oN);
+ const pts=[ori,add(add(P1,u(g.a1),g.L1*.15),n1,10),add(add(P1,u(g.a1),g.L1*.5),n1,13+(1-L)*5),add(add(P2,u(g.a1),-g.L1*.12),n1,10),add(add(P2,u(g.a2),c.ia),n2,c.inn)];
+ s+=`<polyline points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${z[3]}" stroke-width="${7+(1-L)*7}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
+ [P1,P2].forEach(p=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#fff" stroke="#8a7b70" stroke-width="2"/>`);
+ s+=`<text x="330" y="330" font-size="12" fill="#7a6e66" direction="rtl">מבט מהצד · הגוף פונה ימינה</text>`;
+ document.getElementById("limb").innerHTML=s;
+ // LT curve
+ const X=l=>20+l*280,Y=f=>130-f*105,f=l=>Math.exp(-(((l-.58)/.27)**2));
+ let lt="";[[0,.12,"#fde2df"],[.12,.35,"#fff0dd"],[.35,.8,"#e3f5e6"],[.8,.93,"#dff3f3"],[.93,1,"#e3e9fb"]].forEach(([a,b,col])=>lt+=`<rect x="${X(a)}" y="20" width="${X(b)-X(a)}" height="110" fill="${col}"/>`);
+ let d="";for(let i=0;i<=100;i++){const l=i/100;d+=(i?"L":"M")+X(l).toFixed(1)+","+Y(f(l)).toFixed(1);}
+ lt+=`<path d="${d}" fill="none" stroke="#2a2420" stroke-width="2"/><line x1="20" y1="130" x2="300" y2="130" stroke="#999"/>`;
+ lt+=`<circle cx="${X(L)}" cy="${Y(f(L))}" r="7" fill="${z[3]}" stroke="#fff" stroke-width="2"/>`;
+ lt+=`<text x="20" y="150" font-size="11" fill="#7a6e66" text-anchor="start">קצר</text><text x="300" y="150" font-size="11" fill="#7a6e66" text-anchor="end">ארוך</text><text x="160" y="150" font-size="11" fill="#7a6e66" text-anchor="middle">אורך השריר</text><text x="160" y="14" font-size="11" fill="#7a6e66" text-anchor="middle">כוח אפשרי</text>`;
+ document.getElementById("lt").innerHTML=lt;
+ const zd=document.getElementById("zone");zd.style.background=z[1];zd.innerHTML=`<b style="color:${z[3]}">${z[0]}</b> · אורך יחסי ${(L*100).toFixed(0)}% · כוח אפשרי ~${(f(L)*100).toFixed(0)}%<br>${z[2]}`;
+ c.j.forEach((j,i)=>{const el=document.getElementById("sv"+i);if(el)el.textContent=Math.round(lab.v[i])+"°";const r=document.getElementById("sr"+i);if(r&&+r.value!==Math.round(lab.v[i]))r.value=Math.round(lab.v[i]);});
+}
+function setLab(k){
+ lab.k=k;const c=LAB[k];lab.v=c.j.map(j=>j.v);lab.preset=-1;stopAnim();
+ document.getElementById("labPick").value=k;
+ document.getElementById("sliders").innerHTML=c.j.map((j,i)=>`<div class="slider"><label><span>${j.n}</span><b id="sv${i}"></b></label><input type="range" id="sr${i}" min="${j.min}" max="${j.max}" value="${j.v}">${j.h?`<div class="note">${j.h}</div>`:""}</div>`).join("");
+ c.j.forEach((j,i)=>document.getElementById("sr"+i).oninput=e=>{stopAnim();lab.v[i]=+e.target.value;markPreset(-1);drawLab();});
+ document.getElementById("presets").innerHTML=c.pr.map((p,i)=>`<button data-i="${i}">${p[0]}</button>`).join("");
+ document.getElementById("labText").innerHTML=c.txt;document.getElementById("presetNote").textContent="";
+ drawLab();}
+function markPreset(i){lab.preset=i;document.querySelectorAll("#presets button").forEach(b=>b.classList.toggle("on",+b.dataset.i===i));if(i<0)document.getElementById("presetNote").textContent="";}
+document.getElementById("presets").onclick=e=>{const b=e.target.closest("button");if(!b)return;stopAnim();const p=LAB[lab.k].pr[+b.dataset.i];lab.v=[p[1],p[2]];markPreset(+b.dataset.i);document.getElementById("presetNote").innerHTML="📌 "+p[3];drawLab();};
+function stopAnim(){if(lab.anim){cancelAnimationFrame(lab.anim);lab.anim=null;document.getElementById("play").textContent="▶ הפעל תנועה";}}
+document.getElementById("play").onclick=()=>{
+ if(lab.anim){stopAnim();return;}
+ const j=LAB[lab.k].j[1],t0=performance.now(),dur=3200;document.getElementById("play").textContent="⏸ עצור";
+ const lo=lab.k==="gastroc"?j.min+5:j.min+5,hi=j.max-5;
+ const step=t=>{const p=((t-t0)%dur)/dur,e=(1-Math.cos(p*2*Math.PI))/2;lab.v[1]=lo+(hi-lo)*e;drawLab();lab.anim=requestAnimationFrame(step);};
+ lab.anim=requestAnimationFrame(step);};
+(function(){const s=document.getElementById("labPick");s.innerHTML=Object.keys(LAB).map(k=>`<option value="${k}">${LAB[k].name}</option>`).join("");s.onchange=()=>setLab(s.value);})();
+setLab("biceps");
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+
+// normalized name -> [cardKey|null, Hebrew, layer, group, action-note]
+const NM={
+"Clavicular part of pectoralis major":["pec_clav","חזה גדול: ראש עליון (קלביקולרי)",1],
+"Sternocostal part of pectoralis major":["pec_stern","חזה גדול: ראש אמצעי (סטרנוקוסטלי)",1],
+"Abdominal part of pectoralis major":["pec_stern","חזה גדול: חלק בטני (תחתון)",1],
+"pectoralis minor":["pec_minor","חזה קטן",2],
+"Clavicular part of deltoid":["delt_ant","דלתא קדמית",1],
+"Acromial part of deltoid":["delt_lat","דלתא אמצעית (צידית)",1],
+"Spinal part of deltoid":["delt_post","דלתא אחורית",1],
+"Descending part of trapezius":["trap_upper","טרפז עליון",1],
+"Transverse part of trapezius":["trap_mid","טרפז אמצעי",1],
+"Ascending part of trapezius":["trap_low","טרפז תחתון",1],
+"Long head of biceps brachii":["biceps_long","דו-ראשי: ראש ארוך",1],
+"Short head of biceps brachii":["biceps_short","דו-ראשי: ראש קצר",1],
+"brachialis":["brachialis","זרועי (בראכיאליס)",2],
+"coracobrachialis":["coracobrach","קורקוברכיאליס",2],
+"Long head of triceps brachii":["triceps_long","תלת-ראשי: ראש ארוך",1],
+"Lateral head of triceps brachii":["triceps_lat","תלת-ראשי: ראש לטרלי",1],
+"Medial head of triceps brachii":["triceps_med","תלת-ראשי: ראש מדיאלי",2],
+"anconeus":[null,"אנקוניאוס",1,"fa","עזרה בפשיטת מרפק וייצוב המרפק"],
+"brachioradialis":["brachiorad","זרועי-חישורי (ברכיורדיאליס)",1],
+"flexor carpi radialis":["forearm_flex","כופף שורש כף היד הרדיאלי (FCR)",1],
+"Humeral head of flexor carpi ulnaris":["forearm_flex","כופף שורש כף היד האולנרי (FCU): ראש זרועי",1],
+"Ulnar head of flexor carpi ulnaris":["forearm_flex","כופף שורש כף היד האולנרי (FCU): ראש אולנרי",1],
+"Humeroulnar head of flexor digitorum superficialis":["forearm_flex","כופף האצבעות השטחי (FDS)",2],
+"Radial head of flexor digitorum superficialis":["forearm_flex","כופף האצבעות השטחי (FDS): ראש רדיאלי",2],
+"flexor digitorum profundus":["forearm_flex","כופף האצבעות העמוק (FDP)",3],
+"flexor pollicis longus":["forearm_flex","כופף האגודל הארוך",3],
+"Humeral head of pronator teres":[null,"מסובב-פנימה עגול (Pronator teres)",1,"fa","פרונציה של האמה (סיבוב כף היד כלפי מטה), עזרה בכפיפת מרפק"],
+"Ulnar head of pronator teres":[null,"מסובב-פנימה עגול: ראש אולנרי",2,"fa","פרונציה של האמה"],
+"pronator quadratus":[null,"מסובב-פנימה מרובע",3,"fa","פרונציה של האמה, המסובב העיקרי בכל זווית מרפק"],
+"supinator":[null,"סופינטור",3,"fa","סופינציה של האמה. הבייספס מצטרף כשהמרפק כפוף"],
+"extensor carpi radialis longus":["forearm_ext","פושט שורש כף היד הרדיאלי הארוך",1],
+"extensor carpi radialis brevis":["forearm_ext","פושט שורש כף היד הרדיאלי הקצר",1],
+"extensor digitorum":["forearm_ext","פושט האצבעות",1],
+"extensor digiti minimi":["forearm_ext","פושט הזרת",1],
+"extensor indicis":["forearm_ext","פושט האצבע המורה",2],
+"extensor pollicis longus":["forearm_ext","פושט האגודל הארוך",2],
+"extensor pollicis brevis":["forearm_ext","פושט האגודל הקצר",2],
+"abductor pollicis longus":["forearm_ext","מרחיק האגודל הארוך",2],
+"abductor pollicis brevis":[null,"מרחיק האגודל הקצר",1,"fa","הרחקת האגודל (שרירי כף היד)"],
+"Superficial head of flexor pollicis brevis":[null,"כופף האגודל הקצר",1,"fa","כפיפת האגודל"],
+"Deep head of flexor pollicis brevis":[null,"כופף האגודל הקצר: ראש עמוק",2,"fa","כפיפת האגודל"],
+"Oblique head of adductor pollicis":[null,"מקרב האגודל",2,"fa","הקרבת האגודל, חשוב לאחיזת צביטה"],
+"Transverse head of adductor pollicis":[null,"מקרב האגודל: ראש רוחבי",2,"fa","הקרבת האגודל"],
+"Abductor digiti minimi of hand":[null,"מרחיק הזרת (יד)",1,"fa","הרחקת הזרת"],
+"Flexor digiti minimi brevis of hand":[null,"כופף הזרת הקצר (יד)",1,"fa","כפיפת הזרת"],
+"latissimus dorsi":["lats","רחב גבי (לאט)",1],
+"teres major":["teres_major","עגול גדול (טרס מייג'ור)",1],
+"teres minor":["teres_minor","עגול קטן (טרס מיינור)",2],
+"infraspinatus":["infraspinatus","תת-שוכתי (אינפרהספינטוס)",2],
+"supraspinatus":["supraspinatus","על-שוכתי (סופרהספינטוס)",2],
+"subscapularis":["subscap","תת-שכמי (סובסקפולריס)",3],
+"rhomboid major":["rhomboids","רומבואיד גדול",2],
+"rhomboid minor":["rhomboids","רומבואיד קטן",2],
+"levator scapulae":["levator","מרים השכמה",2],
+"serratus anterior":["serratus","משורי קדמי (סראטוס)",1],
+"serratus posterior superior":[null,"משורי אחורי עליון",3,"back","שריר עזר בשאיפה (הרמת צלעות)"],
+"serratus posterior inferior":[null,"משורי אחורי תחתון",3,"back","שריר עזר בנשיפה (הורדת צלעות)"],
+"iliocostalis lumborum":["erector","זוקפי הגו: איליוקוסטליס מותני",2],
+"iliocostalis thoracis":["erector","זוקפי הגו: איליוקוסטליס חזי",2],
+"iliocostalis cervicis":["erector","זוקפי הגו: איליוקוסטליס צווארי",2],
+"longissimus thoracis":["erector","זוקפי הגו: לונגיסימוס חזי",2],
+"longissimus cervicis":["erector","זוקפי הגו: לונגיסימוס צווארי",2],
+"longissimus capitis":["erector","זוקפי הגו: לונגיסימוס הראש",2],
+"spinalis thoracis":["erector","זוקפי הגו: ספינליס חזי",2],
+"spinalis cervicis":["erector","זוקפי הגו: ספינליס צווארי",2],
+"semispinalis thoracis":[null,"סמיספינליס חזי",3,"back","פשיטה וסיבוב של עמוד השדרה"],
+"semispinalis cervicis":[null,"סמיספינליס צווארי",3,"neck","פשיטת הצוואר"],
+"semispinalis capitis":[null,"סמיספינליס הראש",2,"neck","פשיטת הראש (הרמת הסנטר). השריר העבה בעורף"],
+"multifidus":["multifidus","מולטיפידוס",3],
+"Set of levatores costarum longi":[null,"מרימי הצלעות",3,"back","הרמת צלעות, פשיטה קלה של עמוד השדרה"],
+"Set of levatores costarum breves":[null,"מרימי הצלעות הקצרים",3,"back","הרמת צלעות"],
+"Set of anterior cervical intertransversarii":[null,"בין-רוחביים צוואריים",3,"neck","ייצוב בין החוליות"],
+"Set of posterior cervical intertransversarii":[null,"בין-רוחביים צוואריים אחוריים",3,"neck","ייצוב בין החוליות"],
+"Set of lateral lumbar intertransversarius muscles":[null,"בין-רוחביים מותניים",3,"back","ייצוב בין החוליות"],
+"Set of medial lumbar intertransversarius muscles":[null,"בין-רוחביים מותניים פנימיים",3,"back","ייצוב בין החוליות"],
+"splenius capitis":[null,"ספלניוס הראש",2,"neck","פשיטת הראש, וסיבוב והטייה לאותו צד"],
+"splenius cervicis":[null,"ספלניוס הצוואר",2,"neck","פשיטת הצוואר וסיבוב לאותו צד"],
+"rectus capitis posterior major":[null,"ישר הראש האחורי הגדול (תת-עורפי)",3,"neck","פשיטת הראש וסיבוב. שרירי ״יציבה״ קטנים"],
+"rectus capitis posterior minor":[null,"ישר הראש האחורי הקטן (תת-עורפי)",3,"neck","פשיטת הראש"],
+"obliquus capitis inferior":[null,"אלכסוני הראש התחתון (תת-עורפי)",3,"neck","סיבוב הראש (מפרק אטלס-אקסיס)"],
+"obliquus capitis superior":[null,"אלכסוני הראש העליון (תת-עורפי)",3,"neck","פשיטת הראש והטייה"],
+"sternocleidomastoid":["scm","סטרנוקליידומסטואיד",1],
+"scalenus anterior":[null,"סקלנוס קדמי",2,"neck","הרמת צלע 1 בנשימה, כפיפה צידית של הצוואר"],
+"scalenus medius":[null,"סקלנוס אמצעי",2,"neck","הרמת צלע 1, כפיפה צידית"],
+"scalenus posterior":[null,"סקלנוס אחורי",2,"neck","הרמת צלע 2, כפיפה צידית"],
+"longus capitis":[null,"ארוך הראש",3,"neck","כפיפת צוואר עמוקה (Chin tuck)"],
+"Superior oblique part of longus colli":[null,"ארוך הצוואר",3,"neck","כפיפת צוואר עמוקה. שריר יציבה חשוב"],
+"Inferior oblique part of longus colli":[null,"ארוך הצוואר: חלק תחתון",3,"neck","כפיפת צוואר עמוקה"],
+"Vertical intermediate part of longus colli":[null,"ארוך הצוואר: חלק אנכי",3,"neck","כפיפת צוואר עמוקה"],
+"rectus capitis anterior":[null,"ישר הראש הקדמי",3,"neck","כפיפת הראש"],
+"rectus capitis lateralis":[null,"ישר הראש הצידי",3,"neck","הטיית הראש לצד"],
+"sternohyoid":[null,"סטרנוהיואיד",2,"neck","הורדת העצם הלשונית (בליעה ודיבור)"],
+"omohyoid":[null,"אומוהיואיד",2,"neck","הורדת העצם הלשונית"],
+"thyrohyoid":[null,"תירוהיואיד",3,"neck","הורדת העצם הלשונית / הרמת הגרון"],
+"geniohyoid":[null,"גניוהיואיד",3,"neck","הרמת העצם הלשונית, פתיחת הלסת"],
+"mylohyoid":[null,"מילוהיואיד",2,"neck","רצפת הפה, הרמת הלשונית בבליעה"],
+"stylohyoid":[null,"סטילוהיואיד",3,"neck","הרמת העצם הלשונית"],
+"rectus abdominis":["rectus_abd","ישר הבטן (קוביות)",1],
+"external oblique":["ext_oblique","אלכסוני חיצוני",1],
+"internal oblique":["int_oblique","אלכסוני פנימי",2],
+"transversus abdominis":["transverse","רוחבי הבטן",3],
+"quadratus lumborum":["ql","מרובע המותני (QL)",3],
+"transversus thoracis":[null,"רוחבי החזה",3,"core","הורדת הצלעות בנשיפה"],
+"External intercostal muscle":[null,"בין-צלעיים חיצוניים",3,"core","הרמת הצלעות בשאיפה"],
+"Internal intercostal muscle":[null,"בין-צלעיים פנימיים",3,"core","הורדת הצלעות בנשיפה מאומצת"],
+"Innermost intercostal muscle":[null,"בין-צלעיים פנימיים ביותר",3,"core","עזר בנשימה"],
+"psoas major":["iliopsoas","פסואס גדול",2],
+"iliacus":["iliopsoas","איליאקוס",2],
+"gluteus maximus":["glute_max","ישבן גדול (גלוטאוס מקסימוס)",1],
+"gluteus medius":["glute_med","ישבן בינוני (גלוטאוס מדיוס)",2],
+"gluteus minimus":["glute_min","ישבן קטן (גלוטאוס מינימוס)",3],
+"piriformis":["piriformis","אגסי (פיריפורמיס)",3],
+"gemellus superior":[null,"תאומי עליון (גמלוס)",3,"hip","סיבוב חיצוני של הירך (קבוצת ״6 המסובבים העמוקים״)"],
+"gemellus inferior":[null,"תאומי תחתון (גמלוס)",3,"hip","סיבוב חיצוני של הירך"],
+"obturator internus":[null,"חוסם פנימי",3,"hip","סיבוב חיצוני של הירך, ייצוב רצפת האגן"],
+"obturator externus":[null,"חוסם חיצוני",3,"hip","סיבוב חיצוני של הירך"],
+"quadratus femoris":[null,"מרובע הירך",3,"hip","סיבוב חיצוני חזק של הירך"],
+"tensor fasciae latae":["tfl","מותח הפאשיה (TFL)",1],
+"sartorius":["sartorius","החייט (סרטוריוס)",1],
+"rectus femoris":["rectus_fem","ישר הירך (רקטוס פמוריס)",1],
+"vastus lateralis":["vastus_lat","ויסטוס לטרליס (חיצוני)",1],
+"vastus medialis":["vastus_med","ויסטוס מדיאליס (״טיפה״)",1],
+"vastus intermedius":["vastus_int","ויסטוס אינטרמדיוס",2],
+"adductor longus":["adductors","מקרב ארוך",1],
+"adductor brevis":["adductors","מקרב קצר",2],
+"adductor magnus":["adductors","מקרב גדול (אדוקטור מגנוס)",2],
+"adductor minimus":["adductors","מקרב זעיר",3],
+"gracilis":["adductors","גרסיליס (הדק)",1],
+"pectineus":["adductors","פקטיניאוס (המסרקי)",1],
+"Long head of biceps femoris":["bf_long","דו-ראשי הירך: ראש ארוך",1],
+"Short head of biceps femoris":["bf_short","דו-ראשי הירך: ראש קצר",2],
+"semitendinosus":["semiten","חצי-גידי (סמיטנדינוסוס)",1],
+"semimembranosus":["semimem","חצי-קרומי (סמימברנוסוס)",2],
+"Medial head of gastrocnemius":["gastroc_med","תאומים: ראש פנימי",1],
+"Lateral head of gastrocnemius":["gastroc_lat","תאומים: ראש חיצוני",1],
+"soleus":["soleus","סוליאוס (הסנדלי)",2],
+"plantaris":[null,"פלנטריס",2,"calf","כפיפה פלנטרית וכפיפת ברך חלשות. אצל ~10% מהאנשים הוא חסר"],
+"popliteus":[null,"פופליטאוס (הברכי)",3,"calf","״פותח את נעילת״ הברך (סיבוב פנימי של השוק) בתחילת הכפיפה"],
+"tibialis anterior":["tib_ant","שוקי קדמי (טיביאליס אנטריור)",1],
+"tibialis posterior":[null,"שוקי אחורי",3,"calf","אינברסיה וכפיפה פלנטרית. תומך בקשת כף הרגל"],
+"extensor digitorum longus":[null,"פושט אצבעות הרגל הארוך",1,"calf","פשיטת אצבעות הרגל, כפיפה דורסלית"],
+"extensor hallucis longus":[null,"פושט הבוהן הארוך",2,"calf","פשיטת הבוהן, כפיפה דורסלית"],
+"fibularis longus":[null,"פיבולריס (פרונאוס) ארוך",1,"calf","אוורסיה (הטיית כף הרגל החוצה) וכפיפה פלנטרית. תומך בקשת. חשוב במניעת נקע קרסול"],
+"fibularis brevis":[null,"פיבולריס (פרונאוס) קצר",2,"calf","אוורסיה, ייצוב הקרסול"],
+"fibularis tertius":[null,"פיבולריס שלישי",2,"calf","כפיפה דורסלית ואוורסיה"],
+"flexor digitorum longus":[null,"כופף אצבעות הרגל הארוך",3,"calf","כפיפת אצבעות הרגל, כפיפה פלנטרית"],
+"flexor hallucis longus":[null,"כופף הבוהן הארוך",3,"calf","כפיפת הבוהן. חשוב לדחיפה בריצה ובקפיצה"],
+"extensor digitorum brevis":[null,"פושט אצבעות הרגל הקצר",1,"calf","פשיטת אצבעות הרגל"],
+"extensor hallucis brevis":[null,"פושט הבוהן הקצר",1,"calf","פשיטת הבוהן"],
+"abductor hallucis":[null,"מרחיק הבוהן",2,"calf","הרחקת הבוהן, תמיכה בקשת"],
+"Abductor digiti minimi of foot":[null,"מרחיק הזרת (רגל)",2,"calf","הרחקת הזרת"],
+"Flexor digiti minimi brevis of foot":[null,"כופף הזרת הקצר (רגל)",2,"calf","כפיפת הזרת"],
+"flexor digitorum brevis":[null,"כופף אצבעות הרגל הקצר",2,"calf","כפיפת אצבעות הרגל, תמיכה בקשת"],
+"flexor accessorius":[null,"מרובע כף הרגל",3,"calf","עזרה בכפיפת אצבעות הרגל"],
+"Medial head of flexor hallucis brevis":[null,"כופף הבוהן הקצר",3,"calf","כפיפת הבוהן"],
+"Lateral head of flexor hallucis brevis":[null,"כופף הבוהן הקצר: ראש חיצוני",3,"calf","כפיפת הבוהן"],
+"Oblique head of adductor hallucis":[null,"מקרב הבוהן",3,"calf","הקרבת הבוהן, תמיכה בקשת הרוחבית"],
+"Transverse head of adductor hallucis":[null,"מקרב הבוהן: ראש רוחבי",3,"calf","תמיכה בקשת הרוחבית"]
+};
+const ALIAS={pec_clav:"פקטורליס פקט חזה עליון",pec_stern:"פקטורליס פקט חזה",pec_minor:"פקטורליס מיינור",delt_ant:"דלתא כתף דלטואיד",delt_lat:"דלתא כתף צד דלטואיד",delt_post:"דלתא כתף אחורית דלטואיד",biceps_long:"בייספס ביספס",biceps_short:"בייספס ביספס",brachialis:"ברכיאליס",triceps_long:"טרייספס טריספס",triceps_lat:"טרייספס טריספס",triceps_med:"טרייספס טריספס",trap_upper:"טרפז טרפזיוס",trap_mid:"טרפז טרפזיוס",trap_low:"טרפז טרפזיוס",lats:"לאט לאטס גב רחב",rhomboids:"רומבואידס",glute_max:"גלוטס ישבן טוסיק",glute_med:"גלוטס ישבן",glute_min:"גלוטס",rectus_fem:"קוואדס ארבע ראשי ארבע-ראשי",vastus_lat:"קוואדס ארבע ראשי",vastus_med:"קוואדס ארבע ראשי",vastus_int:"קוואדס ארבע ראשי",bf_long:"המסטרינג ירך אחורית",bf_short:"המסטרינג",semiten:"המסטרינג",semimem:"המסטרינג",gastroc_med:"קאף שוק תאומים",gastroc_lat:"קאף שוק תאומים",soleus:"קאף שוק",rectus_abd:"בטן קוביות סיקספק",ext_oblique:"אובליק בטן",int_oblique:"אובליק בטן",transverse:"בטן",adductors:"אדוקטור מקרבים",iliopsoas:"פסואס מכופף ירך",erector:"גב תחתון זוקפים",rotator:"",supraspinatus:"רוטטור קאף",infraspinatus:"רוטטור קאף",teres_minor:"רוטטור קאף",subscap:"רוטטור קאף",serratus:"סראטוס",forearm_flex:"אמה פורארם",forearm_ext:"אמה פורארם",brachiorad:"אמה"};
+const DEPTH={"Descending part of trapezius": 8, "Transverse part of trapezius": 8, "Ascending part of trapezius": 8, "latissimus dorsi": 8, "external oblique": 8, "gluteus maximus": 8, "Medial head of gastrocnemius": 8, "Lateral head of gastrocnemius": 8, "Clavicular part of pectoralis major": 7, "Sternocostal part of pectoralis major": 7, "Abdominal part of pectoralis major": 7, "Clavicular part of deltoid": 7, "Acromial part of deltoid": 7, "Spinal part of deltoid": 7, "rhomboid major": 7, "rhomboid minor": 7, "teres major": 7, "teres minor": 7, "infraspinatus": 7, "gluteus medius": 7, "Long head of biceps femoris": 7, "semitendinosus": 7, "internal oblique": 7, "sartorius": 7, "tensor fasciae latae": 7, "brachioradialis": 7, "flexor carpi radialis": 7, "Humeral head of flexor carpi ulnaris": 7, "Ulnar head of flexor carpi ulnaris": 7, "Humeral head of pronator teres": 7, "extensor carpi radialis longus": 7, "extensor carpi radialis brevis": 7, "extensor digitorum": 7, "extensor digiti minimi": 7, "fibularis longus": 7, "pectoralis minor": 6, "serratus anterior": 6, "serratus posterior superior": 6, "serratus posterior inferior": 6, "supraspinatus": 6, "levator scapulae": 6, "sternocleidomastoid": 6, "rectus abdominis": 6, "Long head of biceps brachii": 6, "Short head of biceps brachii": 6, "Long head of triceps brachii": 6, "Lateral head of triceps brachii": 6, "gluteus minimus": 6, "semimembranosus": 6, "Short head of biceps femoris": 6, "rectus femoris": 6, "vastus lateralis": 6, "vastus medialis": 6, "gracilis": 6, "soleus": 6, "plantaris": 6, "tibialis anterior": 6, "Humeroulnar head of flexor digitorum superficialis": 6, "Radial head of flexor digitorum superficialis": 6, "Ulnar head of pronator teres": 6, "sternohyoid": 6, "omohyoid": 6, "transversus abdominis": 5, "brachialis": 5, "coracobrachialis": 5, "Medial head of triceps brachii": 5, "anconeus": 5, "vastus intermedius": 5, "adductor longus": 5, "pectineus": 5, "piriformis": 5, "gemellus superior": 5, "gemellus inferior": 5, "quadratus femoris": 5, "extensor digitorum longus": 5, "fibularis brevis": 5, "extensor digitorum brevis": 5, "extensor hallucis brevis": 5, "iliocostalis lumborum": 5, "iliocostalis thoracis": 5, "iliocostalis cervicis": 5, "splenius capitis": 5, "splenius cervicis": 5, "flexor digitorum profundus": 5, "flexor pollicis longus": 5, "abductor pollicis longus": 5, "extensor pollicis longus": 5, "extensor pollicis brevis": 5, "extensor indicis": 5, "abductor pollicis brevis": 5, "Superficial head of flexor pollicis brevis": 5, "Abductor digiti minimi of hand": 5, "Flexor digiti minimi brevis of hand": 5, "thyrohyoid": 5, "mylohyoid": 5, "subscapularis": 4, "adductor brevis": 4, "adductor magnus": 4, "adductor minimus": 4, "obturator internus": 4, "obturator externus": 4, "tibialis posterior": 4, "flexor digitorum longus": 4, "flexor hallucis longus": 4, "popliteus": 4, "extensor hallucis longus": 4, "fibularis tertius": 4, "longissimus thoracis": 4, "longissimus cervicis": 4, "longissimus capitis": 4, "spinalis thoracis": 4, "spinalis cervicis": 4, "semispinalis capitis": 4, "supinator": 4, "pronator quadratus": 4, "Deep head of flexor pollicis brevis": 4, "Oblique head of adductor pollicis": 4, "Transverse head of adductor pollicis": 4, "scalenus anterior": 4, "scalenus medius": 4, "scalenus posterior": 4, "geniohyoid": 4, "stylohyoid": 4, "abductor hallucis": 4, "Abductor digiti minimi of foot": 4, "flexor digitorum brevis": 4, "quadratus lumborum": 3, "semispinalis thoracis": 3, "semispinalis cervicis": 3, "Flexor digiti minimi brevis of foot": 3, "flexor accessorius": 3, "Medial head of flexor hallucis brevis": 3, "Lateral head of flexor hallucis brevis": 3, "Oblique head of adductor hallucis": 3, "Transverse head of adductor hallucis": 3, "obliquus capitis inferior": 3, "obliquus capitis superior": 3, "psoas major": 2, "multifidus": 2, "External intercostal muscle": 2, "rectus capitis posterior major": 2, "rectus capitis posterior minor": 2, "longus capitis": 2, "Superior oblique part of longus colli": 2, "Inferior oblique part of longus colli": 2, "Vertical intermediate part of longus colli": 2, "rectus capitis anterior": 2, "rectus capitis lateralis": 2, "iliacus": 1, "Internal intercostal muscle": 1, "Innermost intercostal muscle": 1, "transversus thoracis": 1, "Set of levatores costarum longi": 1, "Set of levatores costarum breves": 1, "Set of anterior cervical intertransversarii": 1, "Set of posterior cervical intertransversarii": 1, "Set of lateral lumbar intertransversarius muscles": 1, "Set of medial lumbar intertransversarius muscles": 1};
+const LVN=v=>v>=7?'שטחית':v>=5?'אמצעית':v>=3?'עמוקה':'העמוקה ביותר';
+const HIDE=/platysma/i;
+const norm=n=>n.replace(/\b(Right|Left|right|left) /g,'').trim();
+const $=id=>document.getElementById(id);
+const toast=t=>{const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('on'),1400)};
+
+// ---------- three setup ----------
+const box=$('app3d');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.0;
+box.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0f0f10);
+const camera=new THREE.PerspectiveCamera(35,innerWidth/innerHeight,5,20000);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.dampingFactor=.08;controls.minDistance=150;controls.maxDistance=6000;controls.rotateSpeed=.8;
+scene.add(new THREE.HemisphereLight(0xfff4ee,0x2a1c1c,1.25));
+const key=new THREE.DirectionalLight(0xffffff,2.3);scene.add(key);scene.add(key.target);const _kv=new THREE.Vector3();
+const rim=new THREE.DirectionalLight(0xdfe6ff,.7);rim.position.set(-900,500,-1200);const rim2=new THREE.DirectionalLight(0xdfe6ff,.5);rim2.position.set(900,600,-1200);scene.add(rim2);scene.add(rim);
+const fill=new THREE.DirectionalLight(0xffe2d0,.6);fill.position.set(-800,-200,600);scene.add(fill);
+camera.add(new THREE.PointLight(0xffffff,.0));scene.add(camera);
+
+function fiberize(m){m.onBeforeCompile=s=>{
+ s.vertexShader=s.vertexShader.replace('#include <common>','#include <common>\nattribute float fib;\nattribute float tdn;\nvarying float vFib;varying float vT;').replace('#include <begin_vertex>','#include <begin_vertex>\nvFib=fib;vT=tdn;');
+ s.fragmentShader=s.fragmentShader.replace('#include <common>','#include <common>\nvarying float vFib;varying float vT;').replace('#include <color_fragment>',`#include <color_fragment>
+ float s1=sin(vFib*2.4)*.5+.5; float s2=sin(vFib*.73+1.7)*.5+.5; float s3=sin(vFib*5.1)*.5+.5;
+ float fibr=.80+.10*s1+.07*s2+.05*s3;
+ vec3 tend=vec3(.90,.88,.87)*(.93+.07*s1);
+ diffuseColor.rgb=mix(diffuseColor.rgb*fibr,tend,vT);`)
+ .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(roughnessFactor,.32,vT);');
+};m.customProgramCacheKey=()=>'fib';return m;}
+const MAT={
+ mus:fiberize(new THREE.MeshStandardMaterial({color:0x9a5f65,roughness:.42,metalness:0})),
+ cart:new THREE.MeshStandardMaterial({color:0x8cc6d4,roughness:.45}),
+ sel:fiberize(new THREE.MeshStandardMaterial({color:0xffc53d,emissive:0x5a3600,roughness:.45})),
+ syn:fiberize(new THREE.MeshStandardMaterial({color:0xf08a4b,emissive:0x2a1000,roughness:.5})),
+ ghost:new THREE.MeshStandardMaterial({color:0xd9c9c4,transparent:true,opacity:.07,depthWrite:false,roughness:1}),
+ bone:new THREE.MeshStandardMaterial({color:0xd9cfb4,roughness:.62}),
+};
+const root=new THREE.Group();root.rotation.x=-Math.PI/2;scene.add(root);
+const parts=[];const byNorm={};const byKey={};
+const st={layer:8,bones:true,iso:false,mirror:true,sel:null};
+
+async function load(){
+ const r=await fetch('model.txt');if(!r.ok)throw new Error('HTTP '+r.status);
+ const total=+r.headers.get('content-length')||4960000;const rd=r.body.getReader();const ch=[];let got=0;
+ for(;;){const {done,value}=await rd.read();if(done)break;ch.push(value);got+=value.length;$('pbar').style.width=Math.min(90,got/total*90)+'%';}
+ const txt=new TextDecoder().decode(await new Blob(ch).arrayBuffer());const bin=atob(txt.trim());const u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+ const buf=await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
+ const hl=new DataView(buf).getUint32(0,true);const H=JSON.parse(new TextDecoder().decode(new Uint8Array(buf,4,hl)));
+ const nv=H.parts.reduce((a,p)=>a+p.vc,0),ni=H.parts.reduce((a,p)=>a+p.ic,0);
+ const Q=new Int16Array(buf,4+hl,nv*3);let off=4+hl+nv*6;if(off%4)off+=2;const I=new Uint16Array(buf,off,ni);
+ const mn=H.mn,sc=H.sc;const bb=new THREE.Box3();
+ for(const p of H.parts){
+  const n=norm(p.n);let kind=p.k==='m'&&!/bone/i.test(p.n)?'m':'b';
+  if(HIDE.test(p.n))continue;
+  const pos=new Float32Array(p.vc*3);
+  for(let i=0;i<p.vc*3;i++){const a=(p.vo*3+i);pos[i]=(Q[a]+32767)*sc[i%3]+mn[i%3];}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setIndex(new THREE.BufferAttribute(I.slice(p.io,p.io+p.ic),1));g.computeVertexNormals();
+  if(kind==='m')addFiber(g,pos,p.vc);
+  const info=NM[n]||[null,n,2,null,""];
+  const cart=/cartilage/i.test(p.n);const mesh=new THREE.Mesh(g,kind==='m'?MAT.mus:(cart?MAT.cart:MAT.bone));
+  mesh.userData={cart,id:p.id,en:p.n,n,kind,info,layer:DEPTH[n]||4,side:/\bright\b/i.test(p.n)?'R':(/\bleft\b/i.test(p.n)?'L':'C')};
+  root.add(mesh);parts.push(mesh);
+  if(kind==='m'){(byNorm[n]=byNorm[n]||[]).push(mesh);if(info[0])(byKey[info[0]]=byKey[info[0]]||[]).push(mesh);}
+  g.computeBoundingBox();
+ }
+ root.updateMatrixWorld(true);
+ for(const m of parts)bb.expandByObject(m);
+ const c=bb.getCenter(new THREE.Vector3());root.position.sub(c);root.updateMatrixWorld(true);
+ const size=bb.getSize(new THREE.Vector3());st.H=size.y;
+ home();applyAll();buildSearch();
+ $('loading').style.display='none';
+}
+function addFiber(g,pos,n){
+ let mx=0,my=0,mz=0;for(let i=0;i<n;i++){mx+=pos[i*3];my+=pos[i*3+1];mz+=pos[i*3+2];}mx/=n;my/=n;mz/=n;
+ const C=[0,0,0,0,0,0];for(let i=0;i<n;i++){const x=pos[i*3]-mx,y=pos[i*3+1]-my,z=pos[i*3+2]-mz;C[0]+=x*x;C[1]+=x*y;C[2]+=x*z;C[3]+=y*y;C[4]+=y*z;C[5]+=z*z;}
+ let a=new THREE.Vector3(.3,.4,.9).normalize();
+ for(let k=0;k<30;k++){const v=new THREE.Vector3(C[0]*a.x+C[1]*a.y+C[2]*a.z,C[1]*a.x+C[3]*a.y+C[4]*a.z,C[2]*a.x+C[4]*a.y+C[5]*a.z);a=v.normalize();}
+ const tmp=Math.abs(a.z)<.9?new THREE.Vector3(0,0,1):new THREE.Vector3(1,0,0);
+ const b=new THREE.Vector3().crossVectors(a,tmp).normalize(),c=new THREE.Vector3().crossVectors(a,b).normalize();
+ let tmin=1e9,tmax=-1e9,vb=0;const T=new Float32Array(n),F=new Float32Array(n),D=new Float32Array(n);
+ for(let i=0;i<n;i++){const x=pos[i*3]-mx,y=pos[i*3+1]-my,z=pos[i*3+2]-mz;const t=x*a.x+y*a.y+z*a.z;T[i]=t;if(t<tmin)tmin=t;if(t>tmax)tmax=t;const pb=x*b.x+y*b.y+z*b.z,pc=x*c.x+y*c.y+z*c.z;vb+=pb*pb+pc*pc;F[i]=pb*1.0+pc*.8;}
+ const L=tmax-tmin,w=Math.sqrt(vb/n)*2,asp=L/Math.max(w,1);
+ for(let i=0;i<n;i++){let td=0;if(asp>2.4&&L>60){const e=Math.min(T[i]-tmin,tmax-T[i])/L;td=1-smooth(.025,.075,e);}D[i]=td;}
+ g.setAttribute('fib',new THREE.BufferAttribute(F,1));g.setAttribute('tdn',new THREE.BufferAttribute(D,1));
+}
+const smooth=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
+
+function partner(m){return st.mirror?(byNorm[m.userData.n]||[m]):[m];}
+function applyAll(){
+ const selSet=new Set(),synSet=new Set();
+ if(st.sel){partner(st.sel).forEach(m=>selSet.add(m));const k=st.sel.userData.info[0];
+  if(k&&M[k]&&M[k].syn)M[k].syn.forEach(s=>(byKey[s]||[]).forEach(m=>{if(!selSet.has(m)&&(st.mirror||m.userData.side===st.sel.userData.side))synSet.add(m)}));}
+ for(const m of parts){const u=m.userData;
+  if(u.kind==='b'){m.visible=st.bones;m.material=st.iso&&st.sel?MAT.ghost:(u.cart?MAT.cart:MAT.bone);continue;}
+  m.visible=true;
+  if(selSet.has(m))m.material=MAT.sel;
+  else if(st.iso&&st.sel)m.material=synSet.has(m)?MAT.syn:MAT.ghost;
+  else if(u.layer>st.layer){m.visible=false;continue;}
+  else m.material=synSet.has(m)?MAT.syn:MAT.mus;
+  m.renderOrder=m.material===MAT.ghost?2:0;
+ }
+ $('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
+ $('bBones').classList.toggle('on',st.bones);$('bIso').classList.toggle('on',st.iso);$('bMirror').classList.toggle('on',st.mirror);
+}
+// ---------- camera ----------
+let anim=null;
+function flyTo(target,pos,dur=650){const t0=performance.now(),ft=controls.target.clone(),fp=camera.position.clone();cancelAnimationFrame(anim);
+ const step=t=>{const k=Math.min(1,(t-t0)/dur),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;controls.target.lerpVectors(ft,target,e);camera.position.lerpVectors(fp,pos,e);if(k<1)anim=requestAnimationFrame(step);};anim=requestAnimationFrame(step);}
+const VIEWS=[[0,0,1,'חזית'],[0,0,-1,'גב'],[1,0,0,'צד ימין'],[-1,0,0,'צד שמאל'],[.7,0,.7,'אלכסון']];let vi=0;
+function dist(){const fov=camera.fov*Math.PI/180;const h=st.H*1.12;return Math.max(h/2/Math.tan(fov/2),h/2/Math.tan(fov/2)/Math.min(1,camera.aspect*1.6));}
+function home(instant){const d=dist();const tg=new THREE.Vector3(0,0,0),p=new THREE.Vector3(0,st.H*.02,d);vi=0;if(instant!==false&&!controls._init){controls.target.copy(tg);camera.position.copy(p);controls._init=1;}else flyTo(tg,p);}
+$('bReset').onclick=()=>{home(false)};
+$('bView').onclick=()=>{vi=(vi+1)%VIEWS.length;const v=VIEWS[vi];const d=camera.position.distanceTo(controls.target);const dir=new THREE.Vector3(v[0],v[1],v[2]).normalize();flyTo(controls.target.clone(),controls.target.clone().add(dir.multiplyScalar(d)));toast(v[3]);};
+function focus(m){const b=new THREE.Box3().setFromObject(m);const c=b.getCenter(new THREE.Vector3()),s=b.getSize(new THREE.Vector3());
+ const d=Math.max(650,Math.max(s.x,s.y,s.z)*4.2);const dir=camera.position.clone().sub(controls.target).normalize();
+ // face the side where the muscle is visible: back muscles -> look from back
+ const mc=new THREE.Box3().setFromObject(m).getCenter(new THREE.Vector3());const back=isBack(m);if(back!==null){dir.z=back?-Math.abs(dir.z)-.3:Math.abs(dir.z)+.3;dir.normalize();}
+ flyTo(c,c.clone().add(dir.multiplyScalar(d)));}
+const BACKK=new Set(["trap_upper","trap_mid","trap_low","delt_post","triceps_long","triceps_lat","triceps_med","lats","teres_major","teres_minor","infraspinatus","supraspinatus","rhomboids","levator","erector","multifidus","ql","glute_max","glute_med","glute_min","piriformis","bf_long","bf_short","semiten","semimem","gastroc_med","gastroc_lat","soleus","forearm_ext","subscap"]);
+const FRONTK=new Set(["pec_clav","pec_stern","pec_minor","delt_ant","biceps_long","biceps_short","brachialis","coracobrach","rectus_abd","ext_oblique","int_oblique","transverse","serratus","scm","iliopsoas","rectus_fem","vastus_lat","vastus_med","vastus_int","adductors","sartorius","tfl","tib_ant","forearm_flex","brachiorad"]);
+function isBack(m){const k=m.userData.info[0];if(BACKK.has(k))return true;if(FRONTK.has(k))return false;const g=m.userData.info[3];if(g==='back'||g==='hip')return true;return null;}
+// ---------- picking ----------
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();let down=null;
+renderer.domElement.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,t:performance.now()}});
+renderer.domElement.addEventListener('pointerup',e=>{if(!down)return;const dx=e.clientX-down.x,dy=e.clientY-down.y;if(dx*dx+dy*dy>64||performance.now()-down.t>600){down=null;return;}down=null;
+ ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+ const cand=parts.filter(m=>m.visible&&m.material!==MAT.ghost);const hits=ray.intersectObjects(cand,false);
+ const h=hits.find(x=>x.object.userData.kind==='m');
+ if(h)select(h.object,false);else if(!hits.length)deselect();});
+function select(m,fly){st.sel=m;applyAll();showCard(m);if(fly)focus(m);}
+function deselect(){st.sel=null;st.iso=false;applyAll();$('sheet').className='';setSheetVar();}
+// ---------- card ----------
+const LN=["","שטחית","עמוקה","הכי עמוקה"];
+function showCard(m){const u=m.userData,[k,he,l,grp,act]=u.info;const c=k?M[k]:null;
+ $('sNm').textContent=he;$('sEn').textContent=u.n;
+ const side=u.side==='R'?'צד ימין':u.side==='L'?'צד שמאל':'';
+ let h=`<div class="tags"><span class="tag">${G[c?c.g:grp]||''}</span><span class="tag">שכבה ${u.layer} מתוך 8 · ${LVN(u.layer)}</span>${side?`<span class="tag">${side}</span>`:''}${c?(c.j===2?'<span class="tag two">דו/רב-מפרקי ⚠️ רלוונטי לאי-ספיקה</span>':'<span class="tag">חד-מפרקי</span>'):''}</div>`;
+ if(c){if(c.he!==he)h+=`<div class="note">חלק מ: <b>${c.he}</b></div>`;
+  h+=`<h3>אנטומיה</h3><div class="kv"><b>מוצא</b><span>${c.o}</span><b>היקשרות</b><span>${c.i}</span><b>עצבוב</b><span>${c.n}</span></div>
+  <h3>פעולות</h3><ul>${c.a.map(x=>`<li>${x}</li>`).join('')}</ul>
+  <h3>תרגילים מומלצים ולמה</h3><ol>${c.ex.map(e=>`<li><b>${e[0]}</b>: ${e[1]}</li>`).join('')}</ol>
+  <div class="tip"><b>💡 נקודה מקצועית / איך להסביר למתאמן</b><br>${c.tip}</div>
+  ${c.syn&&c.syn.length?`<h3>עובדים איתו (מסומנים בכתום במודל)</h3><div class="chips">${c.syn.filter(s=>byKey[s]).map(s=>`<button data-go="${s}">${M[s].he}</button>`).join('')}</div>`:''}
+  ${c.lab?`<div style="margin-top:12px"><button class="btn pri" data-lab="${c.lab}">🧪 פתח במעבדת אי-ספיקה</button></div>`:''}`;}
+ else h+=`<h3>פעולה עיקרית</h3><p style="font-size:14px;margin:4px 0">${act||'—'}</p><p class="note">שריר משני. אין לו כרטיס מאמן מלא.</p>`;
+ h+=`<div class="row" style="margin-top:14px"><button class="btn" id="cFocus">🎯 התמקד</button><button class="btn" id="cIso">${st.iso?'הצג הכול':'👁 בודד'}</button></div>`;
+ $('sBody').innerHTML=h;$('sBody').scrollTop=0;$('sheet').className='open';setSheetVar();
+ $('cFocus').onclick=()=>focus(m);$('cIso').onclick=()=>{st.iso=!st.iso;applyAll();showCard(m);};
+}
+function setSheetVar(){requestAnimationFrame(()=>{const s=$('sheet');let off=0;if(innerWidth<900){if(s.classList.contains('open'))off=Math.min(s.offsetHeight,innerHeight*.52);else if(s.classList.contains('mini'))off=92;}camera.setViewOffset(innerWidth,innerHeight,0,off/2,innerWidth,innerHeight);camera.updateProjectionMatrix();});}
+$('sBody').addEventListener('click',e=>{const g=e.target.dataset.go;if(g&&byKey[g]){const t=byKey[g].find(x=>x.userData.side===(st.sel&&st.sel.userData.side))||byKey[g][0];select(t,true);}
+ const lb=e.target.dataset.lab;if(lb){page('lab');setLab(lb);}});
+$('sClose').onclick=e=>{e.stopPropagation();deselect();};
+$('handle').onclick=()=>{const s=$('sheet');s.className=s.classList.contains('mini')?'open':'mini';setSheetVar();};
+// ---------- buttons ----------
+$('bPeel').onclick=()=>{if(st.layer>1){st.layer--;if(st.sel&&st.sel.userData.layer>st.layer){st.sel=null;$('sheet').className='';setSheetVar();}applyAll();toast('שכבה '+st.layer+' · '+LVN(st.layer));}};
+$('bAdd').onclick=()=>{if(st.layer<8){st.layer++;applyAll();toast('שכבה '+st.layer+' · '+LVN(st.layer));}};
+$('bBones').onclick=()=>{st.bones=!st.bones;applyAll();toast(st.bones?'שלד מוצג':'שלד מוסתר');};
+$('bIso').onclick=()=>{if(!st.sel){toast('בחרו שריר קודם');return;}st.iso=!st.iso;applyAll();showCard(st.sel);};
+$('bMirror').onclick=()=>{st.mirror=!st.mirror;applyAll();toast(st.mirror?'בחירה בשני הצדדים':'בחירה בצד אחד');};
+// ---------- search ----------
+function buildSearch(){const list=Object.keys(byNorm).map(n=>{const i=byNorm[n][0].userData.info;const k=i[0];const s=(i[1]+' '+n+' '+(k&&M[k]?M[k].he+' '+M[k].en+' '+(ALIAS[k]||''):'')).toLowerCase();return{n,he:i[1],s,g:k&&M[k]?M[k].g:(i[3]||'other'),main:!!k};});
+ const render=q=>{q=q.trim().toLowerCase();const f=list.filter(x=>!q||x.s.includes(q));
+  let h='';for(const gk of Object.keys(G).concat(['other'])){const it=f.filter(x=>x.g===gk).sort((a,b)=>(b.main-a.main));if(!it.length)continue;h+=`<div class="g">${G[gk]||'אחר'}</div>`+it.map(x=>`<button data-n="${x.n}">${x.main?'':'· '}${x.he}<small>${x.n}</small></button>`).join('');}
+  $('results').innerHTML=h||'<p class="note">לא נמצא</p>';};
+ $('q').oninput=e=>render(e.target.value);render('');
+ $('results').onclick=e=>{const b=e.target.closest('button');if(!b)return;const arr=byNorm[b.dataset.n];const m=arr.find(x=>x.userData.side==='R')||arr[0];$('search').classList.remove('open');
+  if(m.userData.layer>st.layer){st.layer=m.userData.layer;}select(m,true);};}
+$('bSearch').onclick=()=>{$('search').classList.add('open');setTimeout(()=>$('q').focus(),50);};
+$('qClose').onclick=()=>$('search').classList.remove('open');
+// ---------- pages ----------
+function page(p){document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));$('p-lab').classList.toggle('on',p==='lab');}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>page(b.dataset.p));
+window.showPage=p=>page(p==='atlas'?'3d':p);
+// ---------- loop ----------
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);setSheetVar();});
+camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+renderer.setAnimationLoop(()=>{controls.update();camera.updateMatrixWorld();key.position.copy(_kv.set(500,800,0).applyMatrix4(camera.matrixWorld));key.target.position.copy(controls.target);renderer.render(scene,camera);});
+load().catch(e=>{$('err').textContent='שגיאה בטעינת המודל: '+e.message;});
+</script>
+</body>
+</html>
