@@ -96,6 +96,10 @@ table{border-collapse:collapse;width:100%;font-size:13px}
 td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:right;vertical-align:top}
 th{color:var(--muted);font-weight:600}
 .col.right,.col.left{top:calc(72px + env(safe-area-inset-top,0px))}
+.sarc{margin:6px 0 4px;background:#141416;border:1px solid var(--line);border-radius:12px;padding:8px 8px 10px}
+.sarcl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:0 4px}
+.sarch{font-size:13px;font-weight:700;color:var(--acc);margin:0 4px 2px}
+.sarct{font-size:13px;line-height:1.5;margin:2px 4px 0;color:var(--ink)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
@@ -133,7 +137,8 @@ th{color:var(--muted);font-weight:600}
  <div class="labgrid">
   <div class="card">
     <div class="row"><select id="labPick"></select><button class="btn pri" id="play">▶ הפעל תנועה</button></div>
-    <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:44vh;display:block"></svg>
+    <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:40vh;display:block"></svg>
+    <div class="sarc"><div class="sarch">מה קורה בתוך השריר: סרקומר</div><div class="sarcl"><span style="color:#f2c14e">● אקטין (חוט דק)</span><span style="color:#ff6b6b">● מיוזין (חוט עבה עם ראשים)</span></div><svg id="sarc" viewBox="0 -10 340 206" style="width:100%;display:block" direction="ltr"></svg><div class="sarct" id="sarct"></div></div>
     <div id="sliders"></div>
     <h3>תרגילים (לחצו כדי לראות את מצב השריר)</h3>
     <div class="presets" id="presets"></div>
@@ -296,7 +301,51 @@ function drawLab(){
  lt+=`<text x="20" y="150" font-size="11" fill="#7a6e66" text-anchor="start">קצר</text><text x="300" y="150" font-size="11" fill="#7a6e66" text-anchor="end">ארוך</text><text x="160" y="150" font-size="11" fill="#7a6e66" text-anchor="middle">אורך השריר</text><text x="160" y="14" font-size="11" fill="#7a6e66" text-anchor="middle">כוח אפשרי</text>`;
  document.getElementById("lt").innerHTML=lt;
  const zd=document.getElementById("zone");zd.style.background=z[1];zd.innerHTML=`<b style="color:${z[3]}">${z[0]}</b> · אורך יחסי ${(L*100).toFixed(0)}% · כוח אפשרי ~${(f(L)*100).toFixed(0)}%<br>${z[2]}`;
+ drawSarc(L,z);
  c.j.forEach((j,i)=>{const el=document.getElementById("sv"+i);if(el)el.textContent=Math.round(lab.v[i])+"°";const r=document.getElementById("sr"+i);if(r&&+r.value!==Math.round(lab.v[i]))r.value=Math.round(lab.v[i]);});
+}
+// ---------- sarcomere: actin / myosin overlap at the current muscle length ----------
+// lengths in µm: thick filament (myosin) 1.6, thin filament (actin) 1.0 from each Z line, bare zone ±0.1 around the M line.
+// muscle length L (0..1) → sarcomere length: ~1.6 fully shortened, ~2.2 at the force peak, ~3.7 fully lengthened.
+function sarcLen(L){return L<=.58?1.6+L*(0.58/0.58)*1.0:2.18+(L-.58)/.42*1.5;}
+function drawSarc(L,z){
+ const SL=sarcLen(L),h=SL/2,k=84,cx=170,ZL=cx-h*k,ZR=cx+h*k,MY=.8,AC=1.0,BARE=.1;
+ const myoY=[62,98,134],actY=[44,80,116,152];
+ let s="";
+ // Z lines (zigzag) and M line
+ const zig=x=>{let d=`M${x},30`;for(let y=30,i=0;y<166;y+=9,i++)d+=` L${x+(i%2?-5:5)},${y+9}`;return `<path d="${d}" fill="none" stroke="#b8925a" stroke-width="2.4" stroke-linejoin="round"/>`;};
+ s+=zig(ZL)+zig(ZR)+`<line x1="${cx}" y1="34" x2="${cx}" y2="162" stroke="#b8925a" stroke-width="2"/>`;
+ // actin: beaded chains from each Z line toward the centre
+ const bead=(x1,x2,y)=>{let o="";const a=Math.min(x1,x2),b=Math.max(x1,x2);for(let x=a;x<=b;x+=4.2)o+=`<circle cx="${x.toFixed(1)}" cy="${y}" r="2.3" fill="#f2c14e"/>`;return o;};
+ actY.forEach(y=>{s+=bead(ZL+3,ZL+AC*k,y)+bead(ZR-3,ZR-AC*k,y);});
+ // myosin: thick rod with heads; a head is attached (bright) when actin lies over it
+ let tot=0,on=0;
+ myoY.forEach(y=>{
+  s+=`<line x1="${cx-MY*k}" y1="${y}" x2="${cx+MY*k}" y2="${y}" stroke="#c9434a" stroke-width="7" stroke-linecap="round"/>`;
+  for(let d=BARE;d<=MY+1e-6;d+=0.07){[-1,1].forEach(sd=>{const x=cx+sd*d*k;
+   // actin from the same side covers distance-from-centre in [h-AC, h]
+   const att=d>=h-AC&&d<=h;tot++;if(att)on++;
+   [-1,1].forEach(up=>{const x2=x+sd*5,y2=y+up*9;s+=`<line x1="${x.toFixed(1)}" y1="${y+up*3}" x2="${x2.toFixed(1)}" y2="${y2}" stroke="${att?"#ff5d5d":"#7a3a3e"}" stroke-width="${att?2.6:1.8}" stroke-linecap="round"/>`;});});}
+ });
+ // collisions when fully shortened
+ const cross=h<AC,jam=h<MY+.04;
+ if(cross)s+=`<rect x="${cx-(AC-h)*k}" y="36" width="${2*(AC-h)*k}" height="124" fill="#ff5d5d" opacity=".14"/>`;
+ // labels and brackets
+ const T=(x,y,t,a)=>`<text x="${x.toFixed(1)}" y="${y}" font-size="10.5" fill="#d9d2cb" text-anchor="${a||"middle"}">${t}</text>`;
+ const br=(x1,x2,y,t,up)=>x2-x1<6?"":`<path d="M${x1},${y+(up?6:-6)} V${y} H${x2} V${y+(up?6:-6)}" fill="none" stroke="#a19a94" stroke-width="1.2"/>`+T((x1+x2)/2,up?y-4:y+12,t);
+ s+=T(ZL,22,"קו Z")+T(ZR,22,"קו Z")+T(cx,22,"קו M");
+ if(h-AC>0.03)s+=br(cx-(h-AC)*k,cx+(h-AC)*k,6,"אזור H",true);
+ s+=br(cx-MY*k,cx+MY*k,176,"פס A (מיוזין)",false);
+ if(h-MY>0.06)s+=br(cx+MY*k,ZR,176,"פס I",false);
+ document.getElementById("sarc").innerHTML=s;
+ const pct=Math.round(on/tot*100);
+ let msg;
+ if(cross||jam)msg=`<b style="color:#ff7b7b">מקוצר מדי:</b> האקטין משני הצדדים עובר את קו M ונכנס זה בזה, והמיוזין כמעט נוגע בקווי Z. הראשים לא מצליחים ״למשוך״ ביעילות, ולכן הכוח נמוך.`;
+ else if(pct<25)msg=`<b style="color:#6f8cff">מתוח מדי:</b> האקטין כמעט יצא מאזור המיוזין. מעט ראשי מיוזין נוגעים באקטין, ולכן כמעט אין כוח. מה שמגביל את התנועה הוא השריר עצמו.`;
+ else if(L>=.35&&L<.8)msg=`<b style="color:#5fd18a">אורך אופטימלי:</b> כמעט כל ראשי המיוזין נוגעים באקטין (גשרים צולבים) בלי שהאקטין מתנגש באמצע. זה המצב החזק ביותר.`;
+ else if(L<.35)msg=`<b style="color:#f0a35e">מקוצר:</b> אזור H נעלם והאקטין מתקרב לאמצע. עדיין יש גשרים, אבל הכוח מתחיל לרדת.`;
+ else msg=`<b style="color:#4fc3c0">מוארך:</b> אזור H ופס I רחבים, ופחות ראשים נוגעים באקטין. השריר עובד במצב מתוח.`;
+ document.getElementById("sarct").innerHTML=`אורך סרקומר ≈ ${SL.toFixed(2)} µm · ראשי מיוזין מול אקטין: <b>${pct}%</b><br>${msg}`;
 }
 function setLab(k){
  lab.k=k;const c=LAB[k];lab.v=c.j.map(j=>j.v);lab.preset=-1;stopAnim();
