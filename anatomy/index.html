@@ -100,6 +100,10 @@ th{color:var(--muted);font-weight:600}
 .sarcl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:0 4px}
 .sarch{font-size:13px;font-weight:700;color:var(--acc);margin:0 4px 2px}
 .sarct{font-size:13px;line-height:1.5;margin:2px 4px 0;color:var(--ink)}
+.backbtn{position:fixed;z-index:30;left:12px;top:calc(12px + env(safe-area-inset-top,0px));display:flex;align-items:center;gap:6px;height:44px;padding:0 16px 0 12px;border-radius:999px;
+ background:linear-gradient(135deg,#ff8a1f,#ffb347);color:#1a1a1a;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 8px 20px -8px rgba(255,128,20,.8)}
+.backbtn svg{width:20px;height:20px;fill:none;stroke:#1a1a1a;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.backbtn:active{transform:scale(.96)}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
@@ -107,7 +111,8 @@ th{color:var(--muted);font-weight:600}
 <div id="app3d"></div>
 <div id="loading"><div>טוען מודל אנטומי תלת-ממדי…</div><div class="bar"><i id="pbar"></i></div><div id="err"></div></div>
 
-<div class="top"><div><h1>אטלס שרירים 3D</h1><div class="sub">גררו לסיבוב · צבטו לזום · הקישו על שריר</div></div><a class="rbtn" id="bBack" href="../coach-builder.html" aria-label="חזרה ל-CoachBuilder"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+<div class="top"><div><h1>אטלס שרירים 3D</h1><div class="sub">גררו לסיבוב · צבטו לזום · הקישו על שריר</div></div></div>
+<a class="backbtn" id="bBack" href="../coach-builder.html" aria-label="חזרה לאפליקציה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span>חזרה</span></a>
 
 <div class="col right">
   <button class="rbtn" id="bSearch" title="חיפוש"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg></button>
