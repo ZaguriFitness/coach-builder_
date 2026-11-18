@@ -104,6 +104,10 @@ th{color:var(--muted);font-weight:600}
  background:linear-gradient(135deg,#ff8a1f,#ffb347);color:#1a1a1a;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 8px 20px -8px rgba(255,128,20,.8)}
 .backbtn svg{width:20px;height:20px;fill:none;stroke:#1a1a1a;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .backbtn:active{transform:scale(.96)}
+.legend{position:fixed;z-index:6;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));display:flex;gap:12px;padding:6px 12px;border-radius:999px;background:rgba(36,36,40,.88);border:1px solid #3a3a40;font-size:12px;white-space:nowrap;backdrop-filter:blur(6px)}
+.legend[hidden]{display:none}.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.lg1{background:#ffc53d;box-shadow:0 0 6px #ffc53d}.lg2{background:#dc9468;opacity:.8}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 </head>
@@ -130,6 +134,7 @@ th{color:var(--muted);font-weight:600}
 </div></div>
 
 <div class="toast" id="toast"></div>
+<div class="legend" id="legend" hidden><span><i class="lg1"></i>השריר העיקרי</span><span><i class="lg2"></i>עוזרים (סינרגיסטים)</span></div>
 <div class="credit">3D data: <a href="https://lifesciencedb.jp/bp3d/" target="_blank">BodyParts3D</a> © DBCLS, CC BY-SA 2.1 JP</div>
 
 <div id="sheet"><div class="handle" id="handle"><i></i><div class="shead"><div class="t"><div class="nm" id="sNm"></div><div class="en" id="sEn"></div></div><button class="x" id="sClose">✕</button></div></div><div class="sbody" id="sBody"></div></div>
@@ -575,7 +580,7 @@ const MAT={
  mus:fiberize(new THREE.MeshStandardMaterial({color:0x9a5f65,roughness:.42,metalness:0})),
  cart:new THREE.MeshStandardMaterial({color:0x8cc6d4,roughness:.45}),
  sel:fiberize(new THREE.MeshStandardMaterial({color:0xffc53d,emissive:0x5a3600,roughness:.45})),
- syn:fiberize(new THREE.MeshStandardMaterial({color:0xf08a4b,emissive:0x2a1000,roughness:.5})),
+ syn:fiberize(new THREE.MeshStandardMaterial({color:0xdc9468,roughness:.65,transparent:true,opacity:.8,depthWrite:false})),
  ghost:new THREE.MeshStandardMaterial({color:0xd9c9c4,transparent:true,opacity:.07,depthWrite:false,roughness:1}),
  bone:new THREE.MeshStandardMaterial({color:0xd9cfb4,roughness:.62}),
 };
@@ -642,9 +647,9 @@ function applyAll(){
   else if(st.iso&&st.sel)m.material=synSet.has(m)?MAT.syn:MAT.ghost;
   else if(u.layer>st.layer){m.visible=false;continue;}
   else m.material=synSet.has(m)?MAT.syn:MAT.mus;
-  m.renderOrder=m.material===MAT.ghost?2:0;
+  m.renderOrder=m.material===MAT.ghost?2:m.material===MAT.syn?1:0;
  }
- $('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
+ $('legend').hidden=!st.sel;$('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
  $('bBones').classList.toggle('on',st.bones);$('bIso').classList.toggle('on',st.iso);$('bMirror').classList.toggle('on',st.mirror);
 }
 // ---------- camera ----------
@@ -685,7 +690,7 @@ function showCard(m){const u=m.userData,[k,he,l,grp,act]=u.info;const c=k?M[k]:n
   <h3>פעולות</h3><ul>${c.a.map(x=>`<li>${x}</li>`).join('')}</ul>
   <h3>תרגילים מומלצים ולמה</h3><ol>${c.ex.map(e=>`<li><b>${e[0]}</b>: ${e[1]}</li>`).join('')}</ol>
   <div class="tip"><b>💡 נקודה מקצועית / איך להסביר למתאמן</b><br>${c.tip}</div>
-  ${c.syn&&c.syn.length?`<h3>עובדים איתו (מסומנים בכתום במודל)</h3><div class="chips">${c.syn.filter(s=>byKey[s]).map(s=>`<button data-go="${s}">${M[s].he}</button>`).join('')}</div>`:''}
+  ${c.syn&&c.syn.length?`<h3>שרירים עוזרים (סינרגיסטים): מסומנים בכתום חלש במודל</h3><div class="chips">${c.syn.filter(s=>byKey[s]).map(s=>`<button data-go="${s}">${M[s].he}</button>`).join('')}</div>`:''}
   ${c.lab?`<div style="margin-top:12px"><button class="btn pri" data-lab="${c.lab}">🧪 פתח במעבדת אי-ספיקה</button></div>`:''}`;}
  else h+=`<h3>פעולה עיקרית</h3><p style="font-size:14px;margin:4px 0">${act||'—'}</p><p class="note">שריר משני. אין לו כרטיס מאמן מלא.</p>`;
  h+=`<div class="row" style="margin-top:14px"><button class="btn" id="cFocus">🎯 התמקד</button><button class="btn" id="cIso">${st.iso?'הצג הכול':'👁 בודד'}</button></div>`;
