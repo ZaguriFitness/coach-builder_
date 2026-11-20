@@ -95,7 +95,7 @@ input[type=range]{width:100%;direction:ltr;accent-color:var(--acc)}
 table{border-collapse:collapse;width:100%;font-size:13px}
 td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:right;vertical-align:top}
 th{color:var(--muted);font-weight:600}
-.col.right,.col.left{top:calc(72px + env(safe-area-inset-top,0px))}
+.col.left{top:calc(68px + env(safe-area-inset-top,0px))}.col.right{top:calc(12px + env(safe-area-inset-top,0px))}
 .sarc{margin:6px 0 4px;background:#141416;border:1px solid var(--line);border-radius:12px;padding:8px 8px 10px}
 .sarcl{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin:0 4px}
 .sarch{font-size:13px;font-weight:700;color:var(--acc);margin:0 4px 2px}
@@ -104,8 +104,7 @@ th{color:var(--muted);font-weight:600}
  background:linear-gradient(135deg,#ff8a1f,#ffb347);color:#1a1a1a;font-weight:700;font-size:15px;text-decoration:none;box-shadow:0 8px 20px -8px rgba(255,128,20,.8)}
 .backbtn svg{width:20px;height:20px;fill:none;stroke:#1a1a1a;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
 .backbtn:active{transform:scale(.96)}
-.legend{position:fixed;z-index:6;left:50%;transform:translateX(-50%);top:calc(76px + env(safe-area-inset-top,0px));display:flex;gap:12px;padding:6px 12px;border-radius:999px;background:rgba(36,36,40,.88);border:1px solid #3a3a40;font-size:12px;white-space:nowrap;backdrop-filter:blur(6px)}
-.legend[hidden]{display:none}.legend span{display:flex;align-items:center;gap:6px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin:2px 0 4px}.legend[hidden]{display:none}.legend span{display:flex;align-items:center;gap:6px}
 .legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
 .lg1{background:#ffc53d;box-shadow:0 0 6px #ffc53d}.lg2{background:#dc9468;opacity:.8}
 </style>
@@ -115,7 +114,6 @@ th{color:var(--muted);font-weight:600}
 <div id="app3d"></div>
 <div id="loading"><div>טוען מודל אנטומי תלת-ממדי…</div><div class="bar"><i id="pbar"></i></div><div id="err"></div></div>
 
-<div class="top"><div><h1>אטלס שרירים 3D</h1><div class="sub">גררו לסיבוב · צבטו לזום · הקישו על שריר</div></div></div>
 <a class="backbtn" id="bBack" href="../coach-builder.html" aria-label="חזרה לאפליקציה"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg><span>חזרה</span></a>
 
 <div class="col right">
@@ -134,7 +132,6 @@ th{color:var(--muted);font-weight:600}
 </div></div>
 
 <div class="toast" id="toast"></div>
-<div class="legend" id="legend" hidden><span><i class="lg1"></i>השריר העיקרי</span><span><i class="lg2"></i>עוזרים (סינרגיסטים)</span></div>
 <div class="credit">3D data: <a href="https://lifesciencedb.jp/bp3d/" target="_blank">BodyParts3D</a> © DBCLS, CC BY-SA 2.1 JP</div>
 
 <div id="sheet"><div class="handle" id="handle"><i></i><div class="shead"><div class="t"><div class="nm" id="sNm"></div><div class="en" id="sEn"></div></div><button class="x" id="sClose">✕</button></div></div><div class="sbody" id="sBody"></div></div>
@@ -667,7 +664,7 @@ function applyAll(){
   else m.material=synSet.has(m)?MAT.syn:MAT.mus;
   m.renderOrder=m.material===MAT.ghost?2:m.material===MAT.syn?1:0;
  }
- $('legend').hidden=!st.sel;$('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
+ $('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
  $('bBones').classList.toggle('on',st.bones);$('bIso').classList.toggle('on',st.iso);$('bMirror').classList.toggle('on',st.mirror);
 }
 // ---------- camera ----------
@@ -703,7 +700,8 @@ function showCard(m){const u=m.userData,[k,he,l,grp,act]=u.info;const c=k?M[k]:n
  const en=c&&c.he===he?c.en:u.n.replace(/\b[a-z]/g,x=>x.toUpperCase());
  $('sNm').textContent=he;$('sEn').textContent=en;
  let h='';
- if(c){h+=`<h3>אנטומיה</h3><div class="kv"><b>מוצא</b><span>${c.o}</span><b>היקשרות</b><span>${c.i}</span></div>
+ if(c){if(c.syn&&c.syn.length)h+=`<div class="legend"><span><i class="lg1"></i>השריר העיקרי</span><span><i class="lg2"></i>עוזרים (סינרגיסטים)</span></div>`;
+  h+=`<h3>אנטומיה</h3><div class="kv"><b>מוצא</b><span>${c.o}</span><b>היקשרות</b><span>${c.i}</span></div>
   <h3>פעולות</h3><ul>${c.a.map(x=>`<li>${x}</li>`).join('')}</ul>
   <h3>תרגילים מומלצים</h3><ol>${c.ex.map(e=>`<li><b>${e[0]}</b>: ${e[1]}</li>`).join('')}</ol>
   <div class="tip"><b>💡 טיפ למאמן</b><br>${c.tip}</div>
