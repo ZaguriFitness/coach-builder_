@@ -147,7 +147,7 @@ th{color:var(--muted);font-weight:600}
  <div class="labgrid">
   <div class="card">
     <div class="row"><select id="labPick"></select><button class="btn pri" id="play">▶ הפעל תנועה</button></div>
-    <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:40vh;display:block"></svg>
+    <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:30vh;display:block;margin:4px auto 0"></svg><div class="note" style="text-align:center;margin-bottom:6px">מבט מהצד · הגוף פונה ימינה</div>
     <div class="sarc"><div class="sarch">מה קורה בתוך השריר: סרקומר</div><div class="sarcl"><span style="color:#f2c14e">● אקטין (חוט דק)</span><span style="color:#ff6b6b">● מיוזין (חוט עבה עם ראשים)</span></div><svg id="sarc" viewBox="0 -10 340 206" style="width:100%;display:block" direction="ltr"></svg><div class="sarct" id="sarct"></div></div>
     <div class="ltbox"><h3>עקומת אורך–מתח</h3>
     <svg id="lt" viewBox="0 0 320 160" style="width:100%;display:block;touch-action:none;cursor:grab"></svg><div class="note" style="text-align:center">גררו את הנקודה בגרף כדי לשנות את אורך השריר</div>
@@ -257,7 +257,7 @@ const LAB={
 biceps:{name:"בייספס: ראש ארוך",geo:"arm",side:-1,oA:10,oN:6,ia:16,inn:-7,w:[.45,.55],
  j:[{n:"כפיפת כתף",min:-60,max:180,s:1,v:0,h:"ערך שלילי = פשיטה (הזרוע מאחורי הגוף)"},{n:"כפיפת מרפק",min:0,max:150,s:1,v:90}],
  pr:[["Incline curl: תחתית",-45,5,"הכתף בפשיטה והמרפק ישר: הראש הארוך מוארך מאוד. גירוי מתיחה חזק."],["Incline curl: למעלה",-45,150,"גם בסוף התנועה השריר לא מקוצר מדי, כך שהכוח נשמר."],["כפיפה בעמידה: למעלה",0,150,"מצב ביניים."],["Preacher: תחתית",45,5,"הכתף כפופה, אבל המרפק ישר. כאן העומס במכונה או בספסל הכי גבוה, ובטווח ארוך."],["Spider curl: למעלה",70,150,"מקוצר בכתף וגם במרפק, כלומר מתקרב לאי-ספיקה אקטיבית."],["כבל מעל הראש: למעלה",120,150,"אי-ספיקה אקטיבית: מרגישים ״כיווץ״ חזק, אבל השריר כמעט לא מייצר כוח."]],
- txt:`<h3>התשובה לשאלה שלך</h3><p><b>כתף בפשיטה ואז כפיפת מרפק</b> (Incline, Bayesian): הבייספס מתחיל מוארך מאוד ועובד חזק בטווח הארוך. לפי המחקר העדכני, זה גירוי טוב יותר לגדילה. גם בסוף התנועה הוא לא נכנס לאי-ספיקה, אז הכוח טוב לאורך כל הטווח.</p><p><b>כתף בכפיפה ואז כפיפת מרפק</b> (Spider, Preacher, כבל מעל הראש): הבייספס כבר מקוצר בכתף. בסוף כפיפת המרפק הוא מקוצר בשני המפרקים, וזו <b>אי-ספיקה אקטיבית</b>: תחושת כיווץ חזקה, אבל הכוח יורד. הבראכיאליס (חד-מפרקי) לוקח חלק גדול יותר.</p><p><b>שורה תחתונה למתאמן:</b> לשלב תרגיל במצב מוארך (Incline/Bayesian) עם תרגיל שהעומס בו בתחתית (Preacher).</p>`},
+ txt:`<h3>מה רואים כאן</h3><p><b>כתף בפשיטה ואז כפיפת מרפק</b> (Incline, Bayesian): הבייספס מתחיל מוארך מאוד ועובד חזק בטווח הארוך. לפי המחקר העדכני, זה גירוי טוב יותר לגדילה. גם בסוף התנועה הוא לא נכנס לאי-ספיקה, אז הכוח טוב לאורך כל הטווח.</p><p><b>כתף בכפיפה ואז כפיפת מרפק</b> (Spider, Preacher, כבל מעל הראש): הבייספס כבר מקוצר בכתף. בסוף כפיפת המרפק הוא מקוצר בשני המפרקים, וזו <b>אי-ספיקה אקטיבית</b>: תחושת כיווץ חזקה, אבל הכוח יורד. הבראכיאליס (חד-מפרקי) לוקח חלק גדול יותר.</p><p><b>בשורה התחתונה:</b> כדאי לשלב תרגיל במצב מוארך (Incline/Bayesian) עם תרגיל שהעומס בו בתחתית (Preacher).</p>`},
 triceps:{name:"טרייספס: ראש ארוך",geo:"arm",side:1,oA:-6,oN:-6,ia:-4,inn:9,w:[.45,.55],
  j:[{n:"כפיפת כתף",min:-60,max:180,s:-1,v:0,h:"180 = זרוע מעל הראש · שלילי = זרוע מאחור"},{n:"כפיפת מרפק",min:0,max:150,s:-1,v:90}],
  pr:[["Overhead extension: תחתית",150,140,"הכתף כפופה והמרפק כפוף: מוארך מאוד. זה מה שהניב יותר גדילה במחקר."],["Overhead: נעילה",150,5,"גם בנעילה השריר לא מקוצר יותר מדי."],["Pushdown: התחלה",0,100,"טווח בינוני."],["Pushdown: נעילה",0,5,"מקוצר. הראש הארוך עובד פחות ביעילות."],["Kickback: נעילה",-40,5,"מקוצר בכתף ובמרפק: אי-ספיקה אקטיבית. ״שורף״ אבל חלש."]],
@@ -293,17 +293,20 @@ function zoneOf(L){
 function drawLab(){
  const c=LAB[lab.k],[t1,t2]=lab.v,g=geo(c,t1,t2),L=lenOf(c,lab.v),z=zoneOf(L);
  const P1=g.P1,P0=add(P1,u(g.a0),g.L0),P2=add(P1,u(g.a1),g.L1),P3=add(P2,u(g.a2),g.L2);
- let s="";const seg=(a,b,w,col)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col||"#cdbfb4"}" stroke-width="${w}" stroke-linecap="round"/>`;
- if(g.dec==="arm"){s+=seg(P1,[170,320],34,"#e9ddd3")+`<circle cx="166" cy="122" r="22" fill="#e9ddd3"/>`+seg([166,140],P1,14,"#e9ddd3");}
- if(g.dec==="leg"){s+=seg(P1,P0,34,"#e9ddd3")+`<circle cx="160" cy="26" r="18" fill="#e9ddd3"/>`;const F=add(P3,u(g.a2-90),26);s+=seg(P3,F,10);}
+ const B=[1e9,1e9,-1e9,-1e9],ext=(p,r)=>{B[0]=Math.min(B[0],p[0]-r);B[1]=Math.min(B[1],p[1]-r);B[2]=Math.max(B[2],p[0]+r);B[3]=Math.max(B[3],p[1]+r);};
+ let s="";const seg=(a,b,w,col)=>{ext(a,w/2);ext(b,w/2);return `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col||"#cdbfb4"}" stroke-width="${w}" stroke-linecap="round"/>`;};
+ if(g.dec==="arm"){ext([166,122],22);s+=seg(P1,[170,320],34,"#e9ddd3")+`<circle cx="166" cy="122" r="22" fill="#e9ddd3"/>`+seg([166,140],P1,14,"#e9ddd3");}
+ if(g.dec==="leg"){ext([160,26],18);s+=seg(P1,P0,34,"#e9ddd3")+`<circle cx="160" cy="26" r="18" fill="#e9ddd3"/>`;const F=add(P3,u(g.a2-90),26);s+=seg(P3,F,10);}
  s+=seg(P1,P0,12)+seg(P1,P2,16)+seg(P2,P3,13);
  const n1=r90(u(g.a1)).map(x=>x*c.side),n0=r90(u(g.a0)),n2=r90(u(g.a2));
  const ori=add(add(P1,u(g.a0),c.oA),n0,c.oN);
  const pts=[ori,add(add(P1,u(g.a1),g.L1*.15),n1,10),add(add(P1,u(g.a1),g.L1*.5),n1,13+(1-L)*5),add(add(P2,u(g.a1),-g.L1*.12),n1,10),add(add(P2,u(g.a2),c.ia),n2,c.inn)];
  s+=`<polyline points="${pts.map(p=>p.map(v=>v.toFixed(1)).join(",")).join(" ")}" fill="none" stroke="${z[3]}" stroke-width="${7+(1-L)*7}" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>`;
  [P1,P2].forEach(p=>s+=`<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#fff" stroke="#8a7b70" stroke-width="2"/>`);
- s+=`<text x="330" y="330" font-size="12" fill="#7a6e66" direction="rtl">מבט מהצד · הגוף פונה ימינה</text>`;
- document.getElementById("limb").innerHTML=s;
+ const lb=document.getElementById("limb");lb.innerHTML=s;
+ // frame the drawing: centre it on what is drawn, with a little margin, so it never sits low or gets cut
+ const bx={x:B[0],y:B[1],width:B[2]-B[0],height:B[3]-B[1]},S=Math.max(250,bx.width+36,bx.height+36);
+ lb.setAttribute("viewBox",`${(bx.x+bx.width/2-S/2).toFixed(1)} ${(bx.y+bx.height/2-S/2).toFixed(1)} ${S.toFixed(1)} ${S.toFixed(1)}`);
  // LT curve
  const X=l=>20+l*280,Y=f=>130-f*105,f=l=>Math.exp(-(((l-.58)/.27)**2));
  let lt="";[[0,.12,"#fde2df"],[.12,.35,"#fff0dd"],[.35,.8,"#e3f5e6"],[.8,.93,"#dff3f3"],[.93,1,"#e3e9fb"]].forEach(([a,b,col])=>lt+=`<rect x="${X(a)}" y="20" width="${X(b)-X(a)}" height="110" fill="${col}"/>`);
