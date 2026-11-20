@@ -149,14 +149,15 @@ th{color:var(--muted);font-weight:600}
     <div class="row"><select id="labPick"></select><button class="btn pri" id="play">▶ הפעל תנועה</button></div>
     <svg id="limb" viewBox="0 0 340 340" style="width:100%;max-height:40vh;display:block"></svg>
     <div class="sarc"><div class="sarch">מה קורה בתוך השריר: סרקומר</div><div class="sarcl"><span style="color:#f2c14e">● אקטין (חוט דק)</span><span style="color:#ff6b6b">● מיוזין (חוט עבה עם ראשים)</span></div><svg id="sarc" viewBox="0 -10 340 206" style="width:100%;display:block" direction="ltr"></svg><div class="sarct" id="sarct"></div></div>
+    <div class="ltbox"><h3>עקומת אורך–מתח</h3>
+    <svg id="lt" viewBox="0 0 320 160" style="width:100%;display:block;touch-action:none;cursor:grab"></svg><div class="note" style="text-align:center">גררו את הנקודה בגרף כדי לשנות את אורך השריר</div>
+    <div id="zone" class="zone"></div></div>
     <div id="sliders"></div>
     <h3>תרגילים (לחצו כדי לראות את מצב השריר)</h3>
     <div class="presets" id="presets"></div>
   </div>
   <div class="card">
-    <h3 style="margin-top:0">עקומת אורך–מתח</h3>
-    <svg id="lt" viewBox="0 0 320 160" style="width:100%;display:block"></svg>
-    <div id="zone" class="zone"></div>
+    
     <div id="presetNote" class="note" style="margin-top:8px"></div>
     <div class="explain" id="labText"></div>
     <div class="explain">
@@ -308,7 +309,7 @@ function drawLab(){
  let lt="";[[0,.12,"#fde2df"],[.12,.35,"#fff0dd"],[.35,.8,"#e3f5e6"],[.8,.93,"#dff3f3"],[.93,1,"#e3e9fb"]].forEach(([a,b,col])=>lt+=`<rect x="${X(a)}" y="20" width="${X(b)-X(a)}" height="110" fill="${col}"/>`);
  let d="";for(let i=0;i<=100;i++){const l=i/100;d+=(i?"L":"M")+X(l).toFixed(1)+","+Y(f(l)).toFixed(1);}
  lt+=`<path d="${d}" fill="none" stroke="#2a2420" stroke-width="2"/><line x1="20" y1="130" x2="300" y2="130" stroke="#999"/>`;
- lt+=`<circle cx="${X(L)}" cy="${Y(f(L))}" r="7" fill="${z[3]}" stroke="#fff" stroke-width="2"/>`;
+ lt+=`<line x1="${X(L)}" y1="20" x2="${X(L)}" y2="130" stroke="${z[3]}" stroke-width="1.5" stroke-dasharray="3 3" opacity=".7"/><circle cx="${X(L)}" cy="${Y(f(L))}" r="16" fill="${z[3]}" opacity=".18"/><circle cx="${X(L)}" cy="${Y(f(L))}" r="8" fill="${z[3]}" stroke="#fff" stroke-width="2.5"/>`;
  lt+=`<text x="20" y="150" font-size="11" fill="#7a6e66" text-anchor="start">קצר</text><text x="300" y="150" font-size="11" fill="#7a6e66" text-anchor="end">ארוך</text><text x="160" y="150" font-size="11" fill="#7a6e66" text-anchor="middle">אורך השריר</text><text x="160" y="14" font-size="11" fill="#7a6e66" text-anchor="middle">כוח אפשרי</text>`;
  document.getElementById("lt").innerHTML=lt;
  const zd=document.getElementById("zone");zd.style.background=z[1];zd.innerHTML=`<b style="color:${z[3]}">${z[0]}</b> · אורך יחסי ${(L*100).toFixed(0)}% · כוח אפשרי ~${(f(L)*100).toFixed(0)}%<br>${z[2]}`;
@@ -358,6 +359,19 @@ function drawSarc(L,z){
  else msg=`<b style="color:#4fc3c0">מוארך:</b> אזור H ופס I רחבים, ופחות ראשים נוגעים באקטין. השריר עובד במצב מתוח.`;
  document.getElementById("sarct").innerHTML=`אורך סרקומר ≈ ${SL.toFixed(2)} µm · ראשי מיוזין מול אקטין: <b>${pct}%</b><br>${msg}`;
 }
+// dragging the point on the length–tension curve sets the muscle length; both joint angles follow
+// (the same shift is spread over the two joints, keeping their current balance where the ranges allow)
+function setLen(L){const c=LAB[lab.k];L=Math.min(1,Math.max(0,L));
+ let n=c.j.map((j,i)=>j.s>0?(lab.v[i]-j.min)/(j.max-j.min):(j.max-lab.v[i])/(j.max-j.min));
+ for(let it=0;it<4;it++){const cur=n.reduce((a,x,i)=>a+c.w[i]*x,0),need=(1-L)-cur;if(Math.abs(need)<1e-4)break;
+  const free=n.map(x=>need>0?x<1:x>0),fw=c.w.reduce((a,w,i)=>a+(free[i]?w:0),0);if(!fw)break;
+  n=n.map((x,i)=>free[i]?Math.min(1,Math.max(0,x+need/fw)):x);}
+ lab.v=c.j.map((j,i)=>j.s>0?j.min+n[i]*(j.max-j.min):j.max-n[i]*(j.max-j.min));}
+(function(){const sv=document.getElementById("lt");let drag=false;
+ const at=e=>{const pt=sv.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const q=pt.matrixTransform(sv.getScreenCTM().inverse());return (q.x-20)/280;};
+ sv.addEventListener("pointerdown",e=>{drag=true;sv.setPointerCapture(e.pointerId);sv.style.cursor="grabbing";stopAnim();markPreset(-1);setLen(at(e));drawLab();e.preventDefault();});
+ sv.addEventListener("pointermove",e=>{if(!drag)return;setLen(at(e));drawLab();});
+ const up=()=>{drag=false;sv.style.cursor="grab";};sv.addEventListener("pointerup",up);sv.addEventListener("pointercancel",up);})();
 function setLab(k){
  lab.k=k;const c=LAB[k];lab.v=c.j.map(j=>j.v);lab.preset=-1;stopAnim();
  document.getElementById("labPick").value=k;
