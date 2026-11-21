@@ -397,6 +397,8 @@ setLab("biceps");
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {ConvexGeometry} from 'three/addons/geometries/ConvexGeometry.js';
+import {mergeVertices} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // normalized name -> [cardKey|null, Hebrew, layer, group, action-note]
 const NM={
@@ -600,6 +602,7 @@ const MAT={
  syn:fiberize(new THREE.MeshStandardMaterial({color:0xdc9468,roughness:.65,transparent:true,opacity:.8,depthWrite:false})),
  ghost:new THREE.MeshStandardMaterial({color:0xd9c9c4,transparent:true,opacity:.07,depthWrite:false,roughness:1}),
  bone:new THREE.MeshStandardMaterial({color:0xd9cfb4,roughness:.62}),
+ head:fiberize(new THREE.MeshStandardMaterial({color:0x9a5f65,roughness:.5,metalness:0})),
  sheath:new THREE.MeshStandardMaterial({color:0xf4efe9,roughness:.35,transparent:true,opacity:.34,depthWrite:false}),
 };
 const root=new THREE.Group();root.rotation.x=-Math.PI/2;scene.add(root);
@@ -631,7 +634,7 @@ async function load(){
   if(kind==='m'){(byNorm[n]=byNorm[n]||[]).push(mesh);if(info[0])(byKey[info[0]]=byKey[info[0]]||[]).push(mesh);}
   g.computeBoundingBox();
  }
- trimSheath();
+ trimSheath();buildHead();
  root.updateMatrixWorld(true);
  for(const m of parts)bb.expandByObject(m);
  const c=bb.getCenter(new THREE.Vector3());root.position.sub(c);root.updateMatrixWorld(true);
@@ -653,6 +656,25 @@ function trimSheath(){const R=byNorm['rectus abdominis']||[];if(!R.length)return
   if(n==='external oblique'&&cut.length){const g2=new THREE.BufferGeometry();g2.setAttribute('position',g.attributes.position);if(g.attributes.normal)g2.setAttribute('normal',g.attributes.normal);g2.setIndex(cut);
    const sh=new THREE.Mesh(g2,MAT.sheath);sh.raycast=()=>{};sh.renderOrder=3;root.add(sh);sheaths.push(sh);}}}
 const sheaths=[];
+// The source model has no facial muscles or skin, so the head was a bare white skull with an open jaw.
+// Wrap the skull in a smooth closed shell (convex hull of the skull points, pushed out a little) in a muscle tone,
+// and hide the skull bones themselves.
+const SKULL=/^(frontal bone|occipital bone|sphenoid bone|temporal bone|ethmoid|mandible|parietal bone|zygomatic bone|lacrimal bone|nasal bone|maxilla|palatine bone|vomer|maxillary gingiva|mandibular gingiva|inferior nasal concha)$/i;
+let headMesh=null;
+function buildHead(){const pts=[];
+ for(const m of parts){if(m.userData.kind!=='b'||!SKULL.test(m.userData.n))continue;m.userData.skull=true;
+  const P=m.geometry.attributes.position.array,step=Math.max(3,Math.floor(P.length/3/2500))*3;for(let i=0;i<P.length;i+=step)pts.push(new THREE.Vector3(P[i],P[i+1],P[i+2]));}
+ if(pts.length<20)return;
+ let g=new ConvexGeometry(pts);g.deleteAttribute('normal');g.deleteAttribute('uv');g=mergeVertices(g,1.5);
+ // a few smoothing passes (each vertex moves toward its neighbours) take the facets off the hull
+ const P=g.attributes.position,I=g.index.array,nb=Array.from({length:P.count},()=>new Set());
+ for(let t=0;t<I.length;t+=3){const a=I[t],b=I[t+1],c=I[t+2];nb[a].add(b).add(c);nb[b].add(a).add(c);nb[c].add(a).add(b);}
+ // Taubin smoothing: a shrinking step then an inflating step, so the head keeps its size
+ for(let it=0;it<16;it++){const f=it%2?-.53:.5,Q=Float32Array.from(P.array);for(let i=0;i<P.count;i++){let x=0,y=0,z=0;for(const j of nb[i]){x+=Q[j*3];y+=Q[j*3+1];z+=Q[j*3+2];}const k=nb[i].size||1;
+   P.setXYZ(i,Q[i*3]+(x/k-Q[i*3])*f,Q[i*3+1]+(y/k-Q[i*3+1])*f,Q[i*3+2]+(z/k-Q[i*3+2])*f);}}
+ g.computeVertexNormals();const N=g.attributes.normal;for(let i=0;i<P.count;i++){P.setXYZ(i,P.getX(i)+N.getX(i)*3,P.getY(i)+N.getY(i)*3,P.getZ(i)+N.getZ(i)*3);}
+ g.computeVertexNormals();g.computeBoundingBox();addFiber(g,P.array,P.count);
+ headMesh=new THREE.Mesh(g,MAT.head);headMesh.raycast=()=>{};root.add(headMesh);}
 function addFiber(g,pos,n){
  let mx=0,my=0,mz=0;for(let i=0;i<n;i++){mx+=pos[i*3];my+=pos[i*3+1];mz+=pos[i*3+2];}mx/=n;my/=n;mz/=n;
  const C=[0,0,0,0,0,0];for(let i=0;i<n;i++){const x=pos[i*3]-mx,y=pos[i*3+1]-my,z=pos[i*3+2]-mz;C[0]+=x*x;C[1]+=x*y;C[2]+=x*z;C[3]+=y*y;C[4]+=y*z;C[5]+=z*z;}
@@ -674,7 +696,7 @@ function applyAll(){
  if(st.sel){partner(st.sel).forEach(m=>selSet.add(m));const k=st.sel.userData.info[0];
   if(k&&M[k]&&M[k].syn)M[k].syn.forEach(s=>(byKey[s]||[]).forEach(m=>{if(!selSet.has(m)&&(st.mirror||m.userData.side===st.sel.userData.side))synSet.add(m)}));}
  for(const m of parts){const u=m.userData;
-  if(u.kind==='b'){m.visible=st.bones;m.material=st.iso&&st.sel?MAT.ghost:(u.cart?MAT.cart:MAT.bone);continue;}
+  if(u.kind==='b'){m.visible=st.bones&&!u.skull;m.material=st.iso&&st.sel?MAT.ghost:(u.cart?MAT.cart:MAT.bone);continue;}
   m.visible=true;
   if(selSet.has(m))m.material=MAT.sel;
   else if(st.iso&&st.sel)m.material=synSet.has(m)?MAT.syn:MAT.ghost;
@@ -682,7 +704,7 @@ function applyAll(){
   else m.material=synSet.has(m)?MAT.syn:MAT.mus;
   m.renderOrder=m.material===MAT.ghost?2:m.material===MAT.syn?1:0;
  }
- for(const sh of sheaths)sh.visible=st.layer>=8&&!(st.iso&&st.sel);$('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
+ if(headMesh)headMesh.material=st.iso&&st.sel?MAT.ghost:MAT.head;for(const sh of sheaths)sh.visible=st.layer>=8&&!(st.iso&&st.sel);$('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
  $('bBones').classList.toggle('on',st.bones);$('bIso').classList.toggle('on',st.iso);$('bMirror').classList.toggle('on',st.mirror);
 }
 // ---------- camera ----------
