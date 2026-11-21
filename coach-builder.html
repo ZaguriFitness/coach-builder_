@@ -586,13 +586,23 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .rsstep button{width:58px;height:58px;border-radius:999px;border:1px solid var(--glass-b);background:var(--glass);color:var(--ink);font-weight:700;font-size:1rem}
 .rsgo{width:100%;font-size:1.1rem}
 
-/* library home: the categories on a ring (wheel) */
+/* library home: the categories as slices of a wheel */
 .groups:has(.wheel){display:block}
-.wheel{position:relative;width:min(100%,400px);aspect-ratio:1;margin:6px auto 22px}
-.wring{position:absolute;inset:13%;border-radius:50%;border:2px dashed color-mix(in srgb,var(--v2) 40%,transparent)}
-.wcore{position:absolute;left:50%;top:50%;width:34%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--grad);display:grid;place-items:center;align-content:center;gap:4px;color:#fff;font-weight:800;font-size:.9rem;box-shadow:0 18px 40px -14px rgba(255,128,20,.9),inset 0 0 0 6px rgba(255,255,255,.12)}
-.wcore svg{width:42%;height:auto;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.wcore circle{fill:#fff;stroke:none}
+.wheel{width:min(100%,420px);margin:10px auto 24px}
+.wheel>svg{display:block;width:100%;height:auto;overflow:visible}
+.wrim{fill:none;stroke:#F08A2A;stroke-width:9}
+.wbase{fill:#3a2412}
+.wsf{fill:var(--card,#111);stroke:#F08A2A;stroke-width:1;stroke-opacity:.5}
+.wsl{fill:none;stroke:#F08A2A;stroke-width:1.6;stroke-opacity:.85;pointer-events:none}
+.wimg2{opacity:.22;pointer-events:none}
+.wtx{fill:var(--ink);font-weight:800;font-size:19px;text-anchor:middle;dominant-baseline:middle;pointer-events:none;paint-order:stroke;stroke:var(--card,#111);stroke-width:4px}
+.wseg{cursor:pointer;outline:none}
+.wseg:hover .wsf,.wseg:focus-visible .wsf{fill:#2a1a0e}
+.wseg:active .wsf{fill:#3a2412}
+.wseg:hover .wimg2,.wseg:active .wimg2{opacity:.4}
+.whub{fill:#1a110a;stroke:#F08A2A;stroke-width:4}
+.whub2{fill:#0d0d0d;stroke:#F08A2A;stroke-width:2;stroke-opacity:.7}
+
 .grp.wb,.grp.wb[aria-pressed="true"]{position:absolute;width:23.5%;aspect-ratio:1;min-height:0;padding:4px;transform:translate(-50%,-50%);border-radius:50%;font-size:clamp(.82rem,3.6vw,1.05rem);font-weight:800;line-height:1.15;display:grid;place-items:center;text-align:center}
 .grp.wb:active{transform:translate(-50%,-50%) scale(.94)}
 .grp.wb span{max-width:100%}
@@ -614,8 +624,8 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 
 <div class="app" dir="rtl">
   <header class="apphead homeonly">
-    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF8A1F"/><stop offset="1" stop-color="#FFB347"/></linearGradient></defs>
-      <rect width="48" height="48" rx="14" fill="url(#lg)"/><rect x="11" y="11" width="26" height="30" rx="5" fill="none" stroke="#fff" stroke-width="2.8"/><rect x="18" y="7.5" width="12" height="7.5" rx="3" fill="#fff"/><path d="M16 22l2.5 2.5 4-4.5M25.5 22H32M16 31l2.5 2.5 4-4.5M25.5 31H32" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#141414"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="11.25" fill="none" stroke="#F08A2A" stroke-opacity=".55" stroke-width="1.5"/>
+      <svg x="5" y="5" width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="16" width="68" height="68" fill="none" stroke="#F08A2A" stroke-width="5"/><g stroke="#8d8378" stroke-width="4" stroke-linecap="round" opacity=".8"><path d="M50 40 22 25M50 40 78 25M50 60 31 82M50 60 69 82"/></g><g stroke="#F3E7D6" stroke-linecap="round"><path d="M21 41H79" stroke-width="5"/><path d="M50 33v27" stroke-width="9"/><path d="M50 58 45 84M50 58l5 26" stroke-width="6"/></g><circle cx="50" cy="25" r="7" fill="#F3E7D6"/></svg></svg>
     <div class="htxt"><h1 dir="ltr">CoachBuilder</h1><p class="tagline">תוכניות אימון למאמנים</p></div>
     <div class="hcloud" id="cloud"></div>
   </header>
@@ -3056,11 +3066,8 @@ function renderCloud(){
 function renderGroups(){
   // the home screen: big category tiles only; inside a category (or while searching) they step aside
   $("groups").hidden = !!(F.g || F.q.trim());
-  // the categories sit on a ring around a center circle, starting at the top and going clockwise
-  $("groups").innerHTML = `<div class="wheel"><div class="wring" aria-hidden="true"></div>
-    <div class="wcore" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.6" r="2.3"/><path d="M5 9.2c2.3.9 4.6 1.3 7 1.3s4.7-.4 7-1.3M12 10.5v5.2M12 15.7 9 21.5M12 15.7l3 5.8"/></svg><span>בחרו אזור</span></div>
-    ${GROUPS.map((g, i) => { const a = i / GROUPS.length * 2 * Math.PI, R = 38;
-      return `<button type="button" class="grp wb" data-act="grp" data-g="${g.k}" style="left:${(50 + R*Math.sin(a)).toFixed(2)}%;top:${(50 - R*Math.cos(a)).toFixed(2)}%"><i class="wimg" aria-hidden="true" style="background-image:url(anatomy/wheel/${g.k}.webp)"></i><span>${g.he}</span></button>`; }).join("")}</div>
+  // the categories are slices of a wheel (spokes between them, a glowing rim, the figure in the hub)
+  $("groups").innerHTML = wheelSVG() + `
     <a class="atlasbtn" href="anatomy/index.html"><span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 7.5v7M7 9.5l5 1.5 5-1.5M12 14.5l-3 6.5M12 14.5l3 6.5"/><path d="M3.5 12a8.5 3 0 0 0 17 0" opacity=".55"/></svg></span><span class="atx"><b>אטלס שרירים 3D</b><small>מודל אנטומי, שכבות ומעבדת אי-ספיקה</small></span><i aria-hidden="true">‹</i></a>`;
 }
 
@@ -3170,6 +3177,33 @@ function card(e){
     <button type="button" class="plus" data-act="toggle" data-id="${esc(e.id)}" aria-pressed="${on}" aria-label="${on?"הסר מהתוכנית":"הוסף לתוכנית"}: ${esc(e.he)}">${on?"✓":"+"}</button></div></li>`;
 }
 
+// Vitruvian-style figure (0..100 box): used in the wheel hub and in the logo
+const VITRU = `<rect x="16" y="16" width="68" height="68" fill="none" stroke="#F08A2A" stroke-width="4"/>
+  <g stroke="#8d8378" stroke-width="3.2" stroke-linecap="round" opacity=".8"><path d="M50 40 22 25M50 40 78 25M50 60 31 82M50 60 69 82"/></g>
+  <g stroke="#F3E7D6" stroke-linecap="round"><path d="M21 41H79" stroke-width="4.2"/><path d="M50 33v27" stroke-width="8"/><path d="M50 58 45 84M50 58l5 26" stroke-width="5"/></g>
+  <circle cx="50" cy="25" r="6.5" fill="#F3E7D6"/>`;
+function wheelSVG(){
+  const N = GROUPS.length, C = 200, R = 178, r = 66, gap = 7, deg = Math.PI/180;
+  const pt = (rad, a) => [(C + rad*Math.cos(a)).toFixed(1), (C + rad*Math.sin(a)).toFixed(1)];
+  const seg = (i, R1, r1) => { const a0 = (-90 + i*360/N)*deg, a1 = (-90 + (i+1)*360/N)*deg, po = gap/2/R1, pi = gap/2/r1;
+    const [x1,y1] = pt(R1, a0+po), [x2,y2] = pt(R1, a1-po), [x3,y3] = pt(r1, a1-pi), [x4,y4] = pt(r1, a0+pi);
+    return `M${x1} ${y1}A${R1} ${R1} 0 0 1 ${x2} ${y2}L${x3} ${y3}A${r1} ${r1} 0 0 0 ${x4} ${y4}Z`; };
+  const mid = i => (-90 + (i+.5)*360/N)*deg;
+  return `<div class="wheel"><svg viewBox="0 0 400 400" role="group" aria-label="בחרו אזור">
+    <defs><filter id="wglow" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      ${GROUPS.map((g,i) => `<clipPath id="wc${i}"><path d="${seg(i, R-5, r+5)}"/></clipPath>`).join("")}</defs>
+    <circle cx="${C}" cy="${C}" r="${R+8}" class="wrim" filter="url(#wglow)"/>
+    <circle cx="${C}" cy="${C}" r="${R+3}" class="wbase"/>
+    ${GROUPS.map((g,i) => { const [cx,cy] = pt((R+r)/2 + 8, mid(i)), [ix,iy] = pt((R+r)/2 + 4, mid(i));
+      return `<g class="wseg" data-act="grp" data-g="${g.k}" role="button" tabindex="0" aria-label="${g.he}">
+        <path d="${seg(i, R, r)}" class="wsf"/>
+        <image href="anatomy/wheel/${g.k}.webp" x="${(ix-62).toFixed(1)}" y="${(iy-62).toFixed(1)}" width="124" height="124" clip-path="url(#wc${i})" class="wimg2" preserveAspectRatio="xMidYMid slice"/>
+        <path d="${seg(i, R-5, r+5)}" class="wsl"/>
+        <text x="${cx}" y="${cy}" class="wtx">${g.he}</text></g>`; }).join("")}
+    <circle cx="${C}" cy="${C}" r="${r-4}" class="wbase"/><circle cx="${C}" cy="${C}" r="${r-8}" class="whub"/><circle cx="${C}" cy="${C}" r="${r-20}" class="whub2"/>
+    <svg x="${C-34}" y="${C-34}" width="68" height="68" viewBox="0 0 100 100" aria-hidden="true">${VITRU}</svg>
+  </svg></div>`;
+}
 function renderLibrary(){
   renderGroups(); renderFilters();
   const t = cur(), d = curDay(), Gc = GROUPS.find(g => g.k === F.g);
