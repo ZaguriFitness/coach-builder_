@@ -630,6 +630,7 @@ async function load(){
   if(kind==='m'){(byNorm[n]=byNorm[n]||[]).push(mesh);if(info[0])(byKey[info[0]]=byKey[info[0]]||[]).push(mesh);}
   g.computeBoundingBox();
  }
+ trimSheath();
  root.updateMatrixWorld(true);
  for(const m of parts)bb.expandByObject(m);
  const c=bb.getCenter(new THREE.Vector3());root.position.sub(c);root.updateMatrixWorld(true);
@@ -637,6 +638,15 @@ async function load(){
  home();applyAll();buildSearch();
  $('loading').style.display='none';
 }
+// The oblique / transverse abdominal meshes in the source data run all the way to the midline (their flat tendon
+// sheet), so at the surface they hid the rectus abdominis. Drop their triangles that lie in front of the rectus.
+function trimSheath(){const R=byNorm['rectus abdominis']||[];if(!R.length)return;const edge={};
+ for(const m of R){const P=m.geometry.attributes.position.array;for(let i=0;i<P.length;i+=3){const b=Math.round(P[i+2]/15);edge[b]=Math.max(edge[b]||0,Math.abs(P[i]));}}
+ const lim=z=>{const b=Math.round(z/15);return Math.max(edge[b]||0,edge[b-1]||0,edge[b+1]||0);};
+ for(const n of ['external oblique','internal oblique','transversus abdominis'])for(const m of byNorm[n]||[]){const g=m.geometry,P=g.attributes.position.array,I=g.index.array,keep=[];
+  const inS=v=>{const x=Math.abs(P[v*3]),y=P[v*3+1],L=lim(P[v*3+2]);return L>0&&x<L+3&&y<-120;};
+  for(let t=0;t<I.length;t+=3){if(inS(I[t])&&inS(I[t+1])&&inS(I[t+2]))continue;keep.push(I[t],I[t+1],I[t+2]);}
+  g.setIndex(keep);g.computeBoundingBox();g.computeBoundingSphere();}}
 function addFiber(g,pos,n){
  let mx=0,my=0,mz=0;for(let i=0;i<n;i++){mx+=pos[i*3];my+=pos[i*3+1];mz+=pos[i*3+2];}mx/=n;my/=n;mz/=n;
  const C=[0,0,0,0,0,0];for(let i=0;i<n;i++){const x=pos[i*3]-mx,y=pos[i*3+1]-my,z=pos[i*3+2]-mz;C[0]+=x*x;C[1]+=x*y;C[2]+=x*z;C[3]+=y*y;C[4]+=y*z;C[5]+=z*z;}
