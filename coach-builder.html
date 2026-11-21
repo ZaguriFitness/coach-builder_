@@ -3201,8 +3201,8 @@ function wheelSVG(){
         <image href="anatomy/wheel/${g.k}.webp" x="${(ix-62).toFixed(1)}" y="${(iy-62).toFixed(1)}" width="124" height="124" clip-path="url(#wc${i})" class="wimg2" preserveAspectRatio="xMidYMid slice"/>
         <path d="${seg(i, R-5, r+5)}" class="wsl"/>
 </g>`; }).join("")}
-    <circle cx="${C}" cy="${C}" r="${r-4}" class="wbase"/><circle cx="${C}" cy="${C}" r="${r-8}" class="whub"/><circle cx="${C}" cy="${C}" r="${r-20}" class="whub2"/>
-    <svg x="${C-34}" y="${C-34}" width="68" height="68" viewBox="0 0 100 100" aria-hidden="true">${VITRU}</svg>
+    <circle cx="${C}" cy="${C}" r="${r-4}" class="wbase"/><circle cx="${C}" cy="${C}" r="${r-8}" class="whub"/><circle cx="${C}" cy="${C}" r="${r-15}" class="whub2"/>
+    <svg x="${C-42}" y="${C-42}" width="84" height="84" viewBox="0 0 100 100" aria-hidden="true">${VITRU}</svg>
   </svg>
     ${GROUPS.map((g,i) => { const [cx,cy] = pt((R+r)/2 + 8, mid(i)); return `<span class="wtx" aria-hidden="true" style="left:${(cx/4).toFixed(2)}%;top:${(cy/4).toFixed(2)}%">${g.he}</span>`; }).join("")}</div>`;
 }
