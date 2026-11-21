@@ -540,10 +540,10 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
   background:linear-gradient(135deg,rgba(255,138,31,.22),rgba(255,179,71,.06)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);color:var(--ink);box-shadow:var(--shadow)}
 .grp:active{transform:scale(.97)}
 @media (max-width:420px){.grp,.grp[aria-pressed="true"]{font-size:1.3rem;padding:16px 6px}}
-.cathead{flex-wrap:nowrap}.cathead h2{min-width:0;margin:0}.cathead .gbackb{order:0;margin-inline-start:auto}
+.cathead{flex-wrap:nowrap}.cathead h2{min-width:0;margin:0}.cathead{justify-content:flex-start}.cathead .gbackb{order:-1;margin:0}
 
 /* program, inside one area: name + ✕ on top, the add button right below */
-.gtop{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;margin:2px 0 10px}
+.gtop{list-style:none;display:flex;align-items:center;justify-content:flex-start;gap:12px;margin:2px 0 10px}.gtop>.xbtn{order:-1}
 .gtopl{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
 .gtopl .ghn{font-family:var(--display);font-size:1.6rem;font-weight:800;color:var(--accent)}
 .gtopl .ghm{color:var(--muted);font-size:.9rem}
