@@ -620,6 +620,10 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .atlasbtn .atx{flex:1;min-width:0;display:grid;gap:2px}.atlasbtn b{font-size:1.15rem;font-weight:800}.atlasbtn small{color:var(--muted);font-size:.82rem}
 .atlasbtn>i{font-style:normal;font-size:1.6rem;color:var(--accent);flex:none}
 .homelink{display:flex;align-items:center;gap:inherit;color:inherit;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}.homelink:active{opacity:.75}
+.wtx small{display:block;font-size:.62em;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-top:1px}
+small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-color:var(--muted);letter-spacing:.02em}
+.subhead small.en{display:block;font-size:.72em;margin-top:2px}
+.gtopl .ghe{color:var(--muted);font-size:.85rem;font-weight:600}
 </style>
 </head>
 <body>
@@ -2840,6 +2844,16 @@ const GROUPS = [
   {k:"full",he:"פונקציונלי",subs:{oly:"הרמות אולימפיות",kb:"קטלבל",carry:"נשיאות וסחיבה",plyo:"פליאומטריקה וכדור כוח",comp:"תרגילים משולבים",metab:"קרדיו ומטבולי",agility:"שיווי משקל וזריזות"}},
   {k:"mob",he:"מוביליטי",subs:{hips:"ירכיים",tspine:"גב עליון וכתפיים",ankle:"קרסול",stretch:"מתיחות וחימום"}}
 ];
+// English names of the body areas and their sub-groups (shown under / beside the Hebrew)
+const GEN = {legs:"Legs",back:"Back",chest:"Chest",shoulders:"Shoulders",arms:"Arms",core:"Core",full:"Functional",mob:"Mobility"};
+const SUBEN = {"legs.q":"Quads & Lunges","legs.h":"Hamstrings","legs.g":"Glutes","legs.c":"Calves","legs.a":"Adductors & Abductors",
+  "back.lat":"Lats & Pull-Ups","back.mid":"Mid Back & Rows","back.low":"Lower Back & Deadlifts","back.trap":"Traps",
+  "chest.press":"Chest Press","chest.fly":"Chest Fly","chest.push":"Push-Ups","chest.dip":"Dips",
+  "shoulders.press":"Presses & Front Delts","shoulders.side":"Lateral Delts","shoulders.rear":"Rear Delts","shoulders.rot":"Rotator Cuff & Stability",
+  "arms.bi":"Biceps","arms.tri":"Triceps","arms.fa":"Forearms & Grip",
+  "core.abs":"Abs","core.obl":"Obliques & Rotation","core.anti":"Stability & Planks",
+  "full.oly":"Olympic Lifts","full.kb":"Kettlebell","full.carry":"Carries","full.plyo":"Plyometrics & Med Ball","full.comp":"Complexes","full.metab":"Cardio & Conditioning","full.agility":"Balance & Agility",
+  "mob.hips":"Hips","mob.tspine":"Upper Back & Shoulders","mob.ankle":"Ankles","mob.stretch":"Stretching & Warm-Up"};
 const EQ = {bw:"משקל גוף",db:"משקולות",bb:"מוט",kb:"קטלבל",bd:"גומייה",cb:"כבל",mc:"מכונה",bs:"בוסו",sw:"כדור פיזיו",mb:"כדור כוח",tx:"TRX",rg:"טבעות",pb:"מתח/מקבילים",sl:"מזחלת",rp:"חבלי קרב",sd:"סנדבג",lm:"לנדמין",gl:"גלשנים",bx:"קופסה/ספסל",cm:"מכונת קרדיו"};
 const TYPES = {S:"כוח",F:"פונקציונלי",C:"קליסטניקס",P:"פיצוץ וכוח מתפרץ",K:"קרדיו",B:"יציבות ושיקום",M:"מוביליטי"};
 const LVL = {1:"מתחיל",2:"בינוני",3:"מתקדם"};
@@ -3120,7 +3134,7 @@ function heTr(en){
     return o.replace(/(.)\1+/g,"$1");
   }).filter(x => x.length > 1).join(" ");
 }
-function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||"", heTr(e.en)].join(" ")); }
+function hayOf(e){ const G = GROUPS.find(g => g.k === e.g); return norm([e.he, e.he0!==e.he?e.he0:"", e.en, G?G.he:"", G?G.subs[e.sub]:"", G?GEN[G.k]:"", SUBEN[e.g+"."+e.sub]||"", EQ[e.eq], EQALIAS[e.eq]||"", TYPES[e.type], ALIAS[e.g+"."+e.sub]||"", EXALIAS[e.en]||"", heTr(e.en)].join(" ")); }
 // search words without the joining words people type ("פולי עליון עם מוט")
 const STOP = new Set(["עם","של","את","גם"].map(w => norm(w)));
 const qtoks = q => norm(q).split(" ").filter(t => t && !STOP.has(t));
@@ -3205,12 +3219,12 @@ function wheelSVG(){
     <circle cx="${C}" cy="${C}" r="${r-4}" class="wbase"/><circle cx="${C}" cy="${C}" r="${r-8}" class="whub"/><circle cx="${C}" cy="${C}" r="${r-15}" class="whub2"/>
     <svg x="${C-42}" y="${C-42}" width="84" height="84" viewBox="0 0 100 100" aria-hidden="true">${VITRU}</svg>
   </svg>
-    ${GROUPS.map((g,i) => { const [cx,cy] = pt((R+r)/2 + 8, mid(i)); return `<span class="wtx" aria-hidden="true" style="left:${(cx/4).toFixed(2)}%;top:${(cy/4).toFixed(2)}%">${g.he}</span>`; }).join("")}</div>`;
+    ${GROUPS.map((g,i) => { const [cx,cy] = pt((R+r)/2 + 8, mid(i)); return `<span class="wtx" aria-hidden="true" style="left:${(cx/4).toFixed(2)}%;top:${(cy/4).toFixed(2)}%">${g.he}<small dir="ltr">${GEN[g.k]||""}</small></span>`; }).join("")}</div>`;
 }
 function renderLibrary(){
   renderGroups(); renderFilters();
   const t = cur(), d = curDay(), Gc = GROUPS.find(g => g.k === F.g);
-  $("catbox").hidden = !!F.q.trim() || !Gc; $("cattitle").textContent = Gc ? Gc.he : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
+  $("catbox").hidden = !!F.q.trim() || !Gc; $("cattitle").innerHTML = Gc ? `${esc(Gc.he)} <small class="en" dir="ltr">${GEN[Gc.k]||""}</small>` : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
   $("target").innerHTML = t ? `<span>מוסיף ל: <b>${esc(t.name)}</b> · <b>${esc(d?d.name:"")}</b></span>` : "";
   if (!F.q.trim() && !Gc){ $("lib").innerHTML = ""; return; }
   const list = filtered();
@@ -3225,7 +3239,7 @@ function renderLibrary(){
 function bySub(G, list){
   if (!G) return `<ul class="list">${list.map(card).join("")}</ul>`;
   return Object.entries(G.subs).map(([k,v]) => { const xs = list.filter(e => e.sub === k); if (!xs.length) return "";
-    return `<div class="subhead"><h3>${esc(v)}</h3><span>${xs.length} תרגילים</span></div><ul class="list">${xs.map(card).join("")}</ul>`; }).join("")
+    return `<div class="subhead"><h3>${esc(v)} <small class="en" dir="ltr">${SUBEN[G.k+"."+k]||""}</small></h3><span>${xs.length} תרגילים</span></div><ul class="list">${xs.map(card).join("")}</ul>`; }).join("")
     + (list.some(e => !G.subs[e.sub]) ? `<ul class="list">${list.filter(e => !G.subs[e.sub]).map(card).join("")}</ul>` : "");
 }
 
@@ -3283,7 +3297,7 @@ function itemsHtml(d){
   d.items.forEach((it,i) => { const g = areaOf(it); (groups.find(G => G.g === g) || other).rows.push([it,i]); });
   if (other.rows.length) groups.push(other);
   const label = G => { const meta = GROUPS.find(x => x.k === G.g), n = G.rows.length, sets = G.rows.reduce((a,[it]) => a + setsOf(it), 0);
-    return `<span class="ghn">${meta ? meta.he : "אחר"}</span><span class="ghm">${n ? `${n} ${n===1?"תרגיל":"תרגילים"}${sets?` · ${sets} סטים`:""}` : "0 תרגילים"}</span>`; };
+    return `<span class="ghn">${meta ? meta.he : "אחר"}</span>${meta && GEN[meta.k] ? `<span class="ghe" dir="ltr">${GEN[meta.k]}</span>` : ""}<span class="ghm">${n ? `${n} ${n===1?"תרגיל":"תרגילים"}${sets?` · ${sets} סטים`:""}` : "0 תרגילים"}</span>`; };
   // inside one body area: only its exercises, with a way back to the list of areas
   const G = PCAT && groups.find(x => x.g === PCAT);
   if (G){
