@@ -619,15 +619,16 @@ body[data-v="tr"] #layout,body[data-v="tr"] #addbar{display:none!important}
 .atlasbtn .aic circle{fill:#fff;stroke:none}
 .atlasbtn .atx{flex:1;min-width:0;display:grid;gap:2px}.atlasbtn b{font-size:1.15rem;font-weight:800}.atlasbtn small{color:var(--muted);font-size:.82rem}
 .atlasbtn>i{font-style:normal;font-size:1.6rem;color:var(--accent);flex:none}
+.homelink{display:flex;align-items:center;gap:inherit;color:inherit;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}.homelink:active{opacity:.75}
 </style>
 </head>
 <body>
 
 <div class="app" dir="rtl">
   <header class="apphead homeonly">
-    <svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#141414"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="11.25" fill="none" stroke="#F08A2A" stroke-opacity=".55" stroke-width="1.5"/>
+    <a class="homelink" href="#" data-act="gohome" aria-label="CoachBuilder, למסך הראשי"><svg class="logo" viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#141414"/><rect x=".75" y=".75" width="46.5" height="46.5" rx="11.25" fill="none" stroke="#F08A2A" stroke-opacity=".55" stroke-width="1.5"/>
       <svg x="5" y="5" width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="16" width="68" height="68" fill="none" stroke="#F08A2A" stroke-width="5"/><g stroke="#8d8378" stroke-width="4" stroke-linecap="round" opacity=".8"><path d="M50 40 22 25M50 40 78 25M50 60 31 82M50 60 69 82"/></g><g stroke="#F3E7D6" stroke-linecap="round"><path d="M21 41H79" stroke-width="5"/><path d="M50 33v27" stroke-width="9"/><path d="M50 58 45 84M50 58l5 26" stroke-width="6"/></g><circle cx="50" cy="25" r="7" fill="#F3E7D6"/></svg></svg>
-    <div class="htxt"><h1 dir="ltr">CoachBuilder</h1><p class="tagline">תוכניות אימון למאמנים</p></div>
+    <div class="htxt"><h1 dir="ltr">CoachBuilder</h1><p class="tagline">תוכניות אימון למאמנים</p></div></a>
     <div class="hcloud" id="cloud"></div>
   </header>
   <div class="addbar" id="addbar" hidden><div><small>מוסיף תרגילים ל</small><b id="addname"></b></div><button type="button" class="primary" data-act="backprog">חזרה לתוכנית</button></div>
@@ -3920,6 +3921,8 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
+    case "gohome": { ev.preventDefault(); closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
+      F.g = null; F.q = ""; $("q").value = ""; setView("lib"); renderLibrary(); window.scrollTo(0, 0); break; }
     case "login": cloudLogin(); break;
     case "acct": openAccount(); break;
     case "logout": CLOUD.auth.signOut().then(() => location.reload()); break;
