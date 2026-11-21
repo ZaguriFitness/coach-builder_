@@ -600,6 +600,7 @@ const MAT={
  syn:fiberize(new THREE.MeshStandardMaterial({color:0xdc9468,roughness:.65,transparent:true,opacity:.8,depthWrite:false})),
  ghost:new THREE.MeshStandardMaterial({color:0xd9c9c4,transparent:true,opacity:.07,depthWrite:false,roughness:1}),
  bone:new THREE.MeshStandardMaterial({color:0xd9cfb4,roughness:.62}),
+ sheath:new THREE.MeshStandardMaterial({color:0xf4efe9,roughness:.35,transparent:true,opacity:.34,depthWrite:false}),
 };
 const root=new THREE.Group();root.rotation.x=-Math.PI/2;scene.add(root);
 const parts=[];const byNorm={};const byKey={};
@@ -645,8 +646,13 @@ function trimSheath(){const R=byNorm['rectus abdominis']||[];if(!R.length)return
  const lim=z=>{const b=Math.round(z/15);return Math.max(edge[b]||0,edge[b-1]||0,edge[b+1]||0);};
  for(const n of ['external oblique','internal oblique','transversus abdominis'])for(const m of byNorm[n]||[]){const g=m.geometry,P=g.attributes.position.array,I=g.index.array,keep=[];
   const inS=v=>{const x=Math.abs(P[v*3]),y=P[v*3+1],L=lim(P[v*3+2]);return L>0&&x<L+3&&y<-120;};
-  for(let t=0;t<I.length;t+=3){if(inS(I[t])&&inS(I[t+1])&&inS(I[t+2]))continue;keep.push(I[t],I[t+1],I[t+2]);}
-  g.setIndex(keep);g.computeBoundingBox();g.computeBoundingSphere();}}
+  const cut=[];for(let t=0;t<I.length;t+=3){if(inS(I[t])&&inS(I[t+1])&&inS(I[t+2])){cut.push(I[t],I[t+1],I[t+2]);continue;}keep.push(I[t],I[t+1],I[t+2]);}
+  g.setIndex(keep);g.computeBoundingBox();g.computeBoundingSphere();
+  // the outermost sheet (external oblique) is kept as a thin, see-through white sheath over the rectus, like the real
+  // aponeurosis. It cannot be tapped, so a tap in the middle of the belly selects the rectus abdominis.
+  if(n==='external oblique'&&cut.length){const g2=new THREE.BufferGeometry();g2.setAttribute('position',g.attributes.position);if(g.attributes.normal)g2.setAttribute('normal',g.attributes.normal);g2.setIndex(cut);
+   const sh=new THREE.Mesh(g2,MAT.sheath);sh.raycast=()=>{};sh.renderOrder=3;root.add(sh);sheaths.push(sh);}}}
+const sheaths=[];
 function addFiber(g,pos,n){
  let mx=0,my=0,mz=0;for(let i=0;i<n;i++){mx+=pos[i*3];my+=pos[i*3+1];mz+=pos[i*3+2];}mx/=n;my/=n;mz/=n;
  const C=[0,0,0,0,0,0];for(let i=0;i<n;i++){const x=pos[i*3]-mx,y=pos[i*3+1]-my,z=pos[i*3+2]-mz;C[0]+=x*x;C[1]+=x*y;C[2]+=x*z;C[3]+=y*y;C[4]+=y*z;C[5]+=z*z;}
@@ -676,7 +682,7 @@ function applyAll(){
   else m.material=synSet.has(m)?MAT.syn:MAT.mus;
   m.renderOrder=m.material===MAT.ghost?2:m.material===MAT.syn?1:0;
  }
- $('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
+ for(const sh of sheaths)sh.visible=st.layer>=8&&!(st.iso&&st.sel);$('lvTxt').textContent=st.layer;$('bAdd').disabled=st.layer>=8;$('bPeel').disabled=st.layer<=1;
  $('bBones').classList.toggle('on',st.bones);$('bIso').classList.toggle('on',st.iso);$('bMirror').classList.toggle('on',st.mirror);
 }
 // ---------- camera ----------
