@@ -3108,7 +3108,7 @@ function renderCloud(){
 
 function renderGroups(){
   // the home screen: big category tiles only; inside a category (or while searching) they step aside
-  $("groups").hidden = !!(F.g || F.q.trim());
+  $("groups").hidden = !!(F.g || F.q.trim() || F.m);
   // the categories are slices of a wheel (spokes between them, a glowing rim, the figure in the hub)
   $("groups").innerHTML = wheelSVG() + `
     <a class="atlasbtn" href="anatomy/index.html"><span class="aic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="4.4" r="2.2"/><path d="M12 7.5v7M7 9.5l5 1.5 5-1.5M12 14.5l-3 6.5M12 14.5l3 6.5"/><path d="M3.5 12a8.5 3 0 0 0 17 0" opacity=".55"/></svg></span><span class="atx"><b>אטלס שרירים 3D</b><small>מודל אנטומי, שכבות ומעבדת אי-ספיקה</small></span><i aria-hidden="true">‹</i></a>`;
@@ -3248,8 +3248,77 @@ function wheelSVG(){
   </svg>
     ${GROUPS.map((g,i) => { const [cx,cy] = pt((R+r)/2 + 8, mid(i)); return `<span class="wtx" aria-hidden="true" style="left:${(cx/4).toFixed(2)}%;top:${(cy/4).toFixed(2)}%">${g.he}<small dir="ltr">${GEN[g.k]||""}</small></span>`; }).join("")}</div>`;
 }
+// muscles of the 3D atlas → the app's exercises that train them (by sub-group; re picks the most fitting ones)
+const MUSMAP = {
+  pec_clav:{he:"חזה עליון",en:"Pectoralis Major – Clavicular Head",subs:["chest.press","chest.fly"],re:/incline|low-to-high|landmine|svend/i},
+  pec_stern:{he:"חזה אמצעי",en:"Pectoralis Major – Sternocostal Head",subs:["chest.press","chest.fly","chest.push"]},
+  pec_abd:{he:"חזה תחתון",en:"Pectoralis Major – Abdominal Head",subs:["chest.dip","chest.press","chest.fly"],re:/decline|dip|high-to-low/i},
+  pec_minor:{he:"פקטורליס מיינור",en:"Pectoralis Minor",subs:["chest.dip","chest.push"]},
+  delt_ant:{he:"דלתא קדמית",en:"Anterior Deltoid",subs:["shoulders.press"]},
+  delt_lat:{he:"דלתא אמצעית",en:"Lateral Deltoid",subs:["shoulders.side"]},
+  delt_post:{he:"דלתא אחורית",en:"Posterior Deltoid",subs:["shoulders.rear"]},
+  biceps_long:{he:"דו-ראשי: ראש ארוך",en:"Biceps Brachii – Long Head",subs:["arms.bi"]},
+  biceps_short:{he:"דו-ראשי: ראש קצר",en:"Biceps Brachii – Short Head",subs:["arms.bi"]},
+  brachialis:{he:"בראכיאליס",en:"Brachialis",subs:["arms.bi"],re:/hammer|reverse|preacher|zottman|cross/i},
+  coracobrach:{he:"קורקוברכיאליס",en:"Coracobrachialis",subs:["chest.fly"]},
+  brachiorad:{he:"ברכיורדיאליס",en:"Brachioradialis",subs:["arms.bi","arms.fa"],re:/hammer|reverse|zottman/i},
+  forearm_flex:{he:"כופפי שורש כף היד והאצבעות",en:"Wrist & Finger Flexors",subs:["arms.fa","full.carry"],re:/^(?!reverse).*(wrist curl|farmer|hang|grip|towel|pinch|carry)/i},
+  forearm_ext:{he:"פושטי שורש כף היד והאצבעות",en:"Wrist & Finger Extensors",subs:["arms.fa","arms.bi"],re:/reverse|wrist extension|rice|roller/i},
+  triceps_long:{he:"תלת-ראשי: ראש ארוך",en:"Triceps Brachii – Long Head",subs:["arms.tri"],re:/overhead|skull|french|crusher|extension/i},
+  triceps_lat:{he:"תלת-ראשי: ראש לטרלי",en:"Triceps Brachii – Lateral Head",subs:["arms.tri"]},
+  triceps_med:{he:"תלת-ראשי: ראש מדיאלי",en:"Triceps Brachii – Medial Head",subs:["arms.tri"]},
+  trap_upper:{he:"טרפז עליון",en:"Upper Trapezius",subs:["back.trap"]},
+  trap_mid:{he:"טרפז אמצעי",en:"Middle Trapezius",subs:["back.mid","shoulders.rear"]},
+  trap_low:{he:"טרפז תחתון",en:"Lower Trapezius",subs:["shoulders.rot","back.mid","back.lat"],re:/y-raise|y raise|prone|face pull|scapular|wall slide|reverse fly|rear delt/i},
+  rhomboids:{he:"רומבואידים",en:"Rhomboids",subs:["back.mid"]},
+  levator:{he:"מרים השכמה",en:"Levator Scapulae",subs:["back.trap"]},
+  lats:{he:"רחב גבי (לאט)",en:"Latissimus Dorsi",subs:["back.lat"]},
+  teres_major:{he:"עגול גדול (טרס מייג'ור)",en:"Teres Major",subs:["back.lat"]},
+  supraspinatus:{he:"סופרהספינטוס",en:"Supraspinatus",subs:["shoulders.rot","shoulders.side"],re:/scaption|full can|rotator|lateral raise|external/i},
+  infraspinatus:{he:"אינפרהספינטוס",en:"Infraspinatus",subs:["shoulders.rot","shoulders.rear"],re:/external|face pull|cuban|rear delt|reverse fly|no money|y-raise|w-raise/i},
+  teres_minor:{he:"עגול קטן (טרס מיינור)",en:"Teres Minor",subs:["shoulders.rot","shoulders.rear"],re:/external|face pull|cuban|rear delt|reverse fly|no money|y-raise|w-raise/i},
+  subscap:{he:"סובסקפולריס",en:"Subscapularis",subs:["shoulders.rot"],re:/internal/i},
+  erector:{he:"זוקפי הגו",en:"Erector Spinae",subs:["back.low"]},
+  multifidus:{he:"מולטיפידוס",en:"Multifidus",subs:["back.low","core.anti"],re:/bird dog|back extension|superman|plank/i},
+  ql:{he:"מרובע המותני (QL)",en:"Quadratus Lumborum",subs:["core.anti","core.obl","full.carry"],re:/side plank|suitcase|carry|side bend|copenhagen/i},
+  rectus_abd:{he:"ישר הבטן",en:"Rectus Abdominis",subs:["core.abs"]},
+  ext_oblique:{he:"אלכסוני חיצוני",en:"External Oblique",subs:["core.obl"]},
+  int_oblique:{he:"אלכסוני פנימי",en:"Internal Oblique",subs:["core.obl"]},
+  transverse:{he:"רוחבי הבטן",en:"Transversus Abdominis",subs:["core.anti"]},
+  serratus:{he:"סראטוס",en:"Serratus Anterior",subs:["chest.push","shoulders.rot","shoulders.press"],re:/plus|serratus|punch|wall slide|landmine press|scapular/i},
+  iliopsoas:{he:"איליופסואס",en:"Iliopsoas",subs:["core.abs","mob.hips"],re:/leg raise|knee raise|tuck|l-sit|hip flexor|march|v-up|hollow/i},
+  tfl:{he:"מותח הפאשיה (TFL)",en:"Tensor Fasciae Latae",subs:["legs.a"],re:/abduct|lateral walk|clamshell|monster|fire hydrant/i},
+  sartorius:{he:"סרטוריוס",en:"Sartorius",subs:["legs.a","mob.hips"]},
+  rectus_fem:{he:"רקטוס פמוריס",en:"Rectus Femoris",subs:["legs.q"]},
+  vastus_lat:{he:"ויסטוס לטרליס",en:"Vastus Lateralis",subs:["legs.q"]},
+  vastus_med:{he:"ויסטוס מדיאליס",en:"Vastus Medialis",subs:["legs.q"]},
+  vastus_int:{he:"ויסטוס אינטרמדיוס",en:"Vastus Intermedius",subs:["legs.q"]},
+  adductors:{he:"מקרבי הירך",en:"Adductors",subs:["legs.a","legs.q"],re:/adduct|copenhagen|sumo|cossack|ball squeeze|wide/i},
+  glute_max:{he:"גלוטאוס מקסימוס",en:"Gluteus Maximus",subs:["legs.g"]},
+  glute_med:{he:"גלוטאוס מדיוס",en:"Gluteus Medius",subs:["legs.a","legs.g"],re:/abduct|lateral walk|clamshell|monster|fire hydrant|single-leg|step/i},
+  glute_min:{he:"גלוטאוס מינימוס",en:"Gluteus Minimus",subs:["legs.a"],re:/abduct|lateral walk|clamshell|monster|fire hydrant/i},
+  piriformis:{he:"פיריפורמיס",en:"Piriformis",subs:["mob.hips","legs.a"],re:/figure|pigeon|90\/90|clamshell|external/i},
+  bf_long:{he:"דו-ראשי הירך: ראש ארוך",en:"Biceps Femoris – Long Head",subs:["legs.h"]},
+  bf_short:{he:"דו-ראשי הירך: ראש קצר",en:"Biceps Femoris – Short Head",subs:["legs.h"],re:/curl|nordic/i},
+  semiten:{he:"סמיטנדינוסוס",en:"Semitendinosus",subs:["legs.h"]},
+  semimem:{he:"סמימברנוסוס",en:"Semimembranosus",subs:["legs.h"]},
+  gastroc_med:{he:"תאומים",en:"Gastrocnemius",subs:["legs.c"]},
+  gastroc_lat:{he:"תאומים",en:"Gastrocnemius",subs:["legs.c"]},
+  soleus:{he:"סוליאוס",en:"Soleus",subs:["legs.c"],re:/seated|bent-knee/i},
+  tib_ant:{he:"טיביאליס אנטריור",en:"Tibialis Anterior",subs:["legs.c","mob.ankle"],re:/tibialis|toe raise|dorsi|heel walk/i}
+};
+function musList(m){ const inS = e => m.subs.includes(e.g+"."+e.sub), all = EX.filter(inS);
+  const best = m.re ? all.filter(e => m.re.test(e.en||"")) : all; return best.length ? best : all; }
+function openMuscle(k, fromAtlas){ if (!MUSMAP[k]) return; F.m = k; F.fromAtlas = !!fromAtlas; F.g = null; F.sub = "all"; F.q = ""; $("q").value = "";
+  $("panel").classList.remove("open"); $("picker").hidden = true; setView("lib"); renderLibrary(); window.scrollTo(0, 0); }
 function renderLibrary(){
   renderGroups(); renderFilters();
+  if (F.m && MUSMAP[F.m]){ const m = MUSMAP[F.m], list = musList(m), t0 = cur(), d0 = curDay();
+    $("catbox").hidden = false; $("cattitle").innerHTML = `${esc(m.he)} <small class="en" dir="ltr">${esc(m.en)}</small>`;
+    $("target").innerHTML = t0 ? `<span>מוסיף ל: <b>${esc(t0.name)}</b> · <b>${esc(d0?d0.name:"")}</b></span>` : "";
+    const bySubs = m.subs.map(k => { const [g,sb] = k.split("."), G = GROUPS.find(x => x.k === g), xs = list.filter(e => e.g === g && e.sub === sb); if (!xs.length || !G) return "";
+      return `<div class="subhead"><h3>${esc(G.subs[sb])} <small class="en" dir="ltr">${SUBEN[k]||""}</small></h3><span>${xs.length} תרגילים</span></div><ul class="list">${xs.map(card).join("")}</ul>`; }).join("");
+    $("lib").innerHTML = bySubs || `<div class="empty">אין עדיין תרגילים לשריר הזה.</div>`; return; }
   const t = cur(), d = curDay(), Gc = GROUPS.find(g => g.k === F.g);
   $("catbox").hidden = !!F.q.trim() || !Gc; $("cattitle").innerHTML = Gc ? `${esc(Gc.he)} <small class="en" dir="ltr">${GEN[Gc.k]||""}</small>` : ""; $("q2").placeholder = `חיפוש ב${Gc ? Gc.he : "קטגוריה"}`; $("q2").setAttribute("aria-label", `חיפוש בתוך ${Gc ? Gc.he : "הקטגוריה"}`);
   $("target").innerHTML = t ? `<span>מוסיף ל: <b>${esc(t.name)}</b> · <b>${esc(d?d.name:"")}</b></span>` : "";
@@ -3437,7 +3506,7 @@ $("tabs").addEventListener("click", ev => {
   }
   const again = v === "lib" && VIEW === "lib" && !$("panel").classList.contains("open");
   $("panel").classList.remove("open");
-  if (again && (F.g || F.q)){ F.g = null; F.q = ""; $("q").value = ""; renderLibrary(); }
+  if (again && (F.g || F.q || F.m)){ F.m = null; F.g = null; F.q = ""; $("q").value = ""; renderLibrary(); }
   if (v === "tr") setAdding(false);
   setView(v); window.scrollTo(0, 0);
 });
@@ -3968,7 +4037,7 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
-    case "gohome": { ev.preventDefault(); closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
+    case "gohome": { ev.preventDefault(); F.m = null; closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
       F.g = null; F.q = ""; $("q").value = ""; setView("lib"); renderLibrary(); window.scrollTo(0, 0); break; }
     case "login": cloudLogin(); break;
     case "acct": openAccount(); break;
@@ -3993,8 +4062,9 @@ document.addEventListener("click", ev => {
       if (!inDay(id)){ toggle(id); const e = BYID[id]; closeModal(); $("picker").hidden = true; setAdding(false); setView("lib");
         PCAT = e ? e.g : null; renderPanel(); $("panel").classList.add("open"); break; }
       toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
-    case "home": F.g = null; F.sub = "all"; F.q2 = ""; $("q2").value = ""; renderLibrary(); window.scrollTo(0, 0); break;
-    case "grp": F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); window.scrollTo(0, 0); break;
+    case "home": if (F.m){ const k = F.m; F.m = null; if (F.fromAtlas){ location.href = "anatomy/index.html#sel=" + k; break; } }
+      F.g = null; F.sub = "all"; F.q2 = ""; $("q2").value = ""; renderLibrary(); window.scrollTo(0, 0); break;
+    case "grp": F.m = null; F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); window.scrollTo(0, 0); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
     case "clearF": F.lvl.clear(); F.type.clear(); F.eq.clear(); renderLibrary(); break;
@@ -4056,7 +4126,7 @@ function setAdding(on){
 $("newEx").addEventListener("click", openCustom);
 document.addEventListener("keydown", ev => { if (ev.key === "Escape"){ if (!$("modal").hidden) closeModal(); else if (!$("picker").hidden) closePicker(); else $("panel").classList.remove("open"); } });
 let qT;
-$("q").addEventListener("input", ev => { clearTimeout(qT); qT = setTimeout(() => { F.q = ev.target.value; renderLibrary(); }, 120); });
+$("q").addEventListener("input", ev => { clearTimeout(qT); qT = setTimeout(() => { F.q = ev.target.value; if (F.q.trim()) F.m = null; renderLibrary(); }, 120); });
 $("q").addEventListener("keydown", ev => { if (ev.key === "Enter") ev.target.blur(); });
 let q2T;
 $("q2").addEventListener("input", ev => { clearTimeout(q2T); q2T = setTimeout(() => { F.q2 = ev.target.value; renderLibrary(); }, 120); });
@@ -4111,6 +4181,8 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 
 
 renderAll();
+// opened from the 3D atlas: #mus=<muscle> shows the exercises for that muscle
+{ const mh = (location.hash.match(/mus=([a-z_]+)/)||[])[1]; if (mh && MUSMAP[mh]){ history.replaceState(null, "", location.pathname + location.search); openMuscle(mh, true); } }
 </script>
 </body>
 </html>
