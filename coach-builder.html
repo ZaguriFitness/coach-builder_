@@ -3763,10 +3763,10 @@ function openCustom(){
 const DOC = {W:1240, pad:56, ink:"#17171A", muted:"#5F5F66", line:"#E4E4E7", accent:"#E8730F", soft:"#FFF1E3", chalk:"#FAFAFA"};
 const DOC_COLS = [ // right → left
   {k:"ex", t:"תרגיל", w:0.27},
-  {k:"s",  t:"סטים", w:0.08},
-  {k:"r",  t:"חזרות", w:0.10},
-  {k:"w",  t:"משקל", w:0.10},
-  {k:"i",  t:"עצימות\n(RIR/RPE 1–10)", w:0.15},
+  {k:"s",  t:"סטים", w:0.07},
+  {k:"r",  t:"חזרות", w:0.11},
+  {k:"w",  t:"משקל", w:0.14},
+  {k:"i",  t:"עצימות\n(RIR/RPE 1–10)", w:0.11},
   {k:"n",  t:"הערות", w:0.30},
 ];
 const planFull = t => t.days.length === 1 ? "פול באדי (אימון גוף מלא)" : "אימון מפוצל " + LET.slice(0, t.days.length);
@@ -3796,7 +3796,14 @@ function cellText(it, k){
 function wrapLines(ctx, text, maxW){
   const out = [];
   for (const para of String(text).split("\n")){
-    const words = para.split(/\s+/).filter(Boolean); let line = "";
+    // a value too wide for its column (e.g. per-set weights "13.5/13.5/18") breaks after a "/" instead of
+    // running over the column lines; a single piece that is still too wide is cut by characters
+    const words = []; for (const w of para.split(/\s+/).filter(Boolean)){
+      if (ctx.measureText(w).width <= maxW){ words.push(w); continue; }
+      let cur = ""; for (const part of w.split(/(?<=\/)/)){
+        if (ctx.measureText(cur + part).width <= maxW || !cur) cur += part; else { words.push(cur); cur = part; } }
+      for (let piece of [cur]){ while (ctx.measureText(piece).width > maxW && piece.length > 1){ let n = piece.length - 1; while (n > 1 && ctx.measureText(piece.slice(0, n)).width > maxW) n--; words.push(piece.slice(0, n)); piece = piece.slice(n); } if (piece) words.push(piece); } }
+    let line = "";
     if (!words.length){ out.push(""); continue; }
     for (const w of words){
       const test = line ? line + " " + w : w;
@@ -3825,7 +3832,11 @@ async function buildProgramCanvas(t){
     }
     return y + 40;
   };
-  const rowLines = (it) => colX.map(c => { ctx.font = (c.k === "ex" ? "700 " : "400 ") + "22px " + FB; return wrapLines(ctx, cellText(it, c.k), c.w - CP*2); });
+  // numbers (sets, reps, weight, RPE) shrink a little to stay on one line inside their column; only if they still
+  // do not fit do they wrap (after a "/")
+  const NUMK = {s:1, r:1, w:1, i:1};
+  const cellSize = (c, txt) => { if (!NUMK[c.k]) return 22; for (let z = 22; z >= 16; z--){ ctx.font = "400 " + z + "px " + FB; if (ctx.measureText(txt).width <= c.w - CP*2) return z; } return 19; };
+  const rowLines = (it) => colX.map(c => { const txt = cellText(it, c.k), z = cellSize(c, txt); ctx.font = (c.k === "ex" ? "700 " : "400 ") + z + "px " + FB; const l = wrapLines(ctx, txt, c.w - CP*2); l.z = z; return l; });
   const rowH = (it) => Math.max(...rowLines(it).map(l => l.length)) * LH + CP*2;
   const H = measure(), scale = 2;
   cv.width = W * scale; cv.height = H * scale; ctx.scale(scale, scale);
@@ -3863,9 +3874,10 @@ async function buildProgramCanvas(t){
         for (const c of colX.slice(1)){ ctx.moveTo(c.right, y); ctx.lineTo(c.right, y + h); }
         ctx.moveTo(pad, y); ctx.lineTo(pad, y + h); ctx.moveTo(W - pad, y); ctx.lineTo(W - pad, y + h); ctx.stroke();
         colX.forEach((c, ci) => {
-          ctx.font = (c.k === "ex" ? "700 " : "400 ") + "22px " + FB; ctx.fillStyle = c.k === "n" ? DOC.muted : DOC.ink;
-          const center = c.k !== "ex" && c.k !== "n"; ctx.textAlign = center ? "center" : "right";
-          lines[ci].forEach((ln, li) => ctx.fillText(ln, center ? c.right - c.w/2 : c.right - CP, y + CP + li*LH));
+          const z = lines[ci].z || 22; ctx.font = (c.k === "ex" ? "700 " : "400 ") + z + "px " + FB; ctx.fillStyle = c.k === "n" ? DOC.muted : DOC.ink;
+          const center = c.k !== "ex" && c.k !== "n"; ctx.textAlign = center ? "center" : "right"; ctx.direction = NUMK[c.k] && !/[\u0590-\u05FF]/.test(lines[ci].join("")) ? "ltr" : "rtl";
+          lines[ci].forEach((ln, li) => ctx.fillText(ln, center ? c.right - c.w/2 : c.right - CP, y + CP + li*LH + (22 - z)/2));
+          ctx.direction = "rtl";
         });
         y += h; hline(y);
       });
