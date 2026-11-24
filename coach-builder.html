@@ -3091,7 +3091,9 @@ function openAccount(){
     <div class="macts"><button type="button" class="ghost" data-act="logout">התנתקות</button><button type="button" class="ghost" data-act="cancel">סגור</button></div>`);
 }
 // no automatic selection: a trainee is chosen only by tapping their name
-function pickActive(){ if (activeId && !T[activeId]){ activeId = null; activeDay = 0; } }
+// the old "עלייה במדרגות" exercise was merged into "מדרגות במכונה": drop it from saved programs
+function dropRetired(){ for (const id in T){ let ch = false; for (const d of (T[id].days||[])){ const n = d.items.length; d.items = d.items.filter(it => it.x !== "stair-climbing"); if (d.items.length !== n) ch = true; } if (ch) save(id); } }
+function pickActive(){ dropRetired(); if (activeId && !T[activeId]){ activeId = null; activeDay = 0; } }
 function sortedIds(){ return Object.keys(T).sort((a,b) => (T[a].name||"").localeCompare(T[b].name||"", "he")); }
 function cur(){ return activeId ? T[activeId] : null; }
 function curDay(){ const t = cur(); if (!t) return null; if (activeDay >= t.days.length) activeDay = Math.max(0, t.days.length-1); return t.days[activeDay]; }
@@ -3797,8 +3799,6 @@ function docRows(t){
       const items = d.items.filter(it => areaOf(it) === G.k);
       if (items.length) secs.push({title:G.he, items});
     }
-    const other = d.items.filter(it => !GROUPS.some(G => G.k === areaOf(it)));
-    if (other.length) secs.push({title:"אחר", items:other});
     return {name:d.name, secs};
   }).filter(d => d.secs.length);
   return days.length ? days : [{name:(t.days[0]||{}).name||"", secs:[]}];
