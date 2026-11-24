@@ -3836,7 +3836,7 @@ async function buildProgramCanvas(t){
   const {W, pad} = DOC, tw = W - pad*2, colX = [];
   let x = W - pad; for (const c of DOC_COLS){ const w = Math.round(c.w * tw); colX.push({...c, right:x, w}); x -= w; }
   const days = docRows(t), cv = document.createElement("canvas"), ctx = cv.getContext("2d");
-  const CP = 12, LH = 30, HEADH = 64, SECH = 54;
+  const CP = 12, LH = 30, HEADH = 64, SECH = 48;
   // measure pass
   const measure = () => {
     let y = pad + 150;
@@ -3886,7 +3886,7 @@ async function buildProgramCanvas(t){
     for (const s of d.secs){
       ctx.fillStyle = "#FCE3C8"; ctx.fillRect(pad, y, tw, SECH);
       ctx.fillStyle = DOC.accent; ctx.fillRect(W - pad - 10, y, 10, SECH);
-      ctx.fillStyle = "#B4520A"; ctx.font = "800 30px " + FD; ctx.textAlign = "right"; ctx.fillText(s.title, W - pad - CP - 12, y + 10);
+      ctx.fillStyle = "#B4520A"; ctx.font = "700 26px " + FD; ctx.textAlign = "right"; ctx.fillText(s.title, W - pad - CP - 12, y + 10);
       y += SECH;
       s.items.forEach((it, idx) => {
         const lines = rowLines(it), h = Math.max(...lines.map(l => l.length)) * LH + CP*2;
