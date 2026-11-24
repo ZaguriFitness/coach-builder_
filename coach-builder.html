@@ -630,7 +630,7 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .donebtn{border:1px solid var(--glass-b);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:600;white-space:nowrap}
 .donebtn[aria-pressed="true"]{background:#FFE58A;border-color:#F5B700;color:#3a2a00}
 .it.done{box-shadow:inset 0 0 0 2px rgba(245,183,0,.55),var(--shadow);background:linear-gradient(0deg,rgba(255,229,138,.10),rgba(255,229,138,.10)),var(--card)}
-.pfoot{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.pfoot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
 </style>
 </head>
 <body>
@@ -3450,8 +3450,8 @@ function renderPanelInner(p, t){
     </div>
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
     ${PCAT ? "" : `<div class="pfoot">
-      ${t.days.some(x => x.items.some(it => it.done)) ? `<button type="button" class="ghost" data-act="cleardone">ניקוי סימוני "עשינו היום"</button>` : ""}
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
+      ${t.days.some(x => x.items.some(it => it.done)) ? `<button type="button" class="ghost" data-act="cleardone">ניקוי סימוני "עשינו היום"</button>` : ""}
     </div>`}`;
 }
 function itemRow(it,i,list){
