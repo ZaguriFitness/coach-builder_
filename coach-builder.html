@@ -3870,7 +3870,7 @@ async function buildProgramCanvas(t){
   lab("סוג התוכנית:", planFull(t), pad + 110);
   if (t.days.some(x => x.items.some(it => it.done))){   // legend: highlighted rows = done today
     const lt = "בוצע היום · " + new Date().toLocaleDateString("he-IL"); ctx.font = "600 22px " + FB; const lw = ctx.measureText(lt).width;
-    ctx.fillStyle = "#FFF3C4"; ctx.fillRect(pad, pad + 108, 34, 26); ctx.fillStyle = "#F5B700"; ctx.fillRect(pad + 28, pad + 108, 6, 26);
+    ctx.fillStyle = "#FFF9E0"; ctx.fillRect(pad, pad + 108, 34, 26); ctx.fillStyle = "#F7D35C"; ctx.fillRect(pad + 30, pad + 108, 4, 26);
     ctx.fillStyle = DOC.ink; ctx.textAlign = "left"; ctx.fillText(lt, pad + 44, pad + 110); ctx.textAlign = "right"; }
   let y = pad + 150;
   const hline = (yy, col, wdt) => { ctx.strokeStyle = col || DOC.line; ctx.lineWidth = wdt || 1.5; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke(); };
@@ -3892,7 +3892,7 @@ async function buildProgramCanvas(t){
       y += SECH;
       s.items.forEach((it, idx) => {
         const lines = rowLines(it), h = Math.max(...lines.map(l => l.length)) * LH + CP*2;
-        if (it && it.done){ ctx.fillStyle = "#FFF3C4"; ctx.fillRect(pad, y, tw, h); ctx.fillStyle = "#F5B700"; ctx.fillRect(W - pad - 6, y, 6, h); }
+        if (it && it.done){ ctx.fillStyle = "#FFF9E0"; ctx.fillRect(pad, y, tw, h); ctx.fillStyle = "#F7D35C"; ctx.fillRect(W - pad - 4, y, 4, h); }
         ctx.strokeStyle = DOC.line; ctx.lineWidth = 1.5; ctx.beginPath();
         for (const c of colX.slice(1)){ ctx.moveTo(c.right, y); ctx.lineTo(c.right, y + h); }
         ctx.moveTo(pad, y); ctx.lineTo(pad, y + h); ctx.moveTo(W - pad, y); ctx.lineTo(W - pad, y + h); ctx.stroke();
