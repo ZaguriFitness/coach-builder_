@@ -186,7 +186,7 @@ html{scrollbar-width:none}
 html::-webkit-scrollbar{display:none;width:0}
 .items{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .it{border:1.5px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;background:var(--chalk)}
-.ith{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:start}
+.ith{display:grid;grid-template-columns:28px minmax(0,1fr) auto auto;gap:8px;align-items:start}
 .itn{width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--surface);display:grid;place-items:center;font-family:var(--display);font-size:.95rem;font-variant-numeric:tabular-nums}
 .itt b{display:block;line-height:1.3}
 .x{border:0;background:transparent;color:var(--muted);font-size:1.3rem;line-height:1;padding:2px 6px;border-radius:6px}
@@ -626,6 +626,10 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .subhead small.en{display:block;font-size:.72em;margin-top:2px}
 .gtopl .ghe{color:var(--muted);font-size:.85rem;font-weight:600}
 .deep{margin:0;padding-inline-start:20px;line-height:1.6}.deep li{margin:4px 0}ol.deep li::marker{color:var(--accent);font-weight:700}.deep.cues li::marker{color:var(--accent)}
+.donebtn{border:1px solid var(--glass-b);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.donebtn[aria-pressed="true"]{background:#FFE58A;border-color:#F5B700;color:#3a2a00}
+.it.done{box-shadow:inset 0 0 0 2px rgba(245,183,0,.55),var(--shadow);background:linear-gradient(0deg,rgba(255,229,138,.10),rgba(255,229,138,.10)),var(--card)}
+.pfoot{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -3443,14 +3447,15 @@ function renderPanelInner(p, t){
     </div>
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
     ${PCAT ? "" : `<div class="pfoot">
+      ${t.days.some(x => x.items.some(it => it.done)) ? `<button type="button" class="ghost" data-act="cleardone">ניקוי סימוני "עשינו היום"</button>` : ""}
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
     </div>`}`;
 }
 function itemRow(it,i,list){
   const n = list.length, r = rank(it);
   const e = BYID[it.x] || {he:it.he||"תרגיל שנמחק", en:"", lvl:1};
-  return `<li class="it" data-i="${i}">
-    <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}"><span class="fit1">${esc(e.he)}</span></button></span><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
+  return `<li class="it${it.done?" done":""}" data-i="${i}">
+    <div class="ith"><span class="itn">${i+1}</span><span class="itt"><button type="button" class="itlink" data-act="info" data-id="${esc(it.x)}"><span class="fit1">${esc(e.he)}</span></button></span><button type="button" class="donebtn" data-act="done" data-i="${i}" aria-pressed="${it.done?"true":"false"}">${it.done?"✓ עשינו היום":"עשינו היום?"}</button><button type="button" class="x" data-act="rm" data-i="${i}" aria-label="הסר את ${esc(e.he)}">×</button></div>
     <div class="sets">
       <div class="shead"><span>סט</span><span>${isTL(it)?"זמן (דק')":"חזרות"}</span><span>${isTL(it)?"רמה":"משקל (ק\"ג)"}</span><span></span></div>
       ${setsArr(it).map((x,si) => `<div class="srow"><span class="snum">${si+1}</span>
@@ -3861,6 +3866,10 @@ async function buildProgramCanvas(t){
   const lab = (label, val, y) => { ctx.font = "700 26px " + FB; ctx.fillStyle = DOC.muted; ctx.fillText(label, W - pad, y); const lw = ctx.measureText(label + " ").width; ctx.font = "700 26px " + FB; ctx.fillStyle = DOC.ink; ctx.fillText(val, W - pad - lw, y); };
   lab("שם המתאמן/ת:", t.name, pad + 74);
   lab("סוג התוכנית:", planFull(t), pad + 110);
+  if (t.days.some(x => x.items.some(it => it.done))){   // legend: highlighted rows = done today
+    const lt = "בוצע היום · " + new Date().toLocaleDateString("he-IL"); ctx.font = "600 22px " + FB; const lw = ctx.measureText(lt).width;
+    ctx.fillStyle = "#FFF3C4"; ctx.fillRect(pad, pad + 108, 34, 26); ctx.fillStyle = "#F5B700"; ctx.fillRect(pad + 28, pad + 108, 6, 26);
+    ctx.fillStyle = DOC.ink; ctx.textAlign = "left"; ctx.fillText(lt, pad + 44, pad + 110); ctx.textAlign = "right"; }
   let y = pad + 150;
   const hline = (yy, col, wdt) => { ctx.strokeStyle = col || DOC.line; ctx.lineWidth = wdt || 1.5; ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke(); };
   for (const d of days){
@@ -3881,7 +3890,8 @@ async function buildProgramCanvas(t){
       y += SECH;
       s.items.forEach((it, idx) => {
         const lines = rowLines(it), h = Math.max(...lines.map(l => l.length)) * LH + CP*2;
-        if (it && idx % 2 === 1){ ctx.fillStyle = DOC.chalk; ctx.fillRect(pad, y, tw, h); }
+        if (it && it.done){ ctx.fillStyle = "#FFF3C4"; ctx.fillRect(pad, y, tw, h); ctx.fillStyle = "#F5B700"; ctx.fillRect(W - pad - 6, y, 6, h); }
+        else if (it && idx % 2 === 1){ ctx.fillStyle = DOC.chalk; ctx.fillRect(pad, y, tw, h); }
         ctx.strokeStyle = DOC.line; ctx.lineWidth = 1.5; ctx.beginPath();
         for (const c of colX.slice(1)){ ctx.moveTo(c.right, y); ctx.lineTo(c.right, y + h); }
         ctx.moveTo(pad, y); ctx.lineTo(pad, y + h); ctx.moveTo(W - pad, y); ctx.lineTo(W - pad, y + h); ctx.stroke();
@@ -4110,6 +4120,8 @@ document.addEventListener("click", ev => {
     case "sdel": { const it = curDay().items[+b.dataset.i]; if (!it) break; const S = setsArr(it);
       if (S.length > 1) S.splice(+b.dataset.si, 1); syncSets(it); save(activeId); renderPanel(); break; }
     case "easier": swap(+b.dataset.i, -1); break;
+    case "done": { const it = curDay().items[+b.dataset.i]; if (it){ it.done = !it.done; save(activeId); renderPanel(); } break; }
+    case "cleardone": { const tt = cur(); if (tt){ tt.days.forEach(x => x.items.forEach(it => { delete it.done; })); save(activeId); renderPanel(); toast("הסימונים נוקו"); } break; }
     case "harder": swap(+b.dataset.i, 1); break;
     case "send": openSend(); break;
     case "savepng": saveDoc("png", b.dataset.n); break;
