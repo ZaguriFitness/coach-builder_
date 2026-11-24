@@ -3468,7 +3468,8 @@ function itemRow(it,i,list){
       <label>עצימות (RPE)<input data-f="i" data-i="${i}" value="${esc(it.i||"")}" placeholder="1–10" id="f-i-${i}"></label>
       <label>מנוחה<button type="button" class="restbtn" data-act="restset" data-i="${i}" aria-label="מנוחה, פתיחת הטיימר"><span aria-hidden="true">⏱</span> ${esc(restLbl(it.rest))}</button></label>
     </div>
-    <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערה למתאמן (טמפו, דגשים, התקדמות)" id="f-n-${i}">
+    <!-- the coach asked: this field says only "הערות" (no tempo / cues / progress hint). Keep it that way. -->
+    <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערות" id="f-n-${i}">
     <div class="itacts">
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
       <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
