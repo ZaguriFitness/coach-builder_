@@ -3891,7 +3891,6 @@ async function buildProgramCanvas(t){
       s.items.forEach((it, idx) => {
         const lines = rowLines(it), h = Math.max(...lines.map(l => l.length)) * LH + CP*2;
         if (it && it.done){ ctx.fillStyle = "#FFF3C4"; ctx.fillRect(pad, y, tw, h); ctx.fillStyle = "#F5B700"; ctx.fillRect(W - pad - 6, y, 6, h); }
-        else if (it && idx % 2 === 1){ ctx.fillStyle = DOC.chalk; ctx.fillRect(pad, y, tw, h); }
         ctx.strokeStyle = DOC.line; ctx.lineWidth = 1.5; ctx.beginPath();
         for (const c of colX.slice(1)){ ctx.moveTo(c.right, y); ctx.lineTo(c.right, y + h); }
         ctx.moveTo(pad, y); ctx.lineTo(pad, y + h); ctx.moveTo(W - pad, y); ctx.lineTo(W - pad, y + h); ctx.stroke();
