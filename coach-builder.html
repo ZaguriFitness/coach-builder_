@@ -4242,6 +4242,16 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 
 
 renderAll();
+// always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
+// copy (bypassing the cache) and reload into it. APPV changes with every update.
+const APPV = "20261126173417";
+async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
+  const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
+  // load the new copy by its own address (so no cached page comes back), and only try once per version
+  let tried = ""; try { tried = sessionStorage.getItem("cb-upd") || ""; } catch(e){}
+  if (tried === m[1]) return; try { sessionStorage.setItem("cb-upd", m[1]); } catch(e){}
+  location.replace(location.pathname + "?v=" + m[1] + location.hash); } catch(e){} }
+checkUpdate(); document.addEventListener("visibilitychange", () => { if (!document.hidden) checkUpdate(); });
 // opened from the 3D atlas: #mus=<muscle> shows the exercises for that muscle
 { const mh = (location.hash.match(/mus=([a-z_]+)/)||[])[1]; if (mh && MUSMAP[mh]){ history.replaceState(null, "", location.pathname + location.search); openMuscle(mh, true); } }
 </script>
