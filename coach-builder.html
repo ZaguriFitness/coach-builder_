@@ -635,6 +635,7 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .exth{box-sizing:border-box;width:96px;height:96px;padding:4px;border-radius:18px;object-fit:contain;background:#F3EBDD;border:7px solid #1d1d20;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
 .exx{display:block;min-width:0}
 .pksrow{display:flex;gap:8px;align-items:center}.pksrow .pksearch{flex:1 1 0!important;min-width:0}.pksrow .pksearch input{width:100%;min-width:0}.pkown{flex:none;white-space:nowrap;border-radius:999px;padding:10px 14px;font-weight:700}
+@keyframes itflash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:var(--shadow)}}.it.flash{animation:itflash 1.6s ease}
 </style>
 </head>
 <body>
@@ -3366,6 +3367,12 @@ function openPicker(g){
   $("panel").classList.remove("open"); $("picker").hidden = false; renderPicker(); $("pklist").scrollTop = 0;
   if (!G) setTimeout(() => { const q = $("pkq"); q.readOnly = false; q.focus(); }, 60);
 }
+// from the picker: an exercise already in the program opens its row in the program (sets, reps, weight)
+function goToItem(id){ const d = curDay(), it = d && d.items.find(x => x.x === id); if (!it) return;
+  $("picker").hidden = true; PCAT = areaOf(it) || null; setView("lib"); $("panel").classList.add("open"); renderPanel();
+  requestAnimationFrame(() => { const i = curDay().items.indexOf(it), row = document.querySelector(`#panel li.it[data-i="${i}"]`); if (!row) return;
+    row.scrollIntoView({block:"start"}); row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1600);
+    const inp = row.querySelector('input[data-sf="r"]'); if (inp){ inp.readOnly = false; inp.focus({preventScroll:true}); } }); }
 function closePicker(){ $("picker").hidden = true; if (cur()) $("panel").classList.add("open"); renderPanel(); }
 function renderPicker(){
   const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay();
@@ -4093,7 +4100,7 @@ document.addEventListener("click", ev => {
     case "logout": CLOUD.auth.signOut().then(() => location.reload()); break;
     case "editT": openTrainee(true); break;
     case "cancel": pendingAdd = null; closeModal(); break;
-    case "info": case "open": openInfo(b.dataset.id); break;
+    case "info": case "open": if (a === "info" && !$("picker").hidden && inDay(b.dataset.id)){ goToItem(b.dataset.id); break; } openInfo(b.dataset.id); break;
     case "rename": openRename(b.dataset.id); break;
     case "recat": openRecat(b.dataset.id); break;
     case "recatreset": recatEx(b.dataset.id, ""); break;
