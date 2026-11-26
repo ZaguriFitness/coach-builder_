@@ -3588,7 +3588,9 @@ function toggle(id){
   const d = curDay(), e = BYID[id]; if (!e) return;
   const i = d.items.findIndex(it => it.x === id);
   if (i >= 0){ d.items.splice(i,1); toast(`${e.he} הוסר מ${d.name}`); }
-  else { d.items.push(makeItem(e)); sortDay(d); if (!OPEN.has(e.g)){ OPEN.add(e.g); saveOpen(); } const G = GROUPS.find(x=>x.k===e.g); toast(`${e.he} נוסף ל${t.name} · ${d.name} · ${G?G.he:""}`); }
+  else { // added from inside an area of the program: it goes into that area, whatever its own category is
+    const it = makeItem(e), area = !$("picker").hidden && PK.g && PK.g !== e.g ? PK.g : null; if (area) it.g = area;
+    d.items.push(it); sortDay(d); const ag = area || e.g; if (!OPEN.has(ag)){ OPEN.add(ag); saveOpen(); } const G = GROUPS.find(x=>x.k===ag); toast(`${e.he} נוסף ל${t.name} · ${d.name} · ${G?G.he:""}`); }
   save(activeId); renderTrainees(); renderLibrary(); renderPanel(); renderBar(); if (!$("picker").hidden) renderPicker();
 }
 function swap(i, dir){
@@ -4265,7 +4267,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261126174512";
+const APPV = "20261126174636";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
