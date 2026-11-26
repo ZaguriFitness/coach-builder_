@@ -3376,9 +3376,14 @@ function renderPicker(){
     const list = EX.filter(e => matchQ(e, toks)).sort((a,b) => qscore(b, toks) - qscore(a, toks) || a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
     $("pklist").innerHTML = list.length ? `<ul class="list">${list.slice(0, 60).map(card).join("")}</ul>` : `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
   const base = EX.filter(e => e.g === PK.g), toks = qtoks(PK.q);
-  const list = base.filter(e => toks.length ? matchQ(e, toks) : true).sort((a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
+  const byScore = (a,b) => qscore(b, toks) - qscore(a, toks) || a.lvl - b.lvl || a.he.localeCompare(b.he, "he");
+  const list = base.filter(e => toks.length ? matchQ(e, toks) : true).sort(toks.length ? byScore : (a,b) => a.lvl - b.lvl || a.he.localeCompare(b.he, "he"));
+  if (toks.length){ // matches from the other areas are shown too, under their own heading, so a search never comes up empty
+    const more = EX.filter(e => e.g !== PK.g && matchQ(e, toks)).sort(byScore).slice(0, 30);
+    $("pklist").innerHTML = (list.length ? `<ul class="list">${list.map(card).join("")}</ul>` : "")
+      + (more.length ? `<div class="subhead"><h3>מאזורים אחרים</h3><span>${more.length} תרגילים</span></div><ul class="list">${more.map(card).join("")}</ul>` : "")
+      || `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
   if (!list.length){ $("pklist").innerHTML = `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
-  if (toks.length){ $("pklist").innerHTML = `<ul class="list">${list.map(card).join("")}</ul>`; return; }
   $("pklist").innerHTML = bySub(G, list);
 }
 let armed = null;
