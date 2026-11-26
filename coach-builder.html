@@ -631,6 +631,9 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .donebtn[aria-pressed="true"]{background:#FFE58A;border-color:#F5B700;color:#3a2a00}
 .it.done{box-shadow:inset 0 0 0 2px rgba(245,183,0,.55),var(--shadow);background:linear-gradient(0deg,rgba(255,229,138,.10),rgba(255,229,138,.10)),var(--card)}
 .pfoot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+.exb.hasth{display:grid;grid-template-columns:74px minmax(0,1fr);gap:10px;align-items:center}
+.exth{width:74px;height:74px;border-radius:12px;object-fit:contain;background:radial-gradient(circle at 50% 45%,rgba(255,138,31,.14),rgba(255,138,31,.03) 70%);border:1px solid var(--glass-b,var(--line))}
+.exx{display:block;min-width:0}
 </style>
 </head>
 <body>
@@ -3227,10 +3230,10 @@ function inDay(id){ const d = curDay(); return d ? d.items.some(it => it.x === i
 
 function card(e){
   const on = inDay(e.id);
-  return `<li><div class="ex${on?" on":""}"><button type="button" class="exb" data-act="info" data-id="${esc(e.id)}">
-    <span class="exl"><span class="exn fit1">${esc(e.he)}</span>${e.en?`<bdi class="exe exi" dir="ltr">${esc(e.en)}</bdi>`:""}</span>
+  return `<li><div class="ex${on?" on":""}"><button type="button" class="exb${e.own?"":" hasth"}" data-act="info" data-id="${esc(e.id)}">
+    ${e.own?"":`<img class="exth" src="ex/${esc(e.id)}.webp" alt="" loading="lazy" decoding="async" onerror="this.parentNode.classList.remove('hasth');this.remove()">`}<span class="exx"><span class="exl"><span class="exn fit1">${esc(e.he)}</span>${e.en?`<bdi class="exe exi" dir="ltr">${esc(e.en)}</bdi>`:""}</span>
     ${e.cue?`<span class="exc">${esc(e.cue)}</span>`:""}
-    <span class="exm">${e.own?`<span class="tag own">שלי</span>`:""}<span class="more">הסבר והדמיה ›</span></span></button>
+    <span class="exm">${e.own?`<span class="tag own">שלי</span>`:""}<span class="more">הסבר והדמיה ›</span></span></span></button>
     <button type="button" class="plus" data-act="toggle" data-id="${esc(e.id)}" aria-pressed="${on}" aria-label="${on?"הסר מהתוכנית":"הוסף לתוכנית"}: ${esc(e.he)}">${on?"✓":"+"}</button></div></li>`;
 }
 
