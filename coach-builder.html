@@ -634,6 +634,7 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .exb.hasth{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
 .exth{box-sizing:border-box;width:96px;height:96px;padding:4px;border-radius:18px;object-fit:contain;background:#F3EBDD;border:7px solid #1d1d20;box-shadow:0 0 0 1px rgba(255,255,255,.06)}
 .exx{display:block;min-width:0}
+.pksrow{display:flex;gap:8px;align-items:center}.pksrow .pksearch{flex:1 1 0!important;min-width:0}.pksrow .pksearch input{width:100%;min-width:0}.pkown{flex:none;white-space:nowrap;border-radius:999px;padding:10px 14px;font-weight:700}
 </style>
 </head>
 <body>
@@ -687,7 +688,7 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
   <div class="pkwrap">
     <div class="pkhead">
       <div class="pktop"><div><h2 id="pktitle"></h2><div class="pmeta" id="pkfor"></div></div><button type="button" class="xbtn" data-act="pkclose" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
-      <div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div>
+      <div class="pksrow"><div class="catsearch pksearch"><input id="pkq" type="search" autocomplete="off" enterkeyhint="search" placeholder="חיפוש"></div><button type="button" class="ghost accent pkown" data-act="pkown">+ תרגיל משלי</button></div>
     </div>
     <div class="pkbody" id="pklist"></div>
 
@@ -3758,20 +3759,22 @@ function openTrainee(edit){
     closeModal(); renderAll();
   });
 }
-function openCustom(){
-  const G = GROUPS.find(g => g.k === F.g);
-  const groupOpts = GROUPS.map(g => `<option value="${g.k}" ${g.k===F.g?"selected":""}>${g.he}</option>`).join("");
+// own exercise. From the program's picker (toProg) it goes straight into the trainee's program as well.
+function openCustom(g0, toProg){
+  if (typeof g0 !== "string") g0 = null;
+  const gk = g0 || F.g || "legs", sk = g0 ? "" : F.sub, G = GROUPS.find(g => g.k === gk);
+  const groupOpts = GROUPS.map(g => `<option value="${g.k}" ${g.k===gk?"selected":""}>${g.he}</option>`).join("");
   openModal(`<h2>תרגיל משלי</h2><p class="hint">התרגיל יישמר בספרייה ויופיע עם התג "שלי".</p>
     <form id="cform" class="mbox" style="padding:0;border:0;max-height:none;overflow:visible">
       <label>שם התרגיל<input id="c-he" required placeholder="תנוחה, תנועה כנגד ציוד. למשל: בעמידה, כפיפת מרפקים כנגד מוט"></label>
       <label>שם באנגלית (לא חובה)<input id="c-en" dir="ltr"></label>
       <div class="g2"><label>קבוצת שריר<select id="c-g">${groupOpts}</select></label>
-        <label>תת-קטגוריה<select id="c-sub">${Object.entries(G.subs).map(([k,v])=>`<option value="${k}" ${k===F.sub?"selected":""}>${v}</option>`).join("")}</select></label></div>
+        <label>תת-קטגוריה<select id="c-sub">${Object.entries(G.subs).map(([k,v])=>`<option value="${k}" ${k===sk?"selected":""}>${v}</option>`).join("")}</select></label></div>
       <div class="g2"><label>ציוד<select id="c-eq">${Object.entries(EQ).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></label>
         <label>רמה<select id="c-lvl">${[1,2,3].map(l=>`<option value="${l}">${LVL[l]}</option>`).join("")}</select></label></div>
       <label>סוג<select id="c-type">${Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select></label>
       <label>דגש טכני<input id="c-cue" placeholder="משפט קצר שיופיע על הכרטיס"></label>
-      <div class="macts"><button class="primary" type="submit">הוסף לספרייה</button><button class="ghost" type="button" data-act="cancel">ביטול</button></div>
+      <div class="macts"><button class="primary" type="submit">${toProg ? "הוסף לתוכנית" : "הוסף לספרייה"}</button><button class="ghost" type="button" data-act="cancel">ביטול</button></div>
     </form>`);
   $("c-g").addEventListener("change", () => {
     const g = GROUPS.find(x => x.k === $("c-g").value);
@@ -3782,6 +3785,7 @@ function openCustom(){
     const he = $("c-he").value.trim(); if (!he) return;
     const c = {id:"u-"+uid(), he, en:$("c-en").value.trim(), g:$("c-g").value, sub:$("c-sub").value, eq:$("c-eq").value, lvl:+$("c-lvl").value, type:$("c-type").value, cue:$("c-cue").value.trim()};
     CUSTOM.push(c); rebuild(); saveCustom();
+    if (toProg && cur()){ closeModal(); toggle(c.id); renderPicker(); renderPanel(); toast(`${he} נוסף לתוכנית`); return; }
     F.g = c.g; F.sub = "all"; F.q = ""; $("q").value = "";
     closeModal(); renderLibrary(); toast(`${he} נוסף לספרייה`);
   });
@@ -4081,6 +4085,7 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
+    case "pkown": openCustom(PK.g || null, true); break;
     case "gohome": { ev.preventDefault(); F.m = null; closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
       F.g = null; F.q = ""; $("q").value = ""; setView("lib"); renderLibrary(); window.scrollTo(0, 0); break; }
     case "login": cloudLogin(); break;
