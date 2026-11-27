@@ -3018,7 +3018,7 @@ function attachDb(d){
       if (ch.type === "removed") delete T[id];
       else T[id] = JSON.parse(JSON.stringify(ch.doc.data()));
     }
-    ready = true; pickActive(); renderAll();
+    ready = true; pickActive(); renderAll(); importFromHash();
   }, () => { ready = true; renderAll(); toast("לא הצלחתי לטעון את המתאמנים"); });
   db.doc("custom/exercises").onSnapshot(s => {
     CUSTOM = s.exists ? (s.data().list || []).map(x => ({...x})) : [];
@@ -3032,7 +3032,7 @@ function attachDb(d){
   let d = null;
   try { d = window.claude && window.claude.use ? await window.claude.use("db") : null; } catch(e){ d = null; }
   if (d){ attachDb(d); return; }
-  loadLocal(); ready = true; pickActive(); renderAll();
+  loadLocal(); ready = true; pickActive(); renderAll(); importFromHash();
   if (FIREBASE_CONFIG.apiKey) initCloud();
 })();
 
@@ -3431,6 +3431,41 @@ function openHist(x){ const t = cur(), e = BYID[x] || {he:""}, h = histOf(t, x),
     <div class="hstats">${tl ? `<div><small>הכי ארוך</small><b>${pr1} דק'</b></div>` : `<div><small>שיא משקל</small><b>${prW || "—"}${prW?" ק\"ג":""}</b></div><div><small>1RM משוער</small><b>${pr1 ? Math.round(pr1) + " ק\"ג" : "—"}</b></div>`}<div><small>אימונים</small><b>${h.length}</b></div></div>
     ${pts.length > 1 ? `<svg class="hchart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="התקדמות"><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>${pts.map((p,i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.best).toFixed(1)}" r="3.5" fill="var(--accent)"/>`).join("")}</svg><p class="hint" style="text-align:center;margin:0">${tl ? "זמן" : "1RM משוער"} לאורך הזמן</p>` : ""}
     <ul class="hlist">${h.slice().reverse().map(H => `<li><span>${fmtD(H.date)}</span><b dir="ltr">${esc(setsStr(H.sets, tl))}</b></li>`).join("")}</ul>`); }
+// ===== program as a link: the trainee opens it in their own copy of the app and saves it there (no server needed) =====
+const b64u = u8 => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); };
+const ub64u = s => { s = s.replace(/-/g,"+").replace(/_/g,"/"); const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; };
+async function packProg(t){
+  const own = new Set(), days = t.days.map(d => ({name:d.name, items:d.items.map(it => { const e = BYID[it.x]; if (e && e.own) own.add(it.x);
+    return {x:it.x, he:(e||{he:it.he||""}).he, g:it.g, s:it.s, r:it.r, w:it.w, sets:setsArr(it), i:it.i, rest:it.rest, n:it.n, done:it.done||undefined}; })}));
+  const data = {v:1, from:(CLOUD.user&&CLOUD.user.displayName)||"", name:t.name, goal:t.goal, level:t.level, days, custom:CUSTOM.filter(c => own.has(c.id))};
+  const z = await new Response(new Blob([JSON.stringify(data)]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
+  return b64u(new Uint8Array(z)); }
+async function unpackProg(str){ const z = ub64u(str);
+  return JSON.parse(await new Response(new Blob([z]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text()); }
+async function shareLink(){ const t = cur(); if (!t) return;
+  let url; try { url = location.origin + location.pathname + "#imp=" + await packProg(t); } catch(e){ toast("הדפדפן לא תומך ביצירת קישור"); return; }
+  const text = `התוכנית שלך מ-CoachBuilder: ${t.name}. פותחים את הקישור ושומרים באפליקציה.`;
+  try { if (navigator.share){ await navigator.share({title:"התוכנית שלך", text, url}); return; } } catch(e){ if (e && e.name === "AbortError") return; }
+  try { await navigator.clipboard.writeText(url); toast("הקישור הועתק. אפשר להדביק בוואטסאפ"); } catch(e){ prompt("העתיקו את הקישור:", url); } }
+// opening a program link: show it and offer to save it as "התוכנית שלי" (an update keeps the trainee's own history)
+async function importFromHash(){ const m = location.hash.match(/imp=([A-Za-z0-9_-]+)/); if (!m) return;
+  history.replaceState(null, "", location.pathname + location.search);
+  let P; try { P = await unpackProg(m[1]); } catch(e){ toast("הקישור לא תקין"); return; }
+  const n = P.days.reduce((a,d) => a + d.items.length, 0);
+  openModal(`<h2>קיבלת תוכנית אימון</h2><p class="hint">${P.from ? `מאת ${esc(P.from)} · ` : ""}${esc(P.name)} · ${P.days.length > 1 ? P.days.length + " אימונים" : "אימון אחד"} · ${n} תרגילים</p>
+    <ul class="hlist">${P.days.map(d => `<li><span>${esc(d.name)}</span><b>${d.items.length} תרגילים</b></li>`).join("")}</ul>
+    <div class="macts"><button type="button" class="primary" data-act="impok">שמירה באפליקציה</button><button type="button" class="ghost" data-act="cancel">ביטול</button></div>`);
+  IMP = P; }
+let IMP = null;
+function applyImport(){ const P = IMP; if (!P) return; IMP = null;
+  for (const c of P.custom || []) if (!CUSTOM.some(x => x.id === c.id)) CUSTOM.push(c);
+  if ((P.custom||[]).length){ rebuild(); saveCustom(); }
+  const id = "me", old = T[id];
+  T[id] = {name:P.name, goal:P.goal||"", level:P.level||1, notes:old ? old.notes : "", created:old ? old.created : Date.now(), mine:true,
+    days:P.days.map(d => ({id:"d-"+uid(), name:d.name, items:d.items.map(it => { const o = Object.assign({}, it); if (!o.done) delete o.done; if (!o.g) delete o.g; return o; })})),
+    logs:old ? old.logs || [] : []};
+  save(id); activeId = id; activeDay = 0; PCAT = null; closeModal(); setView("lib"); renderAll(); $("panel").classList.add("open");
+  toast(old ? "התוכנית עודכנה. ההיסטוריה שלך נשמרה" : "התוכנית נשמרה באפליקציה"); }
 function closePicker(){ $("picker").hidden = true; if (cur()) $("panel").classList.add("open"); renderPanel(); }
 function renderPicker(){
   const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay();
@@ -4041,6 +4076,7 @@ async function openSend(){
     </div>
     <div class="dfoot">
       <button type="button" class="ghost" data-act="cancel">סגור</button>
+      <button type="button" class="ghost" data-act="sharelink">🔗 קישור לאפליקציה</button>
       ${docDl ? `<button type="button" class="ghost" data-act="savepdf" data-n="${esc(safe)}">שמור PDF</button><button type="button" class="primary" data-act="savepng" data-n="${esc(safe)}">שמור תמונה</button>`
         : canShare ? `<button type="button" class="ghost" data-act="sharepdf">שליחה כ-PDF</button><button type="button" class="primary" data-act="sharepng">שליחה כתמונה</button>`
         : `<button type="button" class="ghost" data-act="dlpdf">שמור PDF</button><button type="button" class="primary" data-act="dlpng">שמור תמונה</button>`}
@@ -4156,6 +4192,8 @@ document.addEventListener("click", ev => {
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
     case "logsave": saveWorkout(); break;
+    case "sharelink": shareLink(); break;
+    case "impok": applyImport(); break;
     case "hist": openHist(b.dataset.id); break;
     case "pkown": openCustom(PK.g || null, true); break;
     case "gohome": { ev.preventDefault(); F.m = null; closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
@@ -4307,7 +4345,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261127140601";
+const APPV = "20261127140711";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
