@@ -643,6 +643,12 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .hname{font-size:1.1rem;line-height:1.3;min-width:0}
 .hchart{width:100%;height:auto;margin:4px 0}
 .hlist{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}.hlist li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--glass-b,var(--line));font-size:.9rem}.hlist b{font-weight:600;font-variant-numeric:tabular-nums}
+.subtiles{display:grid;gap:12px;margin:4px 0 20px}
+.subtile{font:inherit;color:var(--ink);text-align:start;display:flex;align-items:center;gap:12px;width:100%;min-height:74px;padding:14px 18px;border-radius:18px;cursor:pointer;
+  background:linear-gradient(135deg,rgba(255,138,31,.18),rgba(255,179,71,.04)),var(--card);border:1px solid color-mix(in srgb,var(--v2) 45%,transparent);box-shadow:var(--shadow)}
+.subtile:active{transform:scale(.98)}
+.subtile .stx{flex:1;min-width:0;display:grid;gap:2px}.subtile b{font-size:1.15rem;font-weight:800}.subtile small{color:var(--muted);font-size:.8rem;font-weight:600;text-align:right}
+.subtile .stn{color:var(--muted);font-size:.85rem;white-space:nowrap}.subtile>i{font-style:normal;font-size:1.5rem;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -3379,7 +3385,10 @@ function renderLibrary(){
     $("lib").innerHTML = `<div class="subhead"><h3>${F.q?"תוצאות חיפוש":F.q2.trim()?`חיפוש ב${esc(GROUPS.find(g=>g.k===F.g).he)}`:esc(GROUPS.find(g=>g.k===F.g).subs[F.sub])}</h3><span>${list.length} תרגילים</span></div><ul class="list">${list.map(card).join("")}</ul>`;
     return;
   }
-  $("lib").innerHTML = bySub(Gc, list);
+  // inside an area: first its sub-groups as big buttons; tapping one shows its exercises
+  $("lib").innerHTML = `<div class="subtiles">${Object.entries(Gc.subs).map(([k,v]) => { const n = list.filter(e => e.sub === k).length; if (!n) return "";
+    return `<button type="button" class="subtile" data-act="sub" data-s="${k}"><span class="stx"><b>${esc(v)}</b><small dir="ltr">${SUBEN[Gc.k+"."+k]||""}</small></span><span class="stn">${n} תרגילים</span><i aria-hidden="true">‹</i></button>`; }).join("")}</div>`
+    + (list.some(e => !Gc.subs[e.sub]) ? `<ul class="list">${list.filter(e => !Gc.subs[e.sub]).map(card).join("")}</ul>` : "");
 }
 // exercises of one body area under a heading per sub-category (in the area's own order)
 function bySub(G, list){
@@ -4222,7 +4231,9 @@ document.addEventListener("click", ev => {
         PCAT = e ? e.g : null; renderPanel(); $("panel").classList.add("open"); break; }
       toggle(id); const s2 = infoBtn(id); const db2 = $("dbtn"); if (db2){ db2.textContent = s2.txt; db2.classList.toggle("on", s2.on); } $("dtgt") && ($("dtgt").textContent = s2.tgt); break; }
     case "home": if (F.m){ const k = F.m; F.m = null; if (F.fromAtlas){ location.href = "anatomy/index.html#sel=" + k; break; } }
+      if (F.g && F.sub !== "all" && !F.q2.trim()){ F.sub = "all"; renderLibrary(); window.scrollTo(0, 0); break; }   // back from a sub-group to the area
       F.g = null; F.sub = "all"; F.q2 = ""; $("q2").value = ""; renderLibrary(); window.scrollTo(0, 0); break;
+    case "sub": F.sub = b.dataset.s; renderLibrary(); window.scrollTo(0, 0); break;
     case "grp": F.m = null; F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear(); renderLibrary(); window.scrollTo(0, 0); break;
     case "f": { const k = b.dataset.k, v = k==="lvl" ? +b.dataset.v : b.dataset.v; F[k].has(v) ? F[k].delete(v) : F[k].add(v); renderLibrary(); break; }
     case "ftog": { const open = $("fbody").hidden; $("fbody").hidden = !open; b.setAttribute("aria-expanded", open); break; }
@@ -4345,7 +4356,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261127141745";
+const APPV = "20261127214247";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
