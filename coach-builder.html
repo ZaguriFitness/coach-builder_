@@ -636,6 +636,13 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .exx{display:block;min-width:0}
 .pksrow{display:flex;gap:8px;align-items:center}.pksrow .pksearch{flex:1 1 0!important;min-width:0}.pksrow .pksearch input{width:100%;min-width:0}.pkown{flex:none;white-space:nowrap;border-radius:999px;padding:10px 14px;font-weight:700}
 @keyframes itflash{0%,40%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:var(--shadow)}}.it.flash{animation:itflash 1.6s ease}
+.prevh{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:.82rem;color:var(--muted);padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--v2) 8%,transparent)}
+.prevh b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.hstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin:12px 0}
+.hstats div{border:1px solid var(--glass-b,var(--line));border-radius:12px;padding:8px 10px;text-align:center}.hstats small{display:block;color:var(--muted);font-size:.78rem}.hstats b{font-size:1.15rem}
+.hname{font-size:1.1rem;line-height:1.3;min-width:0}
+.hchart{width:100%;height:auto;margin:4px 0}
+.hlist{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}.hlist li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--glass-b,var(--line));font-size:.9rem}.hlist b{font-weight:600;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -3396,6 +3403,34 @@ function goToItem(id){ const d = curDay(), it = d && d.items.find(x => x.x === i
   requestAnimationFrame(() => { const i = curDay().items.indexOf(it), row = document.querySelector(`#panel li.it[data-i="${i}"]`); if (!row) return;
     row.scrollIntoView({block:"start"}); row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1600);
     const inp = row.querySelector('input[data-sf="r"]'); if (inp){ inp.readOnly = false; inp.focus({preventScroll:true}); } }); }
+// ===== workout history: each saved workout is kept with its date; the program itself keeps only the current plan =====
+const num = v => { const m = String(v||"").replace(",", ".").match(/\d+(\.\d+)?/); return m ? +m[0] : 0; };
+const e1rm = (w, r) => w > 0 && r > 0 ? w * (1 + Math.min(r, 15) / 30) : 0;            // Epley, capped at 15 reps
+const fmtD = t => new Date(t).toLocaleDateString("he-IL", {day:"numeric", month:"numeric", year:"2-digit"});
+function histOf(t, x){ const out = []; for (const L of (t && t.logs) || []) for (const it of L.items) if (it.x === x) out.push({date:L.date, sets:it.sets}); return out.sort((a,b) => a.date - b.date); }
+function setsStr(sets, tl){ return sets.map(s => tl ? `${s.r||"—"} דק' · רמה ${s.w||"—"}` : (s.w ? `${s.w}×${s.r||"—"}` : `${s.r||"—"}`)).join("  ·  "); }
+function prevHint(it){ const td = new Date().toDateString(), h = histOf(cur(), it.x).filter(H => new Date(H.date).toDateString() !== td), L = h[h.length-1]; if (!L) return "";
+  return `<div class="prevh"><span>פעם קודמת · ${fmtD(L.date)}</span><b dir="ltr">${esc(setsStr(L.sets, isTL(it)))}</b></div>`; }
+function saveWorkout(){ const t = cur(), d = curDay(); if (!t || !d) return;
+  const marked = d.items.filter(it => it.done), src = marked.length ? marked : d.items;
+  const items = src.map(it => ({x:it.x, he:(BYID[it.x]||{he:it.he||""}).he, sets:setsArr(it).map(s => ({r:String(s.r||""), w:String(s.w||"")}))})).filter(it => it.sets.length);
+  if (!items.length){ toast("אין תרגילים לשמירה"); return; }
+  t.logs = t.logs || []; const today = new Date().toDateString();
+  // saving again on the same day replaces that day's entry for the same workout
+  t.logs = t.logs.filter(L => !(new Date(L.date).toDateString() === today && L.day === d.id));
+  t.logs.push({id:"l-"+uid(), date:Date.now(), day:d.id, dayName:d.name, items}); save(activeId); renderPanel();
+  toast(`האימון נשמר (${items.length} תרגילים${marked.length ? ", המסומנים" : ""})`); }
+function openHist(x){ const t = cur(), e = BYID[x] || {he:""}, h = histOf(t, x), tl = !!TIMELV[x];
+  if (!h.length){ openModal(`<div class="rshead"><h2 class="hname">${esc(e.he)}</h2><button type="button" class="xbtn" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div><p class="hint">עוד אין אימונים שמורים לתרגיל הזה. לוחצים "✓ שמירת האימון" בסוף האימון, והתוצאות יישמרו כאן.</p>`); return; }
+  const pts = h.map(H => ({date:H.date, best:Math.max(0, ...H.sets.map(s => tl ? num(s.r) : e1rm(num(s.w), num(s.r)))), top:Math.max(0, ...H.sets.map(s => num(s.w)))}));
+  const prW = Math.max(...pts.map(p => p.top)), pr1 = Math.max(...pts.map(p => p.best));
+  const W = 300, Hh = 120, mx = Math.max(1, ...pts.map(p => p.best)), mn = Math.min(...pts.map(p => p.best));
+  const X = i => pts.length < 2 ? W/2 : 14 + i * (W - 28) / (pts.length - 1), Y = v => Hh - 14 - (mx === mn ? 0.5 : (v - mn) / (mx - mn)) * (Hh - 28);
+  const path = pts.map((p,i) => (i ? "L" : "M") + X(i).toFixed(1) + "," + Y(p.best).toFixed(1)).join("");
+  openModal(`<div class="rshead"><h2 class="hname">${esc(e.he)}</h2><button type="button" class="xbtn" data-act="cancel" aria-label="סגירה"><span aria-hidden="true">✕</span></button></div>
+    <div class="hstats">${tl ? `<div><small>הכי ארוך</small><b>${pr1} דק'</b></div>` : `<div><small>שיא משקל</small><b>${prW || "—"}${prW?" ק\"ג":""}</b></div><div><small>1RM משוער</small><b>${pr1 ? Math.round(pr1) + " ק\"ג" : "—"}</b></div>`}<div><small>אימונים</small><b>${h.length}</b></div></div>
+    ${pts.length > 1 ? `<svg class="hchart" viewBox="0 0 ${W} ${Hh}" role="img" aria-label="התקדמות"><path d="${path}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round"/>${pts.map((p,i) => `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.best).toFixed(1)}" r="3.5" fill="var(--accent)"/>`).join("")}</svg><p class="hint" style="text-align:center;margin:0">${tl ? "זמן" : "1RM משוער"} לאורך הזמן</p>` : ""}
+    <ul class="hlist">${h.slice().reverse().map(H => `<li><span>${fmtD(H.date)}</span><b dir="ltr">${esc(setsStr(H.sets, tl))}</b></li>`).join("")}</ul>`); }
 function closePicker(){ $("picker").hidden = true; if (cur()) $("panel").classList.add("open"); renderPanel(); }
 function renderPicker(){
   const G = GROUPS.find(x => x.k === PK.g), t = cur(), d = curDay();
@@ -3491,6 +3526,7 @@ function renderPanelInner(p, t){
     <div class="pbody"><ol class="items">${itemsHtml(d)}</ol></div>
     ${PCAT ? "" : `<div class="pfoot">
       <button type="button" class="primary" data-act="send">שליחת התוכנית</button>
+      <button type="button" class="ghost" data-act="logsave">✓ שמירת האימון</button>
       ${t.days.some(x => x.items.some(it => it.done)) ? `<button type="button" class="ghost" data-act="cleardone">ניקוי סימוני "עשינו היום"</button>` : ""}
     </div>`}`;
 }
@@ -3506,6 +3542,7 @@ function itemRow(it,i,list){
         <input data-sf="w" data-i="${i}" data-si="${si}" value="${esc(x.w)}" inputmode="decimal" placeholder="—" aria-label="${isTL(it)?"רמה":"משקל"} בסט ${si+1}">
         <button type="button" class="sdel" data-act="sdel" data-i="${i}" data-si="${si}" ${it.sets.length>1?"":"disabled"} aria-label="מחק סט ${si+1}">−</button></div>`).join("")}
       <button type="button" class="sadd" data-act="sadd" data-i="${i}">+ הוסף סט</button>
+      ${prevHint(it)}
     </div>
     <div class="fields fields2">
       <label>עצימות (RPE)<input data-f="i" data-i="${i}" value="${esc(it.i||"")}" placeholder="1–10" id="f-i-${i}"></label>
@@ -3514,6 +3551,7 @@ function itemRow(it,i,list){
     <!-- the coach asked: this field says only "הערות" (no tempo / cues / progress hint). Keep it that way. -->
     <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערות" id="f-n-${i}">
     <div class="itacts">
+      <button type="button" class="mini" data-act="hist" data-id="${esc(it.x)}">📈 היסטוריה</button>
       <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
       <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
     </div></li>`;
@@ -4117,6 +4155,8 @@ document.addEventListener("click", ev => {
   switch(a){
     case "pick": { setAdding(false); setView("lib"); PCAT = null; const id = b.dataset.id; if (id !== activeId){ activeId = id; activeDay = 0; } renderAll(); $("panel").classList.add("open"); break; }
     case "newT": pendingAdd = null; openTrainee(false); break;
+    case "logsave": saveWorkout(); break;
+    case "hist": openHist(b.dataset.id); break;
     case "pkown": openCustom(PK.g || null, true); break;
     case "gohome": { ev.preventDefault(); F.m = null; closeModal(); $("picker").hidden = true; $("panel").classList.remove("open"); setAdding(false);
       F.g = null; F.q = ""; $("q").value = ""; setView("lib"); renderLibrary(); window.scrollTo(0, 0); break; }
@@ -4267,7 +4307,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261126174636";
+const APPV = "20261127140601";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
