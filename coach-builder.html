@@ -649,6 +649,7 @@ small.en{font-size:.55em;font-weight:600;color:var(--muted);-webkit-text-fill-co
 .subtile:active{transform:scale(.98)}
 .subtile .stx{flex:1;min-width:0;display:grid;gap:2px}.subtile b{font-size:1.15rem;font-weight:800}.subtile small{color:var(--muted);font-size:.8rem;font-weight:600;text-align:right}
 .subtile .stn{color:var(--muted);font-size:.85rem;white-space:nowrap}.subtile>i{font-style:normal;font-size:1.5rem;color:var(--accent)}
+.subhead .pkback{width:36px;height:36px;flex:none}.subhead:has(.pkback){justify-content:flex-start;gap:10px}.subhead:has(.pkback) h3{flex:1}
 </style>
 </head>
 <body>
@@ -3494,7 +3495,12 @@ function renderPicker(){
       + (more.length ? `<div class="subhead"><h3>מאזורים אחרים</h3><span>${more.length} תרגילים</span></div><ul class="list">${more.map(card).join("")}</ul>` : "")
       || `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
   if (!list.length){ $("pklist").innerHTML = `<div class="empty">לא נמצאו תרגילים. נסו מילה אחרת.</div>`; return; }
-  $("pklist").innerHTML = bySub(G, list);
+  // same as the library: sub-group buttons first, then the exercises of the chosen one
+  if (PK.sub && PK.sub !== "all" && G.subs[PK.sub]){ const xs = list.filter(e => e.sub === PK.sub);
+    $("pklist").innerHTML = `<div class="subhead"><button type="button" class="xbtn pkback" data-act="pksubback" aria-label="חזרה לקבוצות"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button><h3>${esc(G.subs[PK.sub])} <small class="en" dir="ltr">${SUBEN[G.k+"."+PK.sub]||""}</small></h3><span>${xs.length} תרגילים</span></div><ul class="list">${xs.map(card).join("")}</ul>`; return; }
+  $("pklist").innerHTML = `<div class="subtiles">${Object.entries(G.subs).map(([k,v]) => { const n = list.filter(e => e.sub === k).length; if (!n) return "";
+    return `<button type="button" class="subtile" data-act="pksub" data-s="${k}"><span class="stx"><b>${esc(v)}</b><small dir="ltr">${SUBEN[G.k+"."+k]||""}</small></span><span class="stn">${n} תרגילים</span><i aria-hidden="true">‹</i></button>`; }).join("")}</div>`
+    + (list.some(e => !G.subs[e.sub]) ? `<ul class="list">${list.filter(e => !G.subs[e.sub]).map(card).join("")}</ul>` : "");
 }
 let armed = null;
 // program order: legs → back → chest → shoulders → arms (front, back, forearms) → core → functional → mobility
@@ -4281,6 +4287,8 @@ document.addEventListener("click", ev => {
     case "addgrp": openPicker(b.dataset.g); break;
     case "addany": openPicker(null); break;
     case "pkclose": closePicker(); break;
+    case "pksub": PK.sub = b.dataset.s; renderPicker(); $("pklist").scrollTop = 0; break;
+    case "pksubback": PK.sub = "all"; renderPicker(); $("pklist").scrollTop = 0; break;
     case "addgrp_old": { F.g = b.dataset.g; F.sub = "all"; F.q = ""; $("q").value = ""; F.q2 = ""; $("q2").value = ""; F.type.clear(); F.eq.clear();
       $("panel").classList.remove("open"); renderLibrary(); const el = $("groups"); window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - 80));
       const G = GROUPS.find(x=>x.k===F.g); toast(`מציג תרגילי ${G?G.he:""}. אפשר לחפש בתוך ${G?G.he:"הקטגוריה"} או ללחוץ +`); break; }
@@ -4356,7 +4364,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261127214247";
+const APPV = "20261127214355";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
