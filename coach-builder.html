@@ -2592,11 +2592,12 @@ function build(host,frames,opt){opt=opt||{};
     kb(){const g=new T.Group(),h=new T.Mesh(G_(new T.TorusGeometry(5.2,1.25,10,24,Math.PI)),mIron);h.position.y=-5.4;g.add(h);
       for(const x of [-5.2,5.2]){const l=new T.Mesh(G_(new T.CylinderGeometry(1.25,1.4,4,10)),mIron);l.position.set(x,-6.6,0);g.add(l);}
       const b=new T.Mesh(G_(new T.SphereGeometry(8.4,24,18)),mIron);b.position.y=-14.5;b.scale.y=0.94;g.add(b);return g;},
+    wheel(){const g=new T.Group();g.add(cylZ(1.4,30,mSteel));for(const z of [-4,4]) g.add(cylZ(9,3,mRub,z,32));for(const z of [-11,11]) g.add(cylZ(1.9,8,mRub,z));return g;},
     swb(){const g=new T.Group();g.add(new T.Mesh(G_(new T.SphereGeometry(35,36,26)),new T.MeshStandardMaterial({color:0x5b8fb9,roughness:0.55})));return g;},
     mb(){const g=new T.Group();g.add(new T.Mesh(G_(new T.SphereGeometry(11,28,20)),mBall));const r=new T.Mesh(G_(new T.TorusGeometry(11.05,0.55,8,48)),mRim);g.add(r);return g;},
     sd(){const g=new T.Group();g.add(cylZ(12,42,mBag,0,18));for(const z of [-21,21]){const c=new T.Mesh(G_(new T.SphereGeometry(12,18,12)),mBag);c.scale.z=0.35;c.position.z=z;g.add(c);}return g;},
     plate(){const g=new T.Group(),m=new T.Mesh(G_(new T.CylinderGeometry(13,13,2.4,36)),mRub);g.add(m);const h=new T.Mesh(G_(new T.CylinderGeometry(2.6,2.6,2.6,16)),mSteel);g.add(h);return g;}};
-  const kitOf=(eq,en)=>/smith/i.test(en||"")?"bb":eq==="sw"?"swb":/plate/i.test(en||"")?"plate":({db:"db",bb:"bb",kb:"kb",mb:"mb",sd:"sd"})[eq]||"db";
+  const kitOf=(eq,en)=>/ab wheel/i.test(en||"")?"wheel":/smith/i.test(en||"")?"bb":eq==="sw"?"swb":/plate/i.test(en||"")?"plate":({db:"db",bb:"bb",kb:"kb",mb:"mb",sd:"sd"})[eq]||"db";
   const KIND=kitOf(opt.eq,opt.en), PAIR=KIND==="db"||(KIND==="kb"&&!(/swing|goblet|sumo|deadlift|halo|around|figure/i.test(opt.en||"")&&!/single|one-arm/i.test(opt.en||"")));   // one in each hand, or one object held by both hands
   const newKit=()=>{const a=KIT[KIND](),b=PAIR?KIT[KIND]():null;scene.add(a);if(b) scene.add(b);return {a,b};};
   const Zax=new T.Vector3(0,0,1),Yax=new T.Vector3(0,1,0);
@@ -2761,7 +2762,7 @@ function build(host,frames,opt){opt=opt||{};
       else if(q.k==="band"&&opt.eq==="lm") once(["band",i],()=>{const pl=new T.Group();pl.add(cylZ(20,3.4,mRub,0,40));pl.add(cylZ(3.6,6,mSteel,3));
         const base=new T.Mesh(G_(new T.CylinderGeometry(5,7,4,16)),mIron);scene.add(pl);scene.add(base);dyn.push({band:i,lm:true,m:new T.Mesh(cyl,mSteel),pl,base});});
       else if(q.k==="band"&&EQ_==="cb"&&!q.fromRef) once(["band",i],()=>{const a=q.from,b=fr.J.H||fr.J.S;
-        once(["tower",a[0],a[1]],()=>{const bx=(b&&b[0])||0,sd=a[0]>bx?1:-1;cableTower(a[0],-a[1],sd,0,Math.max(14,46-Math.abs(a[0]-bx)));});
+        once(["tower",a[0],a[1]],()=>{const bx=(b&&b[0])||0,sd=a[0]>bx?1:-1;cableTower(a[0],-a[1],sd,0,Math.max(18,62-Math.abs(a[0]-bx)));});
         dyn.push({band:i,kind:"line",steel:true,m:new T.Mesh(new T.BufferGeometry(),mCableS)});});
       else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,kind:q.viaRef==="K"?"knees":q.toRef==="H"?"hips":q.toRef==="S"?"chest":q.toRef==="W"?"hands":"line",
         bars:(fr.pr||[]).some(z=>z.k==="hbar"),m:new T.Mesh(new T.BufferGeometry(),mBand)}));
