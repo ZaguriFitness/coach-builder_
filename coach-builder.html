@@ -1799,6 +1799,25 @@ ZP.windmill=e=>{const b={H:[64,130],t:-35,L:[82,200],kb:[1,0],g:1},s=zS(b);
 // ---- mobility ----
 ZP.mob=e=>{const n=e.en;
   const lab=(f,l)=>[X(f,{label:l||"החזקה"})];
+  // newer stretches / drills, mapped to poses that show the real position
+  if(/hip flexor stretch kneeling/i.test(n)) return lab(X(LUNGE_B,{H:[66,152],t:-94}));
+  if(/butterfly/i.test(n)) return lab({H:[80,194],t:-90,L:[120,198],kb:[1,-1],L2:[118,198],kb2:[1,-1],A:[110,194],g:1});
+  if(/seated hamstring/i.test(n)) return lab({H:[60,194],t:-30,L:[150,198],kb:[1,0],A:[146,192],g:1});
+  if(/glute bridge hold/i.test(n)) return lab(GB_U||ZST);
+  if(/figure-4/i.test(n)) return lab({H:[95,192],t:180,th:-70,sh:-10,A:[80,150],eb:[0,1],g:1});
+  if(/open book/i.test(n)) return [ZQUAD,X(ZQUAD,{A:[84,120],eb2:[0,-1],rotY:30,pivot:[90],label:"יד נפתחת"})];
+  if(/wall angels/i.test(n)){const s0=zS(ZST);return [zA(ZST,add(s0,53,-140),[0,1],{pr:[{k:"wall",x:62,y1:40}]}),zA(ZST,add(s0,53,-60),[0,1],{pr:[{k:"wall",x:62,y1:40}],label:"ידיים למעלה לאורך הקיר"})];}
+  if(/sleeper|cross-body|triceps stretch/i.test(n)) return lab(X(ZST,{ua:/triceps/i.test(n)?-170:0,fa:/triceps/i.test(n)?10:-150}));
+  if(/kneeling ankle/i.test(n)) return lab({H:[70,180],t:-90,L:[40,198],kb:[-1,-0.2],A:[74,186],g:1});
+  if(/wall calf stretch/i.test(n)) return lab({H:[82,132],t:-72,L:[104,200],kb:[1,-0.6],L2:[44,200],kb2:[1,-0.4],A:[140,84],g:1,pr:[{k:"wall",x:148,y1:20}]});
+  if(/toe walks|heel walks|walking knee|walking quad|frankenstein|hip circles|torso twists|side stretch/i.test(n)){
+    if(/knee hug/i.test(n)) return lab(X(ZST,{L2:[104,140],kb2:[1,-1],A:[100,136]}));
+    if(/quad pull/i.test(n)) return lab({H:[80,127],t:-90,L:[80,200],L2:[66,138],kb2:[0,1],A:[68,140],g:1});
+    if(/frankenstein/i.test(n)) return lab(X(ZST,{L2:[150,120],ua:0,fa:0}));
+    if(/toe walks/i.test(n)) return [X(ZST,{H:[80,120],label:"על קצות האצבעות"}),X(ZST,{H:[80,120],L2:[100,180],kb2:[1,-1]})];
+    if(/heel walks/i.test(n)) return [X(ZST,{label:"על העקבים"}),X(ZST,{L2:[100,190],kb2:[1,-0.4]})];
+    if(/side stretch/i.test(n)) return lab(X(ZST,{ua:-170,fa:-170}),"נטייה לצד");
+    return [X(ZST,{ua:88,fa:88}),X(ZST,{ua:88,fa:88,rotY:30,pivot:[80],label:"סיבוב"})];}
   if(/90\/90/i.test(n)) return [{H:[80,194],t:-90,L:[124,198],kb:[1,-1],L2:[40,198],kb2:[-1,-1],A:[60,199],g:1,label:"צד אחד"},{H:[80,194],t:-90,L:[40,198],kb:[-1,-1],L2:[124,198],kb2:[1,-1],A:[100,199],g:1,label:"מעבר לצד השני"}];
   if(/world/i.test(n)){const b={H:[62,166],t:-40,L:[112,200],kb:[1,-0.4],L2:[8,198],g:1};return [X(b,{A:[106,199],A2:[100,199],label:"לאנג' וידיים לרצפה"}),X(b,{A:add(zS(b),53,-95),A2:[106,199],rotY:20,pivot:[62],label:"סיבוב ויד לתקרה"})];}
   if(/hip flexor/i.test(n)) return lab(X(LUNGE_B,{H:[66,152],t:-94}));
@@ -2080,7 +2099,7 @@ const MUSCLE_MAP={"ארבע ראשי":["quads"],"ישבן":["glutes"],"ישבן 
   "רגליים":["quads","hamstrings","glutes","calves"],"רגליים (כוח מתפרץ)":["quads","hamstrings","glutes","calves"],
   "קרסול":["calves","shins"],"יציבות קרסול וברך":["calves","shins"],
   "סיבולת לב-ריאה":["quads","calves","glutes"],"גוף מלא":["quads","glutes","hamstrings","abs","delts_front","lats"],"שיווי משקל":["glutes","calves"],"יציבות":["abs","obliques"],
-  "גמישות":["hipflex"],"מתיחה":["hamstrings"]};
+  "גמישות":["hipflex"],"מתיחה":["hamstrings"],"טווחי תנועה כלליים":["hipflex","hamstrings","obliques"]};
 function muscleAct(mus,groups){
   const a=new Float32Array(32),set=(names,v)=>(names||[]).forEach(nm=>(MUSCLE_MAP[nm]||[]).forEach(g=>{const i=groups.indexOf(g);if(i>0)a[i]=Math.max(a[i],v);}));
   if(mus){set(mus[1],0.4);set(mus[0],1);}
@@ -4449,7 +4468,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261128002747";
+const APPV = "20261128011220";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
