@@ -1852,7 +1852,7 @@ const ZRULES=[
  [/fire hydrant/i,"hydrant"],[/cable hip extension|hip extension machine/i,"cablehipext"],[/kickback|donkey/i,"quadkick"],[/lateral walk|monster walk/i,"walklat"],[/clamshell/i,"clam"],[/side-lying hip abduction|side-lying adduction/i,"sidelie"],
  [/copenhagen/i,"copen"],[/adductor machine|abductor machine|ball squeeze/i,"adducmach"],[/cable hip/i,"cablehip"],
  [/handstand|wall walk|pike push/i,"ohp"],[/push-up/i,"pushup"],
- [/shoulder press|overhead press|arnold|push press|z press|landmine press|bottoms-up kettlebell press|band overhead|standing dumbbell press/i,"ohp"],
+ [/shoulder press|overhead press|arnold|push press|z press|landmine press|landmine chest press|bottoms-up kettlebell press|band overhead|standing dumbbell press/i,"ohp"],
  [/chest press machine/i,"mpress"],[/cable chest press|band chest press/i,"cpress"],
  [/bench press|floor press|dumbbell press|kettlebell floor/i,"bench"],[/fly|crossover|pec deck|svend/i,"fly"],
  [/dip/i,"dip"],[/support hold/i,"dip"],[/front raise/i,"fraise"],
@@ -2710,6 +2710,9 @@ function build(host,frames,opt){opt=opt||{};
   // leg machines: a padded roller across both shins just above the ankles, plus the seat's backrest
   // squat / press machines: a back pad that follows the trunk (hack, pendulum, belt) and a foot plate (leg press, hack)
   if(/hack squat|pendulum|leg press/i.test(EN_)&&!/calf/i.test(EN_)){const plate=new T.Mesh(new T.BoxGeometry(4,52,58),mDark);scene.add(plate);dyn.push({footPlate:plate,flat:!/leg press/i.test(EN_)});}
+  // seated machines (chest / shoulder press, pec deck, rows, pulldowns on a machine): a backrest behind the trunk
+  if(EQ_==="mc"&&/press machine|chest press|shoulder press|pec deck|machine fly|machine row|high row|lateral raise|rear delt|reverse pec|triceps|preacher|crunch/i.test(EN_+" "+opt.he)&&!/smith|leg|hack/i.test(EN_)){
+    const pad=new T.Mesh(new T.BoxGeometry(8,64,34),mPad);scene.add(pad);dyn.push({backPad:pad,seat:true});}
   if(/hack squat|pendulum/i.test(EN_)){const pad=new T.Mesh(new T.BoxGeometry(8,70,34),mPad);scene.add(pad);dyn.push({backPad:pad});}
   if(/smith/i.test(EN_)){// two guide rails either side of the bar
     once(["smith"],()=>{const k0=keys[0],x=(k0.neck[0]+k0.pelv[0])/2;for(const z of [-64,64]){staticBox(x,FY+115,z,6,230,6,mDark);staticBox(x,FY+2,z,30,4,30,mDark);}staticBox(x,FY+230,0,6,6,134,mDark);});}
