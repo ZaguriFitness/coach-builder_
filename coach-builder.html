@@ -3722,11 +3722,7 @@ function itemRow(it,i,list){
     </div>
     <!-- the coach asked: this field says only "הערות" (no tempo / cues / progress hint). Keep it that way. -->
     <input class="note" data-f="n" data-i="${i}" value="${esc(it.n)}" placeholder="הערות" id="f-n-${i}">
-    <div class="itacts">
-      <button type="button" class="mini" data-act="hist" data-id="${esc(it.x)}">📈 היסטוריה</button>
-      <button type="button" class="mini" data-act="easier" data-i="${i}">החלף לקל יותר</button>
-      <button type="button" class="mini" data-act="harder" data-i="${i}">החלף לקשה יותר</button>
-    </div></li>`;
+</li>`;
 }
 // long press on a trainee card (or right-click) → ask whether to delete that trainee
 function askDelT(id){ const x = T[id]; if (!x) return;
@@ -4486,7 +4482,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261128012634";
+const APPV = "20261128012704";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
