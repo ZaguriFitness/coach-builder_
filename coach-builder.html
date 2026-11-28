@@ -1253,7 +1253,7 @@ ZP.stairs=e=>{const mc=/climber/i.test(e.en),S=[box(68,182.5,32,21),box(100,164.
   return [X({H:[92,112],t:-84,L:[116,164],kb:[1,-0.2],L2:[84,182],kb2:[1,-0.2],A:hA||[104,128],g:1,pr:[...S,...rail]},{}),
           X({H:[108,94],t:-84,L:[116,164],kb:[1,-0.2],L2:[148,146],kb2:[1,-0.3],A:hA||[122,104],g:1,pr:[...S,...rail],label:"צעד למדרגה הבאה"},{})];};
 ZP.stepdown=e=>{const B=box(70,153.5,50);return [{H:[90,80],t:-90,L:[92,150],A:[93,84],g:1,pr:[B]},{H:[80,114],t:-75,L:[90,150],kb:[1,-0.2],L2:[118,196],A:[120,110],g:1,pr:[B],label:"ירידה איטית"}];};
-ZP.legpress=e=>{const P=[{k:"pole",x:138,y1:95,y2:160}];
+ZP.legpress=e=>{const P=[];
   return [{H:[60,172],t:-125,L:[100,142],kb:[-0.3,-1],A:[60,182],g:1,pr:[box(10,177.5,70),...P]},
           {H:[60,172],t:-125,L:[126,128],kb:[-0.3,-1],A:[60,182],g:1,pr:[box(10,177.5,70),...P]}];};
 ZP.legext=e=>[ZSEAT({A:[74,168],eb:[0,1]}),ZSEAT({A:[74,168],eb:[0,1],sh:8})];
@@ -1289,7 +1289,7 @@ ZP.bridge=e=>{const n=e.en;
   let p=[];
   if(e.eq==="bb"||e.eq==="db") p=[ZW("H",0,-12)];
   if(e.eq==="bd") p=[ZC([60,200],"H")];
-  if(e.eq==="bs"||e.eq==="sw") p=[box(100,188.5,40,12)];
+  if(e.eq==="bs"||(e.eq==="sw"&&!thrust)) p=[box(100,188.5,40,12)];
   return fr.map(f=>zp(f,p));
 };
 ZP.hipext=e=>[X({H:[100,140],t:140,L:[150,198],A:[70,160],g:1,pr:[box(84,146.5,30,14)]},{label:"התחלה"}),
@@ -2596,7 +2596,7 @@ function build(host,frames,opt){opt=opt||{};
     mb(){const g=new T.Group();g.add(new T.Mesh(G_(new T.SphereGeometry(11,28,20)),mBall));const r=new T.Mesh(G_(new T.TorusGeometry(11.05,0.55,8,48)),mRim);g.add(r);return g;},
     sd(){const g=new T.Group();g.add(cylZ(12,42,mBag,0,18));for(const z of [-21,21]){const c=new T.Mesh(G_(new T.SphereGeometry(12,18,12)),mBag);c.scale.z=0.35;c.position.z=z;g.add(c);}return g;},
     plate(){const g=new T.Group(),m=new T.Mesh(G_(new T.CylinderGeometry(13,13,2.4,36)),mRub);g.add(m);const h=new T.Mesh(G_(new T.CylinderGeometry(2.6,2.6,2.6,16)),mSteel);g.add(h);return g;}};
-  const kitOf=(eq,en)=>eq==="sw"&&/wall squat/i.test(en||"")?"swb":/plate/i.test(en||"")?"plate":({db:"db",bb:"bb",kb:"kb",mb:"mb",sd:"sd"})[eq]||"db";
+  const kitOf=(eq,en)=>/smith/i.test(en||"")?"bb":eq==="sw"?"swb":/plate/i.test(en||"")?"plate":({db:"db",bb:"bb",kb:"kb",mb:"mb",sd:"sd"})[eq]||"db";
   const KIND=kitOf(opt.eq,opt.en), PAIR=KIND==="db"||(KIND==="kb"&&!(/swing|goblet|sumo|deadlift|halo|around|figure/i.test(opt.en||"")&&!/single|one-arm/i.test(opt.en||"")));   // one in each hand, or one object held by both hands
   const newKit=()=>{const a=KIT[KIND](),b=PAIR?KIT[KIND]():null;scene.add(a);if(b) scene.add(b);return {a,b};};
   const Zax=new T.Vector3(0,0,1),Yax=new T.Vector3(0,1,0);
@@ -2612,6 +2612,7 @@ function build(host,frames,opt){opt=opt||{};
       const front=/front squat|zercher/i.test(opt.en||"");
       a.position.copy(sh).addScaledVector(up,front&&/zercher/i.test(opt.en)?-16:2).addScaledVector(fwd,front?9:-7);aim(a,lat);return;}
     if(where==="H"){a.position.copy(bonePos("thighL").add(bonePos("thighR")).multiplyScalar(0.5)).addScaledVector(fwd,13);aim(a,lat);return;}
+    if(KIND==="swb"&&!/wall squat/i.test(opt.en||"")){a.position.set(w[0],Math.max(w[1]-30,-(ILLV.GY+3.5)+30),w[2]);a.scale.setScalar(30/35);return;}   // ball under the feet
     if(where!=="W"){a.position.set(...w);aim(a,lat);return;}
     const gL=gripPoint(Mo,"L"),gR=gripPoint(Mo,"R"),dist=gL.p.distanceTo(gR.p),mid=gL.p.clone().add(gR.p).multiplyScalar(0.5);
     const kbOrient=(o,g)=>{const press=g.f.y>0.35,bd=press?g.n.clone().negate():new T.Vector3(0,-1,0),Y=bd.clone().negate().normalize();
@@ -2686,7 +2687,17 @@ function build(host,frames,opt){opt=opt||{};
     for(const dx of [-1,1]){staticBox(cx+dx*(w/2-6),(topY-6+FY)/2,0,4,topY-6-FY,4,mDark);staticBox(cx+dx*(w/2-6),FY+1.5,0,6,3,30,mDark);}
     staticBox(cx,FY+6,0,w-12,3,4,mDark);};
   // a drawn box becomes the real thing: plyo box, machine pad, machine seat or padded bench
+  const ballMat=new T.MeshStandardMaterial({color:0x5b8fb9,roughness:0.55});if(opt.model) ballMat.color.convertSRGBToLinear();
   const boxProp=q=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
+    if(EQ_==="sw"&&!/wall squat/i.test(EN_)){// swiss ball: its top where the drawn box top is
+      const r=Math.max(26,Math.min(34,(-q.y-FY)/2)),b=new T.Mesh(new T.SphereGeometry(r,32,24),ballMat);b.position.set(cx,-q.y-r,0);
+      if(b.position.y-r<FY) b.position.y=FY+r;scene.add(b);return;}
+    if(EQ_==="bs"||/bosu/i.test(EN_)){// bosu: a blue dome on a black base
+      const g=new T.Group(),d=new T.Mesh(new T.SphereGeometry(31,32,16,0,Math.PI*2,0,Math.PI/2),ballMat),bs=new T.Mesh(new T.CylinderGeometry(31,31,3,32),mPad);
+      d.scale.y=Math.max(0.45,(-q.y-FY-3)/31);d.position.y=3;bs.position.y=1.5;g.add(d,bs);g.position.set(cx,FY,0);scene.add(g);return;}
+    if(/sled/i.test(EN_)){// sled: a low steel base with two upright handles
+      staticBox(cx,FY+4,0,q.w,8,44,mDark);for(const dz of [-16,16]) staticBox(cx-q.w/2+6,FY+40,dz,4,72,4,mDark);staticBox(cx-q.w/2+6,FY+74,0,4,4,36,mDark);
+      for(const dz of [-12,12]) staticCyl([cx-10,FY+12,dz],[cx-10,FY+20,dz],9);return;}
     const plyo=/jump|box|step|stair|hop/i.test(EN_)&&!/bench|press|row|seated/i.test(EN_);
     if(plyo&&q.h==null){staticBox(cx,-(q.y+h/2),0,q.w,h,50,mWood);return;}
     if(q.h!=null&&q.h<30&&-(q.y)>FY+40){staticBox(cx,-(q.y+h/2),0,q.w,h,36,mPad);return;}
@@ -2696,6 +2707,11 @@ function build(host,frames,opt){opt=opt||{};
   const machineSeat=(cx,topY,w,h)=>{staticBox(cx,topY-4,0,w,8,40,mPad);staticBox(cx,(topY-8+FY)/2,0,8,topY-8-FY,8,mDark);staticBox(cx,FY+1.5,0,w,3,34,mDark);};
   const f0=frames[0];
   // leg machines: a padded roller across both shins just above the ankles, plus the seat's backrest
+  // squat / press machines: a back pad that follows the trunk (hack, pendulum, belt) and a foot plate (leg press, hack)
+  if(/hack squat|pendulum|leg press/i.test(EN_)&&!/calf/i.test(EN_)){const plate=new T.Mesh(new T.BoxGeometry(4,52,58),mDark);scene.add(plate);dyn.push({footPlate:plate,flat:!/leg press/i.test(EN_)});}
+  if(/hack squat|pendulum/i.test(EN_)){const pad=new T.Mesh(new T.BoxGeometry(8,70,34),mPad);scene.add(pad);dyn.push({backPad:pad});}
+  if(/smith/i.test(EN_)){// two guide rails either side of the bar
+    once(["smith"],()=>{const k0=keys[0],x=(k0.neck[0]+k0.pelv[0])/2;for(const z of [-64,64]){staticBox(x,FY+115,z,6,230,6,mDark);staticBox(x,FY+2,z,30,4,30,mDark);}staticBox(x,FY+230,0,6,6,134,mDark);});}
   if(/leg extension|leg curl|hip thrust machine/i.test(EN_)&&!/band|slider|swiss|trx|dumbbell/i.test(EN_)){const r=new T.Group(),c=new T.Mesh(cyl,mPad);c.scale.set(5,46,5);c.rotation.x=Math.PI/2;r.add(c);scene.add(r);
     dyn.push({roller:r,front:/extension/i.test(EN_)});}
   if(f0.kind==="raw"){
@@ -2755,6 +2771,13 @@ function build(host,frames,opt){opt=opt||{};
     for(const n in joints) joints[n].m.position.set(...k[n]);
     head.position.set(...k.head);
     for(const d of dyn){
+      if(d.footPlate){let a=V(k.ftL).add(V(k.ftR)).multiplyScalar(0.5),hp=V(k.hpL).add(V(k.hpR)).multiplyScalar(0.5);
+        if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones["foot"+Mo.side.L].getWorldPosition(w);const f2=new T.Vector3();Mo.bones["foot"+Mo.side.R].getWorldPosition(f2);a=w.add(f2).multiplyScalar(0.5);}
+        if(d.flat){d.footPlate.position.set(a.x,Math.min(a.y,-(GY+3.5)+14)-3,0);d.footPlate.rotation.set(0,0,Math.PI/2-0.3);continue;}
+        const u=a.clone().sub(hp).normalize();d.footPlate.position.copy(a).addScaledVector(u,4);d.footPlate.rotation.set(0,0,Math.atan2(u.y,u.x));continue;}
+      if(d.backPad){let n=V(k.neck),pv=V(k.pelv);const sp=n.clone().sub(pv),c=pv.clone().add(n).multiplyScalar(0.5),bw=new T.Vector3(sp.y,-sp.x,0).normalize();
+        if(Mo&&Mo.side){const f=boneFwd("chest");if(bw.dot(f)>0) bw.negate();}
+        d.backPad.position.copy(c).addScaledVector(bw,12);d.backPad.rotation.set(0,0,Math.atan2(sp.y,sp.x)-Math.PI/2);continue;}
       if(d.roller){let a=V(k.ftL),b=V(k.ftR),kn=V(k.knL);
         if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones["foot"+Mo.side.L].getWorldPosition(w);a=w.clone();Mo.bones["foot"+Mo.side.R].getWorldPosition(w);b=w.clone();}
         const m=a.clone().add(b).multiplyScalar(0.5),up=kn.clone().sub(V(k.ftL)).normalize(),fw=new T.Vector3(up.y,-up.x,0).multiplyScalar(d.front?1:-1);
