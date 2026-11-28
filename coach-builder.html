@@ -1554,7 +1554,7 @@ ZP.tri=e=>{const n=e.en,eq=e.eq;
   if(/bench-supported/i.test(n)){const b={H:[60,126],t:-8,L:[66,200],kb:[1,0],K2:null,L2:[24,163],kb2:[0,1],A2:[112,163],eb2:[0,1],g:1,pr:[box(16,166.5,140),ZW()]};
     return [X(b,{ua:176,fa:92}),X(b,{ua:176,fa:178,label:"יישור לאחור"})];}
   if(/kickback/i.test(n)){const b={H:[60,136],t:-10,L:[62,200],kb:[1,0],A2:[118,163],eb2:[0,1],g:1,pr:[box(98,166.5,60),ZW()]};return [X(b,{ua:175,fa:95}),X(b,{ua:175,fa:178,label:"יישור לאחור"})];}
-  const p=eq==="bd"?[ZC([104,0])]:[ZC([104,0])];
+  const p=eq==="bd"?[ZC([104,0])]:[ZC([122,8])];
   return [X(ZST,{ua:90,fa:-25,pr:p}),X(ZST,{ua:90,fa:86,pr:p,label:"יישור למטה"})];
 };
 ZP.grip=e=>{const n=e.en;
@@ -1879,7 +1879,20 @@ function zpat(e){
   for(const [re,k] of ZRULES) if(re.test(e.en||"")) return k;
   return ZSUBDEF[g+"."+sub]||null;
 }
-function zframes(e){const k=zpat(e);if(!k||!ZP[k]) return null;try{const fr=ZP[k](e);return fr&&fr.length?zL(fr):null;}catch(err){return null;}}
+// a cable exercise drawn with hand-held weights (a shared pattern): the weights become a cable from a low pulley
+// in front of the hands, so the right machine shows up
+function cableize(fr,e){
+  if(e.eq!=="cb"||!fr) return fr;
+  if(fr.some(f=>f.kind==="raw")){// 3D-built frames: a low pulley beside the body, the cable to the hand(s); no dumbbells
+    if(fr.some(f=>(f.props3d||[]).some(q=>q.cable||q.pdbar))) return fr;
+    const K=fr[0].K,one=/single|one-arm/i.test(e.en),from=[(K.wrL?K.wrL[0]:0)+8,-(GY+3.5)+12,-48];
+    return fr.map(f=>Object.assign({},f,{props3d:[...(f.props3d||[]),{cable:{from,end:one?"wrL":["wrL","wrR"]}}],
+      flat:f.flat?Object.assign({},f.flat,{pr:(f.flat.pr||[]).filter(q=>q.k!=="wt")}):f.flat}));}
+  if(fr.some(f=>(f.pr||[]).some(q=>q.k==="band"))) return fr;
+  if(!fr.some(f=>(f.pr||[]).some(q=>q.k==="wt"))) return fr;
+  const A=fr[0].A||[120,140],high=/pulldown|pushdown|overhead|high|face|crunch|kneeling/i.test(e.en),anc=[A[0]+(high?40:70),high?6:196];
+  return fr.map(f=>Object.assign({},f,{pr:(f.pr||[]).map(q=>q.k==="wt"&&(!q.at||q.at==="W")?{k:"band",from:anc,to:"W"}:q)}));}
+function zframes(e){const k=zpat(e);if(!k||!ZP[k]) return null;try{const fr=cableize(ZP[k](e),e);return fr&&fr.length?zL(fr):null;}catch(err){return null;}}
 
 const pick=(ex,ringCat)=>Array.isArray(ex)?ex:((ringCat&&RING_SAME[ex])||ILL[ex]);
 // ---------- joint data for the 3D viewer ----------
@@ -2093,7 +2106,9 @@ function makeModel(M,act){
  float any=texture2D(aMap,vec2(31.5/32.0,0.5)).r;
  float pulse=0.82+0.18*sin(uTime*3.2);
  float red=clamp((diffuseColor.r-diffuseColor.b)*2.2,0.0,1.0);
- vec3 dim=mix(diffuseColor.rgb,vec3(dot(diffuseColor.rgb,vec3(0.3,0.5,0.2))),0.45)*0.78;
+ // muscles that do not work turn a pale grey-lilac (the working ones stay red), so the target stands out
+ float lum=dot(diffuseColor.rgb,vec3(0.3,0.5,0.2));
+ vec3 dim=vec3(0.74,0.72,0.78)*(0.62+0.55*lum);
  diffuseColor.rgb=mix(diffuseColor.rgb,dim,any*red*(1.0-act));
  diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.35,0.9,0.85)+vec3(0.06,0.0,0.0),act*red);
  totalEmissiveRadiance+=vec3(0.9,0.12,0.06)*act*red*0.32*pulse;`);
@@ -2553,7 +2568,10 @@ function build(host,frames,opt){opt=opt||{};
   const dl=new T.DirectionalLight(0xffffff,0.75);dl.position.set(180,320,260);scene.add(dl);
   if(opt.model){const fill=new T.DirectionalLight(0xdfe6ff,0.35);fill.position.set(-260,120,-120);scene.add(fill);
     const rim=new T.DirectionalLight(0xffffff,0.45);rim.position.set(-60,260,-320);scene.add(rim);}
-  const mDark=new T.MeshStandardMaterial({color:0x4a4660,roughness:0.5,metalness:0.3});
+  const mDark=new T.MeshStandardMaterial({color:0x3b3e45,roughness:0.45,metalness:0.55});   // machine frames: gunmetal
+  const mPad=new T.MeshStandardMaterial({color:0x202024,roughness:0.75,metalness:0});        // upholstered pads
+  const mWood=new T.MeshStandardMaterial({color:0xc8a274,roughness:0.85});                  // plyo box
+  const mCableS=new T.MeshStandardMaterial({color:0x9a9da5,roughness:0.3,metalness:0.8});    // steel cable
   const mBody=new T.MeshStandardMaterial({color:css("--ink"),roughness:0.55,metalness:0.05});
   const mEq=new T.MeshStandardMaterial({color:css("--muted"),roughness:0.6});
   const mWall=new T.MeshStandardMaterial({color:css("--muted"),roughness:1,transparent:true,opacity:0.25});
@@ -2563,7 +2581,7 @@ function build(host,frames,opt){opt=opt||{};
   const mRub=new T.MeshStandardMaterial({color:0x151518,roughness:0.85}),mBall=new T.MeshStandardMaterial({color:0x34343a,roughness:0.75}),mBag=new T.MeshStandardMaterial({color:0x5b5338,roughness:0.95});
   const mRim=new T.MeshStandardMaterial({color:0xff8a1f,roughness:0.5});
   // with the anatomy model the output is sRGB, so these colours are given in sRGB and converted
-  if(opt.model) for(const m of [mIron,mSteel,mRub,mBall,mBag,mRim,mDark]) m.color.convertSRGBToLinear();
+  if(opt.model) for(const m of [mIron,mSteel,mRub,mBall,mBag,mRim,mDark,mPad,mWood,mCableS]) m.color.convertSRGBToLinear();
   const eqGeo=[];const G_=g=>{eqGeo.push(g);return g;};
   const cylZ=(r,len,mat,z,seg)=>{const m=new T.Mesh(G_(new T.CylinderGeometry(r,r,len,seg||24)),mat);m.rotation.x=Math.PI/2;m.position.z=z||0;return m;};
   const KIT={
@@ -2653,22 +2671,45 @@ function build(host,frames,opt){opt=opt||{};
   // equipment
   const GY=ILLV.GY, dyn=[], seen=new Set();
   const once=(q,fn)=>{const id=JSON.stringify(q);if(!seen.has(id)){seen.add(id);fn();}};
+  const FY=-(GY+3.5), EQ_=opt.eq||"", EN_=opt.en||"";
+  // cable station: an upright frame from the floor, a weight stack inside it, the pulley at the anchor height.
+  // The frame stands just beyond the pulley, on the side away from the body.
+  const cableTower=(px,py,side,pz)=>{pz=pz||0;const back=px+side*14,top=Math.max(py+22,FY+215);const sb0=staticBox,staticBox_=(x,y,z,w,h,d,m)=>sb0(x,y,z+pz,w,h,d,m);
+    for(const dz of [-14,14]) staticBox_(back,(FY+top)/2,dz,5,top-FY,5,mDark);
+    staticBox_(back,top-2.5,0,7,5,33,mDark);staticBox_(back,FY+3,0,26,6,40,mDark);
+    for(let i=0;i<9;i++) staticBox_(back,FY+10+i*5.4,0,12,4.6,20,i%2?mIron:mDark);   // weight plates
+    staticBox_(back,FY+60+((top-FY-70)/2),0,2,top-FY-70,2,mSteel);                   // guide rod
+    staticBox_(back-side*4,(py+FY)/2>py?py:py,0,8,8,6,mDark);                      // carriage
+    const pu=new T.Mesh(tor,mSteel);pu.position.set(px,py,pz);pu.rotation.y=Math.PI/2;pu.scale.setScalar(0.7);scene.add(pu);};
+  // padded bench: pad on a steel frame (two legs and a floor rail)
+  const padBench=(cx,topY,w)=>{staticBox(cx,topY-3,0,w+4,6,28,mPad);
+    for(const dx of [-1,1]){staticBox(cx+dx*(w/2-6),(topY-6+FY)/2,0,4,topY-6-FY,4,mDark);staticBox(cx+dx*(w/2-6),FY+1.5,0,6,3,30,mDark);}
+    staticBox(cx,FY+6,0,w-12,3,4,mDark);};
+  // a drawn box becomes the real thing: plyo box, machine pad, machine seat or padded bench
+  const boxProp=q=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
+    const plyo=/jump|box|step|stair|hop/i.test(EN_)&&!/bench|press|row|seated/i.test(EN_);
+    if(plyo&&q.h==null){staticBox(cx,-(q.y+h/2),0,q.w,h,50,mWood);return;}
+    if(q.h!=null&&q.h<30&&-(q.y)>FY+40){staticBox(cx,-(q.y+h/2),0,q.w,h,36,mPad);return;}
+    if((EQ_==="mc"||EQ_==="cb")&&h<=60){machineSeat(cx,-q.y,q.w,h);return;}
+    if(h>14){padBench(cx,-q.y,q.w);return;}
+    staticBox(cx,-(q.y+h/2),0,q.w,h,50,mPad);};
+  const machineSeat=(cx,topY,w,h)=>{staticBox(cx,topY-4,0,w,8,40,mPad);staticBox(cx,(topY-8+FY)/2,0,8,topY-8-FY,8,mDark);staticBox(cx,FY+1.5,0,w,3,34,mDark);};
   const f0=frames[0];
+  // leg machines: a padded roller across both shins just above the ankles, plus the seat's backrest
+  if(/leg extension|leg curl|hip thrust machine/i.test(EN_)&&!/band|slider|swiss|trx|dumbbell/i.test(EN_)){const r=new T.Group(),c=new T.Mesh(cyl,mPad);c.scale.set(5,46,5);c.rotation.x=Math.PI/2;r.add(c);scene.add(r);
+    dyn.push({roller:r,front:/extension/i.test(EN_)});}
   if(f0.kind==="raw"){
     for(const q of f0.props3d||[]) if(q.pole) staticCyl([q.pole[0],q.pole[1],0],[q.pole[0],q.pole[2],0],3);
-    for(const q of f0.props3d||[]) if(q.bench){const [cx,fy,w,ty]=q.bench,h=ty-fy;staticBox(cx,fy+h/2,0,w,h,50);}
+    for(const q of f0.props3d||[]) if(q.bench){const [cx,fy,w,ty]=q.bench;if(ty-fy>14) padBench(cx,ty,w); else staticBox(cx,fy+(ty-fy)/2,0,w,ty-fy,40,mPad);}
     for(const q of f0.props3d||[]) if(q.slab){const [a,c,wd,th]=q.slab,len=Math.hypot(c[0]-a[0],c[1]-a[1]),m=new T.Mesh(new T.BoxGeometry(len,th,wd),mEq);
       m.position.set((a[0]+c[0])/2,(a[1]+c[1])/2,0);m.rotation.z=Math.atan2(c[1]-a[1],c[0]-a[0]);scene.add(m);}
     for(const q of f0.props3d||[]) if(q.post) staticCyl([q.post[0][0],q.post[0][1],0],[q.post[1][0],q.post[1][1],0],2.2);
     // 3D frames made from a side drawing keep that drawing's bench / box and its hand-held weights
     frames.forEach(fr=>((fr.flat&&fr.flat.pr)||[]).forEach(q=>{
-      if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
-        if(h>35&&q.h==null){staticBox(cx,-(q.y+3),0,q.w+6,6,64);
-          for(const dx of [-1,1]) for(const dz of [-1,1]) staticCyl([cx+dx*(q.w/2-2),-(q.y+6),dz*28],[cx+dx*(q.w/2-2),-(GY+4),dz*28],1.8);}
-        else staticBox(cx,-(q.y+h/2),0,q.w,h,60);});
+      if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>boxProp(q));
       else if(q.k==="wt"&&q.at==="W") once(["held"],()=>dyn.push({held:true,kit:newKit()}));}));
     for(const q of f0.props3d||[]) if(q.pdbar){const tp=q.pdbar.top,cx=q.pdbar.x,fy=-(GY+3.5);
-      staticBox(cx,(fy+tp[1])/2,0,9,tp[1]-fy,9,mDark);staticBox((cx+tp[0])/2,tp[1]+4,0,tp[0]-cx+9,8,9,mDark);
+      cableTower(cx,tp[1]-6,-1);staticBox((cx+tp[0])/2,tp[1]+4,0,Math.abs(tp[0]-cx)+9,8,9,mDark);
       const pu=new T.Mesh(tor,mDark);pu.position.set(tp[0],tp[1],0);pu.rotation.y=Math.PI/2;pu.scale.setScalar(0.8);scene.add(pu);
       const barM=new T.Group(),bar=new T.Mesh(cyl,mSteel);barM.add(bar);bar.scale.set(1.3,104,1.3);bar.rotation.x=Math.PI/2;
       for(const z of [-36,36]){const g=new T.Mesh(cyl,mRub);g.scale.set(1.9,16,1.9);g.rotation.x=Math.PI/2;g.position.z=z;barM.add(g);}
@@ -2676,7 +2717,7 @@ function build(host,frames,opt){opt=opt||{};
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
       // (a high pulley: the column runs from the floor to just above it)
-      {const G=-(GY+3.5),top=Math.max(a[1]+14,G+124);staticBox(a[0],(G+top)/2,a[2]+(a[2]<0?-7:7),9,top-G,9,mDark);}
+      once(["tower",a[0],a[1]],()=>cableTower(a[0]-(a[2]?14:0),a[1],1,a[2]||0));
       // a rope: one strand to each hand
       for(const end of [].concat(q.cable.end)) dyn.push({cable:end,from:V(a),m:new T.Mesh(cyl,mEq),cuff:new T.Mesh(tor,mAcc)});}
   } else if(f0.kind==="front"){const J=f0.J;
@@ -2690,11 +2731,7 @@ function build(host,frames,opt){opt=opt||{};
     frames.forEach(fr=>(fr.pr||[]).forEach((q,i)=>{
       if(q.k==="bar") once(["bar",q.at],()=>staticCyl([q.at[0],-q.at[1],-45],[q.at[0],-q.at[1],45],2.6));
       else if(q.k==="hbar") once(["hbar",q.y,q.x1,q.x2],()=>{for(const z of [-21,21]) staticCyl([q.x1,-q.y,z],[q.x2,-q.y,z],2.6);});
-      else if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>{const h=q.h!=null?q.h:GY+3.5-q.y,cx=q.x+q.w/2;
-        // a tall box reads as a solid cube next to the body: draw it as a table/bench (top + four legs)
-        if(h>35&&q.h==null){staticBox(cx,-(q.y+3),0,q.w+6,6,64);
-          for(const dx of [-1,1]) for(const dz of [-1,1]) staticCyl([cx+dx*(q.w/2-2),-(q.y+6),dz*28],[cx+dx*(q.w/2-2),-(GY+4),dz*28],1.8);}
-        else staticBox(cx,-(q.y+h/2),0,q.w,h,60);});
+      else if(q.k==="box") once(["box",q.x,q.y,q.w,q.h],()=>boxProp(q));
       else if(q.k==="wall") once(["wall",q.x],()=>{const h=GY+4-q.y1;staticBox(q.x,-(q.y1+h/2),0,2,h,130,mWall);});
       else if(q.k==="pole") once(["pole",q.x],()=>staticCyl([q.x,-q.y1,0],[q.x,-q.y2,0],3));
       else if(q.k==="ring") once(["ring",q.atRef||q.at],()=>{
@@ -2703,6 +2740,9 @@ function build(host,frames,opt){opt=opt||{};
           staticCyl([q.at[0],-q.at[1]+6,z],[q.at[0],-q.at[1]+(q.len||55),z],0.9);}});
       else if(q.k==="band"&&opt.eq==="lm") once(["band",i],()=>{const pl=new T.Group();pl.add(cylZ(20,3.4,mRub,0,40));pl.add(cylZ(3.6,6,mSteel,3));
         const base=new T.Mesh(G_(new T.CylinderGeometry(5,7,4,16)),mIron);scene.add(pl);scene.add(base);dyn.push({band:i,lm:true,m:new T.Mesh(cyl,mSteel),pl,base});});
+      else if(q.k==="band"&&EQ_==="cb"&&!q.fromRef) once(["band",i],()=>{const a=q.from,b=fr.J.H||fr.J.S;
+        once(["tower",a[0],a[1]],()=>cableTower(a[0],-a[1],a[0]>((b&&b[0])||0)?1:-1));
+        dyn.push({band:i,kind:"line",steel:true,m:new T.Mesh(new T.BufferGeometry(),mCableS)});});
       else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,kind:q.viaRef==="K"?"knees":q.toRef==="H"?"hips":q.toRef==="S"?"chest":q.toRef==="W"?"hands":"line",
         bars:(fr.pr||[]).some(z=>z.k==="hbar"),m:new T.Mesh(new T.BufferGeometry(),mBand)}));
       else if(q.k==="wt") once(["wt",i],()=>dyn.push({wt:i,kit:newKit()}));
@@ -2715,6 +2755,10 @@ function build(host,frames,opt){opt=opt||{};
     for(const n in joints) joints[n].m.position.set(...k[n]);
     head.position.set(...k.head);
     for(const d of dyn){
+      if(d.roller){let a=V(k.ftL),b=V(k.ftR),kn=V(k.knL);
+        if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones["foot"+Mo.side.L].getWorldPosition(w);a=w.clone();Mo.bones["foot"+Mo.side.R].getWorldPosition(w);b=w.clone();}
+        const m=a.clone().add(b).multiplyScalar(0.5),up=kn.clone().sub(V(k.ftL)).normalize(),fw=new T.Vector3(up.y,-up.x,0).multiplyScalar(d.front?1:-1);
+        d.roller.position.copy(m).addScaledVector(up,9).addScaledVector(fw,6);continue;}
       if(d.pdbar){// the bar sits in the hands, the cable runs from its middle up to the pulley
         let gL,gR;if(Mo&&Mo.side){gL=gripPoint(Mo,"L").p;gR=gripPoint(Mo,"R").p;}else{gL=V(k.wrL);gR=V(k.wrR);}
         const mid=gL.clone().add(gR).multiplyScalar(0.5),ax=gR.clone().sub(gL);d.bar.position.copy(mid);aim(d.bar,ax.lengthSq()>1?ax:new T.Vector3(0,0,1));
@@ -2744,6 +2788,9 @@ function build(host,frames,opt){opt=opt||{};
           const bp=bodyPt(k,"knees"),y=a[1],zz=d.bars?21:Math.max(12,Math.abs(k.wrL[2]-k.wrR[2])/2);
           bandMesh(d.m,loopPts(new T.Vector3(bp.c.x,y,zz),new T.Vector3(bp.c.x,y,-zz),Object.assign(bp,{lat:new T.Vector3(0,0,1)})));}
         else if(d.kind==="hands"){const bp=bodyPt(k,"hands"),A=V(a);bandMesh(d.m,[A,A.clone().lerp(bp.c,0.5).add(new T.Vector3(0,-2,0)),bp.c]);}
+        else if(d.kind==="line"&&d.steel){// a taut steel cable from the pulley to the hands (or to the cuff)
+          let e=V(b);if(Mo&&Mo.side&&k._wh!==false){const gL=gripPoint(Mo,"L").p,gR=gripPoint(Mo,"R").p;e=gL.distanceTo(V(b))<40?gL.add(gR).multiplyScalar(0.5):e;}
+          bandMesh(d.m,[V(a),V(a).lerp(e,0.5),e]);d.m.scale.setScalar(1);}
         else if(d.kind==="line") bandMesh(d.m,[V(a),V(a).lerp(V(b),0.5).add(new T.Vector3(0,-6,0)),V(b)]);
         else {// looped over the bar / anchor, two strands down to the body part and around it
           const bp=bodyPt(k,d.kind),A=V(a),l=bp.lat.clone().multiplyScalar(2.5);bandMesh(d.m,loopPts(A.clone().add(l),A.clone().sub(l),bp));}}
@@ -4364,7 +4411,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261127214355";
+const APPV = "20261128002747";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
