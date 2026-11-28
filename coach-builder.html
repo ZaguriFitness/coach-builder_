@@ -1352,6 +1352,7 @@ ZP.cpress=e=>{const n=e.en,up=/incline/i.test(n),dn=/decline/i.test(n);
   const p=up?[ZC([-20,190])]:dn?[ZC([-20,25])]:e.eq==="cb"?[ZC([-20,85])]:[ZC([-20,95])];
   return [zA(ZST,up?[94,100]:dn?[94,82]:[94,90],[-1,0.3],{pr:p}),zA(ZST,up?[128,60]:dn?[128,112]:[133,84],[0,1],{pr:p,label:up?"לחיצה קדימה ולמעלה":dn?"לחיצה קדימה ולמטה":"לחיצה קדימה"})];};
 ZP.fly=e=>{const n=e.en;
+  if(/incline cable fly/i.test(n)){const f=ZRAW_FLY(true);return f.map(x=>Object.assign({},x,{props3d:[...(x.props3d||[]),{cable:{from:[0,-(GY+3.5)+12,-70],end:["wrL","wrR"]}}],flat:x.flat?Object.assign({},x.flat,{pr:(x.flat.pr||[]).filter(q=>q.k!=="wt")}):x.flat}));}
   if(/cable|band|crossover/i.test(n)){const hi=/low[- ]to[- ]high/i.test(n)?[170,195]:[170,15];
     const s=/low[- ]to[- ]high/i.test(n)?[[108,128],[128,70]]:/high-to-low/i.test(n)?[[120,40],[110,124]]:[[124,52],[126,100]];
     return [zA(ZST,s[0],[-1,0],{pr:[ZC(hi)]}),zA(ZST,s[1],[-1,0],{pr:[ZC(hi)],label:"ידיים נפגשות"})];}
@@ -1751,7 +1752,17 @@ function ZRAW_CABLEHIP(add){const k0=zkeys(ZST),G=-(GY+3.5);
   const pr=[{cable:{from:anchor,end:"ftL"}}];
   const f=(K,lab)=>({kind:"raw",K,g:true,props3d:pr,az:1.3,flat:X(ZST,{label:lab})});
   return add?[f(out,"רגל בצד"),f(inn,"הרגל חוצה פנימה")]:[f(inn,"רגליים יחד"),f(out,"הרגל לצד")];}
-ZP.cablehip=e=>ZRAW_CABLEHIP(/adduction/i.test(e.en));
+ZP.cablehip=e=>{const f=ZRAW_CABLEHIP(/adduction/i.test(e.en));
+  if(e.eq==="bd") f.forEach(x=>{x.props3d=x.props3d.map(q=>q.cable?{cable:Object.assign({},q.cable,{band:true})}:q);});   // a band tied low instead of the cable
+  return f;};
+// standing leg curl: hands on the machine / column, the working knee bends and the heel comes up behind
+ZP.standcurl=e=>{const pr=e.eq==="cb"?[ZC([150,196],"F")]:[{k:"pole",x:132,y1:70,y2:200}];
+  return [zA(ZST,[128,112],[0,1],{pr}),zA(ZST,[128,112],[0,1],{pr,L2:[50,162],kb2:[0,1],label:"עקב לישבן"})];};
+ZP.seatpullover=e=>[ZSEAT({A:[100,46],eb:[0,1],label:"ידיים למעלה"}),ZSEAT({A:[96,150],eb:[0,1],label:"ידיים למטה"})];
+ZP.seatcrunch=e=>[ZSEAT({A:[96,110],eb:[0,1]}),ZSEAT({t:-58,A:[110,130],eb:[0,1],label:"כפיפת גו"})];
+ZP.ballsq=e=>[X(GB_D,{pr:[ZW("K")]}),X(GB_D,{pr:[ZW("K")],label:"לחיצה של הברכיים"})];
+ZP.sidelat=e=>[{H:[100,186],t:180,th:0,sh:0,A:[100,160],g:1,pr:[box(40,190,130,8),ZW()]},{H:[100,186],t:180,th:0,sh:0,A:[150,130],g:1,pr:[box(40,190,130,8),ZW()],label:"יד עולה"}];
+ZP.sleeper=e=>[{H:[100,190],t:180,th:0,sh:0,A:[136,170],eb:[0,1],g:1,label:"אמה נדחפת לרצפה"}];
 // standing cable hip extension: facing a low pulley, hands on the column, trunk leaning a little forward; the working
 // leg (model's left) stays straight and swings from slightly in front of the body to behind it, the cable on the ankle
 ZP.cablehipext=e=>{const b=X(ZST,{t:-80}),k0=zkeys(b),G=-(GY+3.5),hp=k0.hpL,L=Math.hypot(hp[0]-k0.ftL[0],hp[1]-k0.ftL[1]);
@@ -1800,6 +1811,7 @@ ZP.windmill=e=>{const b={H:[64,130],t:-35,L:[82,200],kb:[1,0],g:1},s=zS(b);
 ZP.mob=e=>{const n=e.en;
   const lab=(f,l)=>[X(f,{label:l||"החזקה"})];
   // newer stretches / drills, mapped to poses that show the real position
+  if(/sleeper/i.test(n)) return ZP.sleeper(e);
   if(/hip flexor stretch kneeling/i.test(n)) return lab(X(LUNGE_B,{H:[66,152],t:-94}));
   if(/butterfly/i.test(n)) return lab({H:[80,194],t:-90,L:[120,198],kb:[1,-1],L2:[118,198],kb2:[1,-1],A:[110,194],g:1});
   if(/seated hamstring/i.test(n)) return lab({H:[60,194],t:-30,L:[150,198],kb:[1,0],A:[146,192],g:1});
@@ -1857,6 +1869,10 @@ ZP.mob=e=>{const n=e.en;
 
 // ---- exercise → pattern ----
 const ZRULES=[
+ [/band hip adduction/i,"cablehip"],[/seated hip abduction/i,"adducmach"],[/ball squeeze/i,"ballsq"],
+ [/standing leg curl|cable leg curl/i,"standcurl"],[/machine pullover/i,"seatpullover"],[/machine crunch/i,"seatcrunch"],
+ [/side-lying lateral raise/i,"sidelat"],[/external rotation 90-90/i,"yraise"],[/tate press/i,"bench"],[/^reverse curl$/i,"curl"],
+ [/sleeper stretch/i,"sleeper"],[/cable glute kickback/i,"cablehipext"],
  [/stair/i,"stairs"],
  [/iron cross/i,"ironcross"],[/halo/i,"halo"],[/squat row/i,"thruster"],[/windmill/i,"windmill"],[/triceps kickback/i,"tri"],[/scapular push/i,"rot"],[/side plank/i,"plank"],[/landmine rotation|woodchop|wood chop|side bend/i,"chop"],
  [/plank jack|jumping jack|battle rope/i,"cardio"],[/jump rope|double unders/i,"run"],[/snatch(?!-grip)/i,"snatch"],[/high pull/i,"highpull"],
@@ -2634,6 +2650,7 @@ function build(host,frames,opt){opt=opt||{};
       const front=/front squat|zercher/i.test(opt.en||"");
       a.position.copy(sh).addScaledVector(up,front&&/zercher/i.test(opt.en)?-16:2).addScaledVector(fwd,front?9:-7);aim(a,lat);return;}
     if(where==="H"){a.position.copy(bonePos("thighL").add(bonePos("thighR")).multiplyScalar(0.5)).addScaledVector(fwd,13);aim(a,lat);return;}
+    if(KIND==="swb"&&/squeeze/i.test(opt.en||"")){a.position.set(...w);a.scale.setScalar(0.4);return;}
     if(KIND==="swb"&&!/wall squat/i.test(opt.en||"")){a.position.set(w[0],Math.max(w[1]-30,-(ILLV.GY+3.5)+30),w[2]);a.scale.setScalar(30/35);return;}   // ball under the feet
     if(where!=="W"){a.position.set(...w);aim(a,lat);return;}
     const gL=gripPoint(Mo,"L"),gR=gripPoint(Mo,"R"),dist=gL.p.distanceTo(gR.p),mid=gL.p.clone().add(gR.p).multiplyScalar(0.5);
@@ -2767,9 +2784,10 @@ function build(host,frames,opt){opt=opt||{};
     for(const q of f0.props3d||[]) if(q.cable){const a=q.cable.from;
       // pulley column beside the body, the cable from its low pulley to the cuff
       // (a high pulley: the column runs from the floor to just above it)
-      once(["tower",a[0],a[1]],()=>cableTower(a[0]-(a[2]?14:0),a[1],1,a[2]||0));
+      if(!q.cable.band) once(["tower",a[0],a[1]],()=>cableTower(a[0]-(a[2]?14:0),a[1],1,a[2]||0));
+      else staticCyl([a[0],-(GY+3.5),a[2]],[a[0],a[1]+10,a[2]],3);
       // a rope: one strand to each hand
-      for(const end of [].concat(q.cable.end)) dyn.push({cable:end,from:V(a),m:new T.Mesh(cyl,mEq),cuff:new T.Mesh(tor,mAcc)});}
+      for(const end of [].concat(q.cable.end)) dyn.push({cable:end,from:V(a),m:new T.Mesh(cyl,q.cable.band?mBand:mCableS),cuff:new T.Mesh(tor,mAcc),thick:q.cable.band?1.3:0.6});}
   } else if(f0.kind==="front"){const J=f0.J;
     if(J.eq==="bar"){const x1=Math.min(-75,J.hL[0]-15),x2=Math.max(75,J.hR[0]+15);staticCyl([x1,-J.by,0],[x2,-J.by,0],2.6);}
     else for(const s of ["L","R"]) dyn.push({ring:new T.Mesh(tor,mEq),strap:new T.Mesh(cyl,mEq),j:"wr"+s,len:60,axis:"z"});
@@ -2824,7 +2842,7 @@ function build(host,frames,opt){opt=opt||{};
       if(d.cable){// ends at the cuff just above the ankle: on the model's ankle when it is shown
         let e=V(k[d.cable]);const lim=d.cable.slice(0,2)==="ft"?"foot":"hand";
         if(Mo&&Mo.side){const w=new T.Vector3();Mo.bones[lim+Mo.side[d.cable.slice(-1)]].getWorldPosition(w);e=w.add(new T.Vector3(0,lim==="foot"?3:0,0));}
-        place(d.m,d.from,e,0.7);d.cuff.position.copy(e);d.cuff.scale.setScalar(0.75);d.cuff.visible=lim==="foot";
+        place(d.m,d.from,e,d.thick||0.7);d.cuff.position.copy(e);d.cuff.scale.setScalar(0.75);d.cuff.visible=lim==="foot";
         d.cuff.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(0,1,0));continue;}
       if(d.ring){const w=k[d.j];
         if(Mo&&Mo.side&&d.j.startsWith("wr")){
@@ -4468,7 +4486,7 @@ document.addEventListener("focusout", ev => { const el = ev.target; if (el.datas
 renderAll();
 // always run the newest version: when the app is opened or comes back to the screen, check the site for a newer
 // copy (bypassing the cache) and reload into it. APPV changes with every update.
-const APPV = "20261128011220";
+const APPV = "20261128012634";
 async function checkUpdate(){ try { const r = await fetch(location.pathname + "?u=" + Date.now(), {cache:"no-store"}); if (!r.ok) return;
   const m = (await r.text()).match(/const APPV = "([^"]+)"/); if (!m || m[1] === APPV || document.querySelector("input:focus,textarea:focus")) return;
   // load the new copy by its own address (so no cached page comes back), and only try once per version
