@@ -2675,12 +2675,13 @@ function build(host,frames,opt){opt=opt||{};
   const FY=-(GY+3.5), EQ_=opt.eq||"", EN_=opt.en||"";
   // cable station: an upright frame from the floor, a weight stack inside it, the pulley at the anchor height.
   // The frame stands just beyond the pulley, on the side away from the body.
-  const cableTower=(px,py,side,pz)=>{pz=pz||0;const back=px+side*14,top=Math.max(py+22,FY+215);const sb0=staticBox,staticBox_=(x,y,z,w,h,d,m)=>sb0(x,y,z+pz,w,h,d,m);
+  const cableTower=(px,py,side,pz,gap)=>{pz=pz||0;const back=px+side*(gap||14),top=Math.max(py+22,FY+215);const sb0=staticBox,staticBox_=(x,y,z,w,h,d,m)=>sb0(x,y,z+pz,w,h,d,m);
     for(const dz of [-14,14]) staticBox_(back,(FY+top)/2,dz,5,top-FY,5,mDark);
     staticBox_(back,top-2.5,0,7,5,33,mDark);staticBox_(back,FY+3,0,26,6,40,mDark);
     for(let i=0;i<9;i++) staticBox_(back,FY+10+i*5.4,0,12,4.6,20,i%2?mIron:mDark);   // weight plates
     staticBox_(back,FY+60+((top-FY-70)/2),0,2,top-FY-70,2,mSteel);                   // guide rod
     staticBox_(back-side*4,(py+FY)/2>py?py:py,0,8,8,6,mDark);                      // carriage
+    if((gap||14)>16) staticBox_((px+back)/2,py+5,0,Math.abs(back-px)+4,5,6,mDark);   // arm from the column out to the pulley
     const pu=new T.Mesh(tor,mSteel);pu.position.set(px,py,pz);pu.rotation.y=Math.PI/2;pu.scale.setScalar(0.7);scene.add(pu);};
   // padded bench: pad on a steel frame (two legs and a floor rail)
   const padBench=(cx,topY,w)=>{staticBox(cx,topY-3,0,w+4,6,28,mPad);
@@ -2757,7 +2758,7 @@ function build(host,frames,opt){opt=opt||{};
       else if(q.k==="band"&&opt.eq==="lm") once(["band",i],()=>{const pl=new T.Group();pl.add(cylZ(20,3.4,mRub,0,40));pl.add(cylZ(3.6,6,mSteel,3));
         const base=new T.Mesh(G_(new T.CylinderGeometry(5,7,4,16)),mIron);scene.add(pl);scene.add(base);dyn.push({band:i,lm:true,m:new T.Mesh(cyl,mSteel),pl,base});});
       else if(q.k==="band"&&EQ_==="cb"&&!q.fromRef) once(["band",i],()=>{const a=q.from,b=fr.J.H||fr.J.S;
-        once(["tower",a[0],a[1]],()=>cableTower(a[0],-a[1],a[0]>((b&&b[0])||0)?1:-1));
+        once(["tower",a[0],a[1]],()=>{const bx=(b&&b[0])||0,sd=a[0]>bx?1:-1;cableTower(a[0],-a[1],sd,0,Math.max(14,46-Math.abs(a[0]-bx)));});
         dyn.push({band:i,kind:"line",steel:true,m:new T.Mesh(new T.BufferGeometry(),mCableS)});});
       else if(q.k==="band") once(["band",i],()=>dyn.push({band:i,kind:q.viaRef==="K"?"knees":q.toRef==="H"?"hips":q.toRef==="S"?"chest":q.toRef==="W"?"hands":"line",
         bars:(fr.pr||[]).some(z=>z.k==="hbar"),m:new T.Mesh(new T.BufferGeometry(),mBand)}));
