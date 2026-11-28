@@ -2078,7 +2078,9 @@ const MUSCLE_MAP={"ארבע ראשי":["quads"],"ישבן":["glutes"],"ישבן 
   "חזה":["chest"],"חזה תחתון":["chest"],"חזה עליון":["chest"],"אמות":["forearms"],"אחיזה":["forearms"],"בטן ישרה":["abs"],"בטן רוחבית":["abs","obliques"],
   "אלכסונים":["obliques"],"ריבוע מותני":["obliques","erectors"],"מכופפי ירך":["hipflex"],"מפרק הירך":["glutes","hipflex"],
   "רגליים":["quads","hamstrings","glutes","calves"],"רגליים (כוח מתפרץ)":["quads","hamstrings","glutes","calves"],
-  "קרסול":["calves","shins"],"יציבות קרסול וברך":["calves","shins"]};
+  "קרסול":["calves","shins"],"יציבות קרסול וברך":["calves","shins"],
+  "סיבולת לב-ריאה":["quads","calves","glutes"],"גוף מלא":["quads","glutes","hamstrings","abs","delts_front","lats"],"שיווי משקל":["glutes","calves"],"יציבות":["abs","obliques"],
+  "גמישות":["hipflex"],"מתיחה":["hamstrings"]};
 function muscleAct(mus,groups){
   const a=new Float32Array(32),set=(names,v)=>(names||[]).forEach(nm=>(MUSCLE_MAP[nm]||[]).forEach(g=>{const i=groups.indexOf(g);if(i>0)a[i]=Math.max(a[i],v);}));
   if(mus){set(mus[1],0.4);set(mus[0],1);}
@@ -2715,6 +2717,14 @@ function build(host,frames,opt){opt=opt||{};
   if(EQ_==="mc"&&/press machine|chest press|shoulder press|pec deck|machine fly|machine row|high row|lateral raise|rear delt|reverse pec|triceps|preacher|crunch/i.test(EN_+" "+opt.he)&&!/smith|leg|hack/i.test(EN_)){
     const pad=new T.Mesh(new T.BoxGeometry(8,64,34),mPad);scene.add(pad);dyn.push({backPad:pad,seat:true});}
   if(/hack squat|pendulum/i.test(EN_)){const pad=new T.Mesh(new T.BoxGeometry(8,70,34),mPad);scene.add(pad);dyn.push({backPad:pad});}
+  // cardio machines, placed from the first pose
+  once(["cardio"],()=>{const k0=keys[0];if(!k0||!k0.ftL) return;const fx=(k0.ftL[0]+k0.ftR[0])/2,wx=k0.wrL?(k0.wrL[0]+k0.wrR[0])/2:fx+30,wy=k0.wrL?(k0.wrL[1]+k0.wrR[1])/2:FY+110;
+    if(/bike|spin/i.test(EN_)){const fan=new T.Mesh(new T.CylinderGeometry(24,24,8,32),mDark);fan.rotation.x=Math.PI/2;fan.position.set(fx+34,FY+27,0);scene.add(fan);
+      staticCyl([fx+34,FY+27,0],[wx,wy-4,0],2.4);staticBox(wx,wy-4,0,4,4,46,mDark);staticBox(fx,FY+3,0,110,6,30,mDark);}
+    else if(/treadmill|incline walk/i.test(EN_)){staticBox(fx,FY+6,0,170,12,52,mPad);staticBox(fx+80,FY+60,0,6,110,40,mDark);staticBox(fx+70,FY+112,0,24,14,46,mDark);}
+    else if(/rowing machine|\brower\b/i.test(EN_)){staticBox(fx-40,FY+10,0,200,6,12,mDark);const fan=new T.Mesh(new T.CylinderGeometry(22,22,10,32),mDark);fan.position.set(fx+70,FY+30,0);fan.rotation.x=Math.PI/2;scene.add(fan);}
+    else if(/elliptical/i.test(EN_)){staticBox(fx,FY+5,0,120,10,40,mDark);staticBox(fx+55,FY+70,0,6,130,6,mDark);}
+    else if(/skierg/i.test(EN_)){staticBox(fx+40,FY+100,0,10,200,16,mDark);}});
   if(/smith/i.test(EN_)){// two guide rails either side of the bar
     once(["smith"],()=>{const k0=keys[0],x=(k0.neck[0]+k0.pelv[0])/2;for(const z of [-64,64]){staticBox(x,FY+115,z,6,230,6,mDark);staticBox(x,FY+2,z,30,4,30,mDark);}staticBox(x,FY+230,0,6,6,134,mDark);});}
   if(/leg extension|leg curl|hip thrust machine/i.test(EN_)&&!/band|slider|swiss|trx|dumbbell/i.test(EN_)){const r=new T.Group(),c=new T.Mesh(cyl,mPad);c.scale.set(5,46,5);c.rotation.x=Math.PI/2;r.add(c);scene.add(r);
